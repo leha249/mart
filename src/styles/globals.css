@@ -1,0 +1,335 @@
+:root,
+[data-theme='dark'] {
+  --bg: #08080a;
+  --bg-soft: #0e0e11;
+  --surface: #14141a;
+  --surface-hi: #1a1a20;
+  --border: #242428;
+  --border-hi: #2e2e34;
+
+  --text: #f0f0f2;
+  --text-dim: #c8c8cc;
+  --muted: #6b6b70;
+
+  --accent: #d4f7ff;
+  --accent-dark: #a8e6f5;
+  --accent-contrast: #000000;
+  --accent-blue: #2563eb;
+  --accent-red: #ef4444;
+
+  --danger: #ef4444;
+  --success: #22c55e;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+
+  --skeleton: linear-gradient(90deg, #14141a 0%, #1e1e24 50%, #14141a 100%);
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: #f6f6f8;
+  --bg-soft: #eeeeee;
+  --surface: #ffffff;
+  --surface-hi: #f2f2f4;
+  --border: #e2e2e6;
+  --border-hi: #cccccc;
+
+  --text: #0a0a0a;
+  --text-dim: #2a2a2a;
+  --muted: #666666;
+
+  --accent: #0ea5e9;
+  --accent-dark: #0284c7;
+  --accent-contrast: #ffffff;
+  --accent-blue: #2563eb;
+  --accent-red: #dc2626;
+
+  --danger: #dc2626;
+  --success: #16a34a;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.12);
+
+  --skeleton: linear-gradient(90deg, #f2f2f4 0%, #e6e6e8 50%, #f2f2f4 100%);
+  color-scheme: light;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 100px;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern', 'liga', 'calt', 'ss01';
+  overflow-x: hidden;
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+section[id] {
+  scroll-margin-top: 100px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.serif {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-feature-settings: 'kern', 'liga';
+}
+
+.mono {
+  font-family: 'Space Grotesk', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.price-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 16px;
+}
+
+/* Заголовки */
+h1, h2, h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+/* Skeleton */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: var(--skeleton);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Scroll progress */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent) 50%,
+    var(--accent-blue) 100%
+  );
+  transform-origin: 0%;
+  z-index: 9999;
+  pointer-events: none;
+  will-change: transform;
+}
+
+body.preloading {
+  overflow: hidden;
+}
+
+/* Custom cursor */
+@media (hover: hover) and (pointer: fine) {
+  body.custom-cursor,
+  body.custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+/* Mobile */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  [role='button'],
+  a {
+    min-height: 44px;
+  }
+
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton {
+    animation: none;
+    background: var(--surface-hi);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #4a4a4a;
+    --muted: #b0b0b0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  html {
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .scroll-progress,
+  nav,
+  footer,
+  button {
+    display: none !important;
+  }
+}
+
+/* Performance */
+[style*='transform'],
+[style*='transition'] {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+img {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+.products-grid > * {
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 300px 400px;
+}
+
+header {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+[role='dialog'] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
