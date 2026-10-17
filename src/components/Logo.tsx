@@ -33,31 +33,17 @@ const Logo = ({
         alignItems: 'baseline',
         lineHeight: 1,
         textDecoration: 'none',
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Inter', sans-serif",
       }}
     >
-      DPR
+      MØRA
       <span
         style={{
           color: 'var(--accent)',
-          position: 'relative',
           display: 'inline-block',
         }}
       >
         .
-        <span
-          style={{
-            position: 'absolute',
-            bottom: -3,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 3,
-            height: 3,
-            borderRadius: '50%',
-            background: 'var(--accent-blue)',
-            boxShadow: '0 0 5px var(--accent-blue)',
-          }}
-        />
       </span>
       {withSuffix && (
         <span

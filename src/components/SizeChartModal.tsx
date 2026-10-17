@@ -233,8 +233,8 @@ const SizeChartModal = ({ category, open, onClose }: Props) => {
                       style={{
                         marginTop: 20,
                         padding: 14,
-                        background: 'rgba(96,165,250,0.08)',
-                        border: '1px solid rgba(96,165,250,0.25)',
+                        background: 'rgba(232,255,90,0.08)',
+                        border: '1px solid rgba(232,255,90,0.25)',
                         borderRadius: 12,
                         fontSize: 13,
                         color: 'var(--text-dim)',
@@ -245,7 +245,7 @@ const SizeChartModal = ({ category, open, onClose }: Props) => {
                     >
                       <Info
                         size={16}
-                        color="#60a5fa"
+                        color="var(--accent)"
                         style={{ flexShrink: 0, marginTop: 2 }}
                       />
                       {chart.note}

@@ -1,21 +1,21 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, Truck, Sparkles } from 'lucide-react';
+import { Leaf, Sparkles, Truck } from 'lucide-react';
 
 const features = [
   {
-    icon: ShieldCheck,
-    title: 'Только оригинал',
-    text: 'Работаем с проверенными поставщиками. Каждая вещь — с гарантией подлинности.',
+    icon: Leaf,
+    title: 'Эко-материалы',
+    text: 'Только натуральные и переработанные ткани от проверенных поставщиков.',
   },
   {
     icon: Sparkles,
-    title: 'Кураторский отбор',
-    text: 'Не продаём всё подряд. Только то, что действительно стоит носить — по нашему вкусу.',
+    title: 'Лимитированные серии',
+    text: 'Каждая коллекция выпускается ограниченным тиражом. Уникальность в каждой вещи.',
   },
   {
     icon: Truck,
-    title: 'Доставка по Донбассу',
-    text: 'Отправляем по ДНР и России. Быстро, аккуратно, с трекингом.',
+    title: 'Бесплатная доставка',
+    text: 'По всей России при заказе от 5 000 ₽. Возврат в течение 30 дней.',
   },
 ];
 
@@ -47,7 +47,7 @@ const About = () => {
                 marginBottom: 16,
               }}
             >
-              • О магазине
+              • О нас
             </div>
             <h2
               className="serif"
@@ -59,23 +59,11 @@ const About = () => {
                 marginBottom: 24,
               }}
             >
-              Магазин брендовых вещей{' '}
+              Мы создаём одежду{' '}
               <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
-                с донецкой пропиской
+                с характером
               </span>
             </h2>
-            <p
-              style={{
-                color: 'var(--muted)',
-                fontSize: 16,
-                lineHeight: 1.8,
-                marginBottom: 24,
-              }}
-            >
-              DPR.MART — это не производство, а тщательно подобранная витрина
-              оригинальных вещей. Мы работаем с проверенными брендами и
-              поставщиками, чтобы ты получал то, что действительно хочешь.
-            </p>
             <p
               style={{
                 color: 'var(--muted)',
@@ -84,8 +72,9 @@ const About = () => {
                 marginBottom: 48,
               }}
             >
-              Каждая вещь в каталоге — та, что мы сами носим или носили бы.
-              Никаких случайных позиций, никаких сомнительных брендов.
+              MØRA MART — это больше, чем магазин. Это философия осознанного
+              потребления, где каждый предмет одежды создаётся с уважением
+              к природе и человеку.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -150,8 +139,8 @@ const About = () => {
               }}
             >
               <img
-                src="https://picsum.photos/seed/dpraout/800/1000"
-                alt="DPR.MART"
+                src="https://picsum.photos/seed/moraabout/800/1000"
+                alt="MØRA MART"
                 loading="lazy"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -183,7 +172,7 @@ const About = () => {
             >
               100%
               <br />
-              ORIGINAL
+              ORGANIC
             </motion.div>
           </motion.div>
         </div>

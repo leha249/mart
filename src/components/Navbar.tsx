@@ -53,7 +53,7 @@ const Navbar = () => {
           zIndex: 100,
           transition:
             'background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease',
-          background: scrolled ? 'rgba(8,8,10,0.75)' : 'transparent',
+          background: scrolled ? 'rgba(10,10,10,0.75)' : 'transparent',
           backdropFilter: scrolled ? 'blur(24px)' : 'none',
           borderBottom: scrolled
             ? '1px solid var(--border)'
@@ -131,13 +131,13 @@ const Navbar = () => {
               onClick={goToFavorites}
               style={{
                 position: 'relative',
-                color: favorites.length > 0 ? 'var(--accent-red)' : 'var(--text)',
+                color: favorites.length > 0 ? 'var(--danger)' : 'var(--text)',
               }}
             >
               <Heart
                 size={18}
                 strokeWidth={1.75}
-                fill={favorites.length > 0 ? 'var(--accent-red)' : 'none'}
+                fill={favorites.length > 0 ? 'var(--danger)' : 'none'}
               />
               {favorites.length > 0 && (
                 <span
@@ -146,7 +146,7 @@ const Navbar = () => {
                     position: 'absolute',
                     top: -6,
                     right: -8,
-                    background: 'var(--accent-red)',
+                    background: 'var(--danger)',
                     color: '#fff',
                     borderRadius: '50%',
                     minWidth: 16,
@@ -216,7 +216,6 @@ const Navbar = () => {
         </div>
       </motion.header>
 
-      {/* Fullscreen mobile menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -319,7 +318,7 @@ const Navbar = () => {
                     style={{
                       fontSize: 16,
                       padding: '4px 12px',
-                      background: 'var(--accent-red)',
+                      background: 'var(--danger)',
                       color: '#fff',
                       borderRadius: 100,
                       fontWeight: 700,

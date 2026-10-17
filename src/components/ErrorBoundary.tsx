@@ -56,28 +56,14 @@ class ErrorBoundary extends Component<Props, State> {
               alignItems: 'baseline',
             }}
           >
-            DPR
+            MØRA
             <span
               style={{
                 color: 'var(--accent)',
-                position: 'relative',
                 display: 'inline-block',
               }}
             >
               .
-              <span
-                style={{
-                  position: 'absolute',
-                  bottom: '0.1em',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '0.1em',
-                  height: '0.1em',
-                  borderRadius: '50%',
-                  background: 'var(--accent-blue)',
-                  boxShadow: '0 0 8px var(--accent-blue)',
-                }}
-              />
             </span>
             <span
               style={{

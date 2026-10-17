@@ -21,9 +21,9 @@ const Login = () => {
   const { addToast } = useToast();
 
   useEffect(() => {
-    document.title = 'Вход — DPR.MART';
+    document.title = 'Вход — MØRA MART';
     return () => {
-      document.title = 'DPR.MART';
+      document.title = 'MØRA MART';
     };
   }, []);
 
@@ -105,7 +105,7 @@ const Login = () => {
           height: 500,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(30,64,175,0.12), transparent 70%)',
+            'radial-gradient(circle, rgba(200,224,61,0.12), transparent 70%)',
           bottom: '-15%',
           left: '-15%',
           filter: 'blur(70px)',
@@ -165,22 +165,9 @@ const Login = () => {
               alignItems: 'baseline',
             }}
           >
-            DPR
+            MØRA
             <span style={{ color: 'var(--accent)', position: 'relative' }}>
               .
-              <span
-                style={{
-                  position: 'absolute',
-                  bottom: -3,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 3,
-                  height: 3,
-                  borderRadius: '50%',
-                  background: 'var(--accent-blue)',
-                  boxShadow: '0 0 4px var(--accent-blue)',
-                }}
-              />
             </span>
             <span
               style={{
@@ -252,7 +239,7 @@ const Login = () => {
                 setEmail(e.target.value);
                 if (error) setError('');
               }}
-              placeholder="admin@dpr.mart"
+              placeholder="admin@moramart.ru"
               autoComplete="email"
               autoFocus
               disabled={submitting}

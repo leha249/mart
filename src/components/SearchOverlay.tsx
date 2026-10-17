@@ -18,7 +18,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { formatPrice } from '../utils/format';
 import { STORAGE_KEYS, LIMITS } from '../utils/constants';
 
-const TOP_QUERIES = ['Палто', 'Рубашка', 'Кеды', 'Сумка', 'Брюки'];
+const TOP_QUERIES = ['Пальто', 'Рубашка', 'Кеды', 'Сумка', 'Брюки'];
 
 interface Props {
   open: boolean;

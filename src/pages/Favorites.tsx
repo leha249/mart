@@ -15,9 +15,9 @@ const FavoritesPage = () => {
   const { addToast } = useToast();
 
   useEffect(() => {
-    document.title = 'Избранное — DPR.MART';
+    document.title = 'Избранное — MØRA MART';
     return () => {
-      document.title = 'DPR.MART';
+      document.title = 'MØRA MART';
     };
   }, []);
 

@@ -14,7 +14,6 @@ const Hero = () => {
         paddingBottom: 80,
       }}
     >
-      {/* Свечение */}
       <div
         style={{
           position: 'absolute',
@@ -22,7 +21,7 @@ const Hero = () => {
           height: 700,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(212,247,255,0.1), transparent 70%)',
+            'radial-gradient(circle, rgba(232,255,90,0.08), transparent 70%)',
           top: '5%',
           right: '-15%',
           filter: 'blur(80px)',
@@ -37,7 +36,7 @@ const Hero = () => {
           height: 500,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(37,99,235,0.12), transparent 70%)',
+            'radial-gradient(circle, rgba(200,224,61,0.1), transparent 70%)',
           bottom: '5%',
           left: '-15%',
           filter: 'blur(90px)',
@@ -58,7 +57,6 @@ const Hero = () => {
         }}
       >
         <div>
-          {/* Плашка */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -86,11 +84,10 @@ const Hero = () => {
                 boxShadow: '0 0 12px var(--accent)',
               }}
             />
-            New Collection 2025
+            Новая коллекция 2025
           </motion.div>
 
-          {/* Большое название бренда */}
-          <motion.div
+          <motion.h1
             initial={{ opacity: 0, y: 80, filter: 'blur(20px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             transition={{
@@ -99,44 +96,28 @@ const Hero = () => {
               ease: [0.22, 1, 0.36, 1],
             }}
             style={{
-              fontSize: 'clamp(72px, 14vw, 200px)',
+              fontSize: 'clamp(48px, 8vw, 96px)',
               fontWeight: 700,
-              letterSpacing: '-0.06em',
-              lineHeight: 0.85,
+              letterSpacing: '-0.04em',
+              lineHeight: 0.95,
               marginBottom: 40,
-              wordBreak: 'break-word',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'baseline',
             }}
           >
-            DPR
+            Одежда
+            <br />
+            для тех, кто
+            <br />
             <span
+              className="serif"
               style={{
+                fontStyle: 'italic',
                 color: 'var(--accent)',
-                position: 'relative',
-                display: 'inline-block',
+                fontWeight: 400,
               }}
             >
-              .
-              <motion.span
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.2, duration: 0.5, ease: 'backOut' }}
-                style={{
-                  position: 'absolute',
-                  bottom: '0.15em',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '0.1em',
-                  height: '0.1em',
-                  borderRadius: '50%',
-                  background: 'var(--accent-blue)',
-                  boxShadow: '0 0 16px var(--accent-blue)',
-                }}
-              />
+              чувствует себя собой
             </span>
-          </motion.div>
+          </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -150,7 +131,8 @@ const Hero = () => {
               lineHeight: 1.65,
             }}
           >
-            Одежда, обувь и аксессуары. Новые поступления каждую неделю.
+            Осознанный подход к дизайну. Натуральные ткани, минимализм
+            и внимание к деталям — для тех, кто ценит себя.
           </motion.p>
 
           <motion.div
@@ -180,7 +162,7 @@ const Hero = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              Смотреть каталог
+              Смотреть коллекцию
               <ArrowUpRight size={18} strokeWidth={2} />
             </motion.a>
             <motion.a
@@ -208,7 +190,6 @@ const Hero = () => {
           </motion.div>
         </div>
 
-        {/* Фото справа */}
         <motion.div
           initial={{ opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -229,8 +210,8 @@ const Hero = () => {
               initial={{ scale: 1.15 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-              src="https://picsum.photos/seed/dprhero/900/1200"
-              alt="DPR.MART"
+              src="https://picsum.photos/seed/morahero/900/1200"
+              alt="MØRA MART"
               style={{
                 width: '100%',
                 height: '100%',
@@ -275,9 +256,9 @@ const Hero = () => {
               ◆
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>New Season</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Эко-материалы</div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                Обновление каждую неделю
+                100% органический хлопок
               </div>
             </div>
           </motion.div>

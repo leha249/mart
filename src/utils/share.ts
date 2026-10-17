@@ -12,7 +12,7 @@ export const shareProduct = async (
 ): Promise<ShareResult> => {
   const url = `${window.location.origin}${window.location.pathname}#product-${product.id}`;
   const title = product.name;
-  const text = `${product.name} — ${formatPrice(product.price)} в DPR.MART`;
+  const text = `${product.name} — ${formatPrice(product.price)} в MØRA MART`;
 
   if (navigator.share) {
     try {

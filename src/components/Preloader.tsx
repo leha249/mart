@@ -65,7 +65,6 @@ const Preloader = ({ onDone }: Props) => {
             gap: 48,
           }}
         >
-          {/* DPR.MART по буквам */}
           <div
             style={{
               fontSize: 'clamp(52px, 11vw, 132px)',
@@ -76,7 +75,7 @@ const Preloader = ({ onDone }: Props) => {
               lineHeight: 1,
             }}
           >
-            {['D', 'P', 'R'].map((letter, i) => (
+            {['M', 'Ø', 'R', 'A'].map((letter, i) => (
               <motion.span
                 key={i}
                 initial={{ opacity: 0, y: 60, filter: 'blur(10px)' }}
@@ -96,27 +95,10 @@ const Preloader = ({ onDone }: Props) => {
               transition={{ delay: 0.5, duration: 0.4, ease: 'backOut' }}
               style={{
                 color: 'var(--accent)',
-                position: 'relative',
                 display: 'inline-block',
               }}
             >
               .
-              <motion.span
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.65, duration: 0.4, ease: 'backOut' }}
-                style={{
-                  position: 'absolute',
-                  bottom: '0.15em',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '0.12em',
-                  height: '0.12em',
-                  borderRadius: '50%',
-                  background: 'var(--accent-blue)',
-                  boxShadow: '0 0 12px var(--accent-blue)',
-                }}
-              />
             </motion.span>
             <motion.span
               initial={{ opacity: 0, x: -30 }}
@@ -135,7 +117,6 @@ const Preloader = ({ onDone }: Props) => {
             </motion.span>
           </div>
 
-          {/* Прогресс-бар */}
           <div
             style={{
               width: 240,
@@ -151,24 +132,10 @@ const Preloader = ({ onDone }: Props) => {
               style={{
                 height: '100%',
                 background:
-                  'linear-gradient(90deg, var(--accent) 0%, var(--accent-blue) 100%)',
+                  'linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%)',
               }}
             />
           </div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            style={{
-              fontSize: 10,
-              color: 'var(--muted)',
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Loading
-          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

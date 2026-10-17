@@ -6,7 +6,7 @@ interface Props {
 }
 
 const Marquee = ({
-  items = ['NEW ARRIVALS', 'WINTER 2025', 'DPR.MART', 'FREE SHIPPING'],
+  items = ['NEW ARRIVALS', 'WINTER 2025', 'MØRA MART', 'FREE SHIPPING'],
   speed = 30,
 }: Props) => {
   const text = items.join('  ·  ');
@@ -24,7 +24,6 @@ const Marquee = ({
         userSelect: 'none',
       }}
     >
-      {/* Левый градиент */}
       <div
         style={{
           position: 'absolute',
@@ -37,7 +36,6 @@ const Marquee = ({
           pointerEvents: 'none',
         }}
       />
-      {/* Правый градиент */}
       <div
         style={{
           position: 'absolute',

@@ -109,7 +109,6 @@ const Admin = () => {
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
 
-  // Products
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [initialForm, setInitialForm] = useState<FormState>(emptyForm);
@@ -120,10 +119,8 @@ const Admin = () => {
   const [productSearch, setProductSearch] = useState('');
   const [openingForm, setOpeningForm] = useState(false);
 
-  // Orders
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // Categories
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [initialCategoryForm, setInitialCategoryForm] =
@@ -132,10 +129,8 @@ const Admin = () => {
   const [deleteCategoryId, setDeleteCategoryId] = useState<number | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
 
-  // Reviews
   const [reviewSearchInput, setReviewSearchInput] = useState(reviewsSearch);
 
-  // Promocodes
   const [promoFormOpen, setPromoFormOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promocode | null>(null);
   const [initialPromoForm, setInitialPromoForm] =
@@ -200,17 +195,17 @@ const Admin = () => {
   }, [user, authLoading]);
 
   useEffect(() => {
-    let title = 'Админ — DPR.MART';
-    if (activeTab === 'dashboard') title = 'Дашборд — DPR.MART';
-    if (activeTab === 'orders') title = `Заказы (${newOrdersCount}) — DPR.MART`;
-    if (activeTab === 'products') title = 'Товары — DPR.MART';
-    if (activeTab === 'categories') title = 'Категории — DPR.MART';
+    let title = 'Админ — MØRA MART';
+    if (activeTab === 'dashboard') title = 'Дашборд — MØRA MART';
+    if (activeTab === 'orders') title = `Заказы (${newOrdersCount}) — MØRA MART`;
+    if (activeTab === 'products') title = 'Товары — MØRA MART';
+    if (activeTab === 'categories') title = 'Категории — MØRA MART';
     if (activeTab === 'reviews')
-      title = `Отзывы (${reviewsPendingCount}) — DPR.MART`;
-    if (activeTab === 'promocodes') title = 'Промокоды — DPR.MART';
+      title = `Отзывы (${reviewsPendingCount}) — MØRA MART`;
+    if (activeTab === 'promocodes') title = 'Промокоды — MØRA MART';
     document.title = title;
     return () => {
-      document.title = 'DPR.MART';
+      document.title = 'MØRA MART';
     };
   }, [activeTab, newOrdersCount, reviewsPendingCount]);
 
@@ -240,7 +235,6 @@ const Admin = () => {
     }
   };
 
-  // ============== PRODUCTS ==============
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
@@ -483,7 +477,6 @@ const Admin = () => {
     addToast(`Экспортировано промокодов: ${promocodes.length}`, 'success');
   };
 
-  // ============== CATEGORIES ==============
   const productsCountByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     products.forEach((p) => {
@@ -573,7 +566,6 @@ const Admin = () => {
     }
   };
 
-  // ============== REVIEWS ==============
   const productsMap = useMemo(() => {
     const map: Record<number, { name: string; image: string }> = {};
     products.forEach((p) => {
@@ -612,7 +604,6 @@ const Admin = () => {
     }
   };
 
-  // ============== PROMOCODES ==============
   const filteredPromocodes = useMemo(() => {
     if (!promoSearch.trim()) return promocodes;
     const q = promoSearch.toLowerCase();
@@ -744,7 +735,6 @@ const Admin = () => {
       }}
     >
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {/* Header */}
         <div
           style={{
             display: 'flex',
@@ -777,28 +767,14 @@ const Admin = () => {
                 alignItems: 'baseline',
               }}
             >
-              DPR
+              MØRA
               <span
                 style={{
                   color: 'var(--accent)',
-                  position: 'relative',
                   display: 'inline-block',
                 }}
               >
                 .
-                <span
-                  style={{
-                    position: 'absolute',
-                    bottom: -3,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 3,
-                    height: 3,
-                    borderRadius: '50%',
-                    background: 'var(--accent-blue)',
-                    boxShadow: '0 0 4px var(--accent-blue)',
-                  }}
-                />
               </span>
               <span
                 style={{
@@ -1016,10 +992,8 @@ const Admin = () => {
           reviewsBadge={reviewsPendingCount}
         />
 
-        {/* ============ DASHBOARD ============ */}
         {activeTab === 'dashboard' && <Dashboard />}
 
-        {/* ============ PRODUCTS TAB ============ */}
         {activeTab === 'products' && (
           <>
             <div
@@ -1215,7 +1189,6 @@ const Admin = () => {
           </>
         )}
 
-        {/* ============ ORDERS TAB ============ */}
         {activeTab === 'orders' && (
           <>
             {orderStats && (
@@ -1463,7 +1436,6 @@ const Admin = () => {
           </>
         )}
 
-        {/* ============ CATEGORIES TAB ============ */}
         {activeTab === 'categories' && (
           <>
             <div
@@ -1609,7 +1581,6 @@ const Admin = () => {
           </>
         )}
 
-        {/* ============ REVIEWS TAB ============ */}
         {activeTab === 'reviews' && (
           <>
             <div
@@ -1826,7 +1797,6 @@ const Admin = () => {
           </>
         )}
 
-        {/* ============ PROMOCODES TAB ============ */}
         {activeTab === 'promocodes' && (
           <>
             <div
@@ -1978,7 +1948,6 @@ const Admin = () => {
         )}
       </div>
 
-      {/* ============ PRODUCT FORM MODAL ============ */}
       <AnimatePresence>
         {formOpen && (
           <motion.div
@@ -2056,7 +2025,6 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      {/* ============ CATEGORY FORM MODAL ============ */}
       <AnimatePresence>
         {categoryFormOpen && (
           <motion.div
@@ -2136,7 +2104,6 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      {/* ============ PROMOCODE FORM MODAL ============ */}
       <AnimatePresence>
         {promoFormOpen && (
           <motion.div
@@ -2215,7 +2182,6 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      {/* ============ DELETE PRODUCTS MODAL ============ */}
       <AnimatePresence>
         {deleteIds.length > 0 && (
           <motion.div
@@ -2341,7 +2307,6 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      {/* ============ DELETE CATEGORY MODAL ============ */}
       <AnimatePresence>
         {deletingCategory && (
           <motion.div
@@ -2468,7 +2433,6 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      {/* ============ DELETE PROMO MODAL ============ */}
       <AnimatePresence>
         {deletingPromo && (
           <motion.div
