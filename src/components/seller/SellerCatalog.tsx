@@ -8,7 +8,6 @@ import { useToast } from '../../context/ToastContext';
 import { formatPrice } from '../../utils/format';
 import { optimizeImageUrl } from '../../utils/imageLoader';
 
-// === Карточка товара ===
 interface CardProps {
   product: UIProduct;
   index: number;
@@ -44,6 +43,7 @@ const ProductCard = memo(({ product, index, accent, onOpen }: CardProps) => {
       name: product.name,
       price: product.price,
       image: product.image,
+      seller_id: product.sellerId,
     });
     setAdded(true);
     addToast(`${product.name} добавлен в корзину`, 'success');
@@ -334,7 +334,6 @@ const ProductCard = memo(({ product, index, accent, onOpen }: CardProps) => {
 
 ProductCard.displayName = 'SellerProductCard';
 
-// === Основной компонент каталога ===
 interface Props {
   products: UIProduct[];
   categories: string[];
@@ -355,7 +354,6 @@ const SellerCatalog = ({
     'default'
   );
 
-  // Уникальные категории + счётчики
   const allCategories = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => set.add(p.category));
@@ -511,7 +509,6 @@ const SellerCatalog = ({
           )}
         </div>
 
-        {/* Категории */}
         {!loading && allCategories.length > 1 && (
           <div
             className="seller-catalog-filters"
@@ -569,7 +566,6 @@ const SellerCatalog = ({
           </div>
         )}
 
-        {/* Товары */}
         {products.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -200,6 +200,24 @@ export const sellersService = {
   },
 
   /**
+   * Удалить продавца навсегда.
+   * Каскадно удаляет: товары, заказы, категории, промокоды, отзывы.
+   */
+  async remove(id: number): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('sellers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (e) {
+      console.error('[sellersService.remove]', e);
+      throw normalizeError(e);
+    }
+  },
+
+  /**
    * Сырые данные (для контекста с realtime)
    */
   async getRawAll(): Promise<Seller[]> {

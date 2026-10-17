@@ -25,6 +25,7 @@ const SellerPage = lazy(() => import('./pages/SellerPage'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
 
 // ============ DATA SYNC ============
 function DataSync() {
@@ -89,6 +90,15 @@ function Router() {
     return (
       <Suspense fallback={<PageLoader />}>
         <FavoritesPage />
+      </Suspense>
+    );
+  }
+
+  // /order-success — страница «Спасибо»
+  if (route.path === '/order-success') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <OrderSuccess />
       </Suspense>
     );
   }

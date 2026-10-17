@@ -54,14 +54,12 @@ const ProductModal = ({ product, onClose }: Props) => {
     modalRef
   );
 
-  // Сбрасываем состояние ТОЛЬКО при смене ID товара
   useEffect(() => {
     if (!product) {
       previousProductIdRef.current = null;
       return;
     }
 
-    // Если ID изменился — сбрасываем всё
     if (previousProductIdRef.current !== product.id) {
       previousProductIdRef.current = product.id;
       setAdded(false);
@@ -106,6 +104,7 @@ const ProductModal = ({ product, onClose }: Props) => {
       price: product.price,
       image: product.image,
       size: selectedSize ?? undefined,
+      seller_id: product.sellerId,
     });
     setAdded(true);
     addToast(`${product.name} добавлен в корзину`, 'success');

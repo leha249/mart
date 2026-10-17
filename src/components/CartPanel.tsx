@@ -48,7 +48,6 @@ const CartPanel = ({ open, onClose }: Props) => {
     }
   }, [open]);
 
-  // Сброс промокода, если корзина пуста
   useEffect(() => {
     if (items.length === 0 && promo.applied) {
       promo.clearCode();
@@ -89,29 +88,97 @@ const CartPanel = ({ open, onClose }: Props) => {
 
     setSubmitting(true);
     try {
-      await ordersService.create({
-        customer_name: name.trim(),
-        customer_phone: phone.trim(),
-        customer_email: email.trim() || undefined,
-        items: items.map((i) => ({
-          id: i.id,
-          name: i.name,
-          price: i.price,
-          image: i.image,
-          quantity: i.quantity,
-          size: i.size,
-        })),
-        total: finalTotal,
-        promo_code: promo.applied?.code,
-        promo_discount: promoDiscount,
+      // 1. Группируем товары по seller_id
+      const grouped = new Map<number | null, typeof items>();
+      items.forEach((item) => {
+        const key = item.seller_id ?? null;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(item);
       });
 
+      // 2. Для каждой группы — создаём отдельный заказ
+      const createdOrders: {
+        id: number;
+        sellerId: number | null;
+        total: number;
+        itemsCount: number;
+      }[] = [];
+
+      let totalDiscountRemaining = promoDiscount;
+
+      for (const [sellerId, groupItems] of grouped.entries()) {
+        const groupTotal = groupItems.reduce(
+          (sum, i) => sum + i.price * i.quantity,
+          0
+        );
+
+        // Распределяем скидку пропорционально сумме группы
+        const groupShare =
+          totalPrice > 0 ? groupTotal / totalPrice : 0;
+        const groupDiscount = Math.round(totalDiscountRemaining * groupShare);
+        totalDiscountRemaining -= groupDiscount;
+
+        const groupFinalTotal = Math.max(0, groupTotal - groupDiscount);
+
+        const order = await ordersService.create({
+          customer_name: name.trim(),
+          customer_phone: phone.trim(),
+          customer_email: email.trim() || undefined,
+          items: groupItems.map((i) => ({
+            id: i.id,
+            name: i.name,
+            price: i.price,
+            image: i.image,
+            quantity: i.quantity,
+            size: i.size,
+          })),
+          total: groupFinalTotal,
+          promo_code: promo.applied?.code,
+          promo_discount: groupDiscount,
+          seller_id: sellerId,
+        });
+
+        createdOrders.push({
+          id: order.id,
+          sellerId,
+          total: groupFinalTotal,
+          itemsCount: groupItems.reduce((s, i) => s + i.quantity, 0),
+        });
+      }
+
+      // 3. Увеличиваем использование промокода (один раз, на общую сумму)
       if (promo.applied) {
         incrementPromocodeUsage(promo.applied.id);
       }
 
+      // 4. Сохраняем телефоны/номера заказов для страницы "Спасибо"
+      try {
+        const orderInfo = createdOrders.map((o) => ({
+          id: o.id,
+          total: o.total,
+          itemsCount: o.itemsCount,
+        }));
+        sessionStorage.setItem(
+          'mora-last-orders',
+          JSON.stringify({
+            phone: phone.trim(),
+            name: name.trim(),
+            orders: orderInfo,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      } catch (e) {
+        console.warn('Не удалось сохранить данные заказа:', e);
+      }
+
       setOrderSent(true);
-      addToast('Заказ оформлен! Мы свяжемся с вами', 'success');
+      addToast(
+        createdOrders.length === 1
+          ? 'Заказ оформлен!'
+          : `Создано ${createdOrders.length} заказов`,
+        'success'
+      );
+
       setTimeout(() => {
         clearCart();
         promo.clearCode();
@@ -121,7 +188,11 @@ const CartPanel = ({ open, onClose }: Props) => {
         setOrderSent(false);
         setShowCheckout(false);
         onClose();
-      }, 1500);
+
+        // 5. Редирект на страницу "Спасибо"
+        window.history.pushState({}, '', '/order-success');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }, 1200);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка оформления';
       addToast(msg, 'error');
@@ -141,6 +212,10 @@ const CartPanel = ({ open, onClose }: Props) => {
   };
 
   const itemWord = pluralize(totalItems, 'товар', 'товара', 'товаров');
+
+  // Сколько продавцов в корзине — для предупреждения при оформлении
+  const uniqueSellers = new Set(items.map((i) => i.seller_id ?? null)).size;
+  const willSplitInto = uniqueSellers > 1;
 
   return (
     <AnimatePresence>
@@ -272,7 +347,9 @@ const CartPanel = ({ open, onClose }: Props) => {
                   </div>
                 </div>
               ) : showCheckout ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+                >
                   <div
                     style={{
                       fontSize: 13,
@@ -305,9 +382,38 @@ const CartPanel = ({ open, onClose }: Props) => {
                     type="email"
                     disabled={submitting || orderSent}
                   />
+
+                  {willSplitInto && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        background: 'rgba(232,255,90,0.06)',
+                        border: '1px solid rgba(232,255,90,0.2)',
+                        borderRadius: 12,
+                        fontSize: 12,
+                        color: 'var(--text-dim)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          marginBottom: 4,
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        В корзине товары от {uniqueSellers}{' '}
+                        {uniqueSellers === 1 ? 'магазина' : 'магазинов'}
+                      </div>
+                      Будет создано {uniqueSellers} отдельных заказа. Каждый
+                      продавец получит только свою часть.
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+                >
                   <AnimatePresence>
                     {items.map((item) => (
                       <motion.div
@@ -716,7 +822,9 @@ const CartPanel = ({ open, onClose }: Props) => {
                   ) : submitting ? (
                     'Отправка...'
                   ) : showCheckout ? (
-                    'Подтвердить заказ'
+                    willSplitInto
+                      ? `Оформить (${uniqueSellers} заказа)`
+                      : 'Подтвердить заказ'
                   ) : (
                     'Оформить заказ'
                   )}

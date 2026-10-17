@@ -35,6 +35,7 @@ const FavoritesPage = () => {
           name: p.name,
           price: p.price,
           image: p.image,
+          seller_id: p.sellerId,
         });
         count++;
       }
@@ -356,6 +357,7 @@ const FavoritesPage = () => {
                             name: p.name,
                             price: p.price,
                             image: p.image,
+                            seller_id: p.sellerId,
                           });
                           addToast('Добавлено в корзину', 'success');
                         }

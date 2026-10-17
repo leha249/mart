@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Package,
   Store,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import type { UISeller, SellerStatus } from '../../types/database';
 
@@ -23,6 +25,7 @@ interface Props {
   productsCount: Record<number, number>;
   onEdit: (seller: UISeller) => void;
   onChangeStatus: (seller: UISeller, status: SellerStatus) => void;
+  onDelete?: (seller: UISeller) => Promise<void>;
   search: string;
 }
 
@@ -59,6 +62,7 @@ const SellersTable = ({
   productsCount,
   onEdit,
   onChangeStatus,
+  onDelete,
   search,
 }: Props) => {
   const [sortKey, setSortKey] = useState<SortKey>('created');
@@ -67,6 +71,9 @@ const SellersTable = ({
     seller: UISeller;
     newStatus: SellerStatus;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UISeller | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const sorted = useMemo(() => {
     const list = [...sellers];
@@ -118,6 +125,31 @@ const SellersTable = ({
         {text.slice(idx + query.length)}
       </>
     );
+  };
+
+  const openDelete = (seller: UISeller) => {
+    setDeleteTarget(seller);
+    setDeleteConfirmText('');
+  };
+
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || !onDelete) return;
+    if (deleteConfirmText.trim() !== deleteTarget.name) return;
+
+    setDeleting(true);
+    try {
+      await onDelete(deleteTarget);
+      setDeleteTarget(null);
+      setDeleteConfirmText('');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -300,7 +332,7 @@ const SellersTable = ({
                 </div>
               </th>
 
-              <th style={{ width: 160 }} />
+              <th style={{ width: 200 }} />
             </tr>
           </thead>
 
@@ -314,13 +346,16 @@ const SellersTable = ({
                   key={s.id}
                   style={{
                     borderBottom: '1px solid var(--border)',
-                    background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                    background:
+                      i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                     opacity: s.status === 'blocked' ? 0.6 : 1,
                     transition: 'background 0.2s',
                   }}
                 >
                   <td style={{ padding: 12, maxWidth: 240 }}>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div
+                      style={{ display: 'flex', gap: 12, alignItems: 'center' }}
+                    >
                       {s.logo ? (
                         <img
                           src={s.logo}
@@ -518,6 +553,16 @@ const SellersTable = ({
                           danger
                         />
                       )}
+
+                      {/* 🗑 Кнопка удаления — только если передан onDelete */}
+                      {onDelete && (
+                        <ActionBtn
+                          onClick={() => openDelete(s)}
+                          label="Удалить продавца навсегда"
+                          icon={<Trash2 size={14} />}
+                          danger
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -527,6 +572,7 @@ const SellersTable = ({
         </table>
       </div>
 
+      {/* Модалка: смена статуса */}
       <AnimatePresence>
         {confirmChange && (
           <motion.div
@@ -601,7 +647,7 @@ const SellersTable = ({
                 }}
               >
                 {confirmChange.newStatus === 'blocked'
-                  ? 'Магазин и все его товары станут недоступны покупателям.'
+                  ? 'Магазин и все его товары станут недоступны покупателям. Продавец не сможет войти в кабинет.'
                   : confirmChange.newStatus === 'paused'
                   ? 'Товары магазина скроются из каталога, пока вы не активируете обратно.'
                   : 'Магазин и его товары снова станут доступны покупателям.'}
@@ -649,6 +695,194 @@ const SellersTable = ({
                   }}
                 >
                   Подтвердить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Модалка: удаление */}
+      <AnimatePresence>
+        {deleteTarget && onDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeDelete}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 750,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--bg-soft)',
+                border: '1px solid rgba(255,77,77,0.3)',
+                borderRadius: 20,
+                padding: 32,
+                maxWidth: 480,
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  background: 'rgba(255,77,77,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  color: 'var(--danger)',
+                }}
+              >
+                <Trash2 size={24} />
+              </div>
+
+              <h3
+                style={{
+                  fontSize: 20,
+                  marginBottom: 8,
+                  fontWeight: 700,
+                  textAlign: 'center',
+                }}
+              >
+                Удалить «{deleteTarget.name}» навсегда?
+              </h3>
+
+              <div
+                style={{
+                  padding: 16,
+                  background: 'rgba(255,77,77,0.08)',
+                  border: '1px solid rgba(255,77,77,0.25)',
+                  borderRadius: 12,
+                  marginBottom: 20,
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: 'var(--text-dim)',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--danger)' }}>
+                  ⚠️ Это действие необратимо
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  <li>Все товары магазина будут удалены</li>
+                  <li>Все заказы будут удалены навсегда</li>
+                  <li>Все категории, промокоды, отзывы — тоже</li>
+                  <li>Покупатели потеряют историю заказов у этого магазина</li>
+                </ul>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--muted)',
+                    display: 'block',
+                    marginBottom: 8,
+                  }}
+                >
+                  Введите{' '}
+                  <strong style={{ color: 'var(--danger)' }}>
+                    {deleteTarget.name}
+                  </strong>{' '}
+                  для подтверждения:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={deleteTarget.name}
+                  autoFocus
+                  disabled={deleting}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={closeDelete}
+                  disabled={deleting}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    borderRadius: 100,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    opacity: deleting ? 0.5 : 1,
+                  }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={
+                    deleting ||
+                    deleteConfirmText.trim() !== deleteTarget.name
+                  }
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    borderRadius: 100,
+                    border: 'none',
+                    background: 'var(--danger)',
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: deleting ? 'wait' : 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity:
+                      deleting ||
+                      deleteConfirmText.trim() !== deleteTarget.name
+                        ? 0.5
+                        : 1,
+                  }}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2
+                        size={16}
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      />
+                      Удаление...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} /> Удалить навсегда
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>

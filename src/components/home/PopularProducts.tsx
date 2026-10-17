@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, ArrowUpRight, Plus, Heart, Star } from 'lucide-react';
+import { ArrowUpRight, Plus, Heart, Star } from 'lucide-react';
 import { productsService } from '../../services/products';
 import { sellersService } from '../../services/sellers';
 import { useCart } from '../../context/CartContext';
@@ -45,11 +45,9 @@ const PopularProducts = ({
 
     (async () => {
       try {
-        // 1. Загружаем топ товаров
-        const topProducts = await productsService.getPopular(limit * 2); // берём больше, отфильтруем
+        const topProducts = await productsService.getPopular(limit * 2);
         const uiProducts = topProducts.map(mapProductToUI);
 
-        // 2. Загружаем продавцов для меток
         const sellerIds = Array.from(
           new Set(
             uiProducts
@@ -74,7 +72,6 @@ const PopularProducts = ({
           });
         }
 
-        // 3. Склеиваем
         const withSellers: ProductWithSeller[] = uiProducts
           .filter((p) => p.sellerId !== null && sellersMap.has(p.sellerId))
           .map((p) => ({
@@ -121,6 +118,7 @@ const PopularProducts = ({
       name: p.name,
       price: p.price,
       image: p.image,
+      seller_id: p.sellerId,
     });
     addToast(`${p.name} добавлен в корзину`, 'success');
   };
@@ -135,7 +133,7 @@ const PopularProducts = ({
   };
 
   if (!loading && products.length === 0) {
-    return null; // Нечего показывать — секция скрыта
+    return null;
   }
 
   return (
@@ -147,7 +145,6 @@ const PopularProducts = ({
       }}
     >
       <div className="container">
-        {/* Заголовок */}
         <div
           style={{
             display: 'flex',
@@ -220,7 +217,6 @@ const PopularProducts = ({
           )}
         </div>
 
-        {/* Loading skeleton */}
         {loading && (
           <div
             style={{
@@ -240,7 +236,6 @@ const PopularProducts = ({
           </div>
         )}
 
-        {/* Сетка товаров */}
         {!loading && products.length > 0 && (
           <div
             className="popular-grid"
@@ -282,7 +277,6 @@ const PopularProducts = ({
                 }}
                 className="popular-card"
               >
-                {/* Фото + метка магазина */}
                 <div
                   style={{
                     position: 'relative',
@@ -304,7 +298,6 @@ const PopularProducts = ({
                     className="popular-card-img"
                   />
 
-                  {/* 🔥 ТЕГ товара (снизу) */}
                   {p.tag && (
                     <div
                       style={{
@@ -330,7 +323,6 @@ const PopularProducts = ({
                     </div>
                   )}
 
-                  {/* 🏪 МЕТКА МАГАЗИНА (сверху слева) — НОВОЕ */}
                   {p.seller && (
                     <button
                       onClick={(e) => handleGoToSeller(p.seller!.slug, e)}
@@ -400,7 +392,6 @@ const PopularProducts = ({
                     </button>
                   )}
 
-                  {/* Избранное */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -436,7 +427,6 @@ const PopularProducts = ({
                     />
                   </motion.button>
 
-                  {/* Кнопка в корзину */}
                   <button
                     onClick={(e) => handleAdd(p, e)}
                     disabled={!p.inStock}
@@ -477,7 +467,6 @@ const PopularProducts = ({
                   </button>
                 </div>
 
-                {/* Инфо под фото */}
                 <div
                   style={{
                     padding: 16,

@@ -45,7 +45,8 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
       const raw = localStorage.getItem(STORAGE_KEYS.searchHistory);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setHistory(parsed.slice(0, LIMITS.maxSearchHistory));
+        if (Array.isArray(parsed))
+          setHistory(parsed.slice(0, LIMITS.maxSearchHistory));
       }
     } catch {}
   }, [open]);
@@ -54,7 +55,10 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
     const t = term.trim();
     if (!t || t.length < 2) return;
     setHistory((prev) => {
-      const next = [t, ...prev.filter((x) => x !== t)].slice(0, LIMITS.maxSearchHistory);
+      const next = [t, ...prev.filter((x) => x !== t)].slice(
+        0,
+        LIMITS.maxSearchHistory
+      );
       try {
         localStorage.setItem(STORAGE_KEYS.searchHistory, JSON.stringify(next));
       } catch {}
@@ -106,7 +110,13 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
 
   const handleAdd = (e: React.MouseEvent, p: UIProduct) => {
     e.stopPropagation();
-    addItem({ id: p.id, name: p.name, price: p.price, image: p.image });
+    addItem({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      image: p.image,
+      seller_id: p.sellerId,
+    });
     addToast(`${p.name} добавлен в корзину`, 'success');
   };
 
@@ -231,7 +241,9 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
               </form>
 
               {showSuggestions && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 32 }}
+                >
                   {history.length > 0 && (
                     <div>
                       <div
@@ -274,13 +286,7 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
                           <Trash2 size={11} /> Очистить
                         </button>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 8,
-                          flexWrap: 'wrap',
-                        }}
-                      >
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {history.map((h) => (
                           <div
                             key={`history-${h}`}
@@ -382,7 +388,9 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
               )}
 
               {results.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                >
                   {results.map((p, i) => (
                     <motion.div
                       key={`result-${p.id}`}
@@ -431,7 +439,9 @@ const SearchOverlay = ({ open, onClose, onProductSelect }: Props) => {
                         >
                           {p.category}
                         </div>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</div>
+                        <div style={{ fontSize: 15, fontWeight: 600 }}>
+                          {p.name}
+                        </div>
                       </div>
                       <div
                         className="price-num"

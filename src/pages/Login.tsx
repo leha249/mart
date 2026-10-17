@@ -27,6 +27,21 @@ const Login = () => {
     };
   }, []);
 
+  // Показ сообщения о блокировке / удалении аккаунта
+  useEffect(() => {
+    const authError = sessionStorage.getItem('mora-auth-error');
+    if (authError) {
+      sessionStorage.removeItem('mora-auth-error');
+      if (authError === 'blocked') {
+        setError('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+      } else if (authError === 'no-role') {
+        setError(
+          'Аккаунт не найден или был удалён. Обратитесь к администратору.'
+        );
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!loading && user) {
       window.history.pushState({}, '', '/admin');
@@ -214,7 +229,7 @@ const Login = () => {
             marginBottom: 32,
           }}
         >
-          Только для администраторов
+          Только для администраторов и продавцов
         </p>
 
         <form
@@ -328,9 +343,10 @@ const Login = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
+                lineHeight: 1.5,
               }}
             >
-              <AlertCircle size={14} /> {error}
+              <AlertCircle size={14} style={{ flexShrink: 0 }} /> {error}
             </motion.div>
           )}
 

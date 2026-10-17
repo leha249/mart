@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useSellers } from '../../context/SellersContext';
 import { useProducts } from '../../context/ProductsContext';
 import { sellersService } from '../../services/sellers';
@@ -21,7 +21,7 @@ const AdminSellers = () => {
     loading: sellersLoading,
     refetch: refetchSellers,
   } = useSellers();
-  const { products } = useProducts();
+  const { products, refetch: refetchProducts } = useProducts();
   const { addToast } = useToast();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -36,7 +36,7 @@ const AdminSellers = () => {
   useBodyLock(formOpen);
   useUnsavedChanges(formOpen && !saving);
 
-  // === КОЛИЧЕСТВО ТОВАРОВ ПО ПРОДАВЦАМ ===
+  // === КОЛИЧЕСТВО ТОВАРОВ ===
   const productsCountBySeller = useMemo(() => {
     const map: Record<number, number> = {};
     products.forEach((p) => {
@@ -124,7 +124,7 @@ const AdminSellers = () => {
     }
   };
 
-  // === СМЕНА СТАТУСА (из таблицы) ===
+  // === СМЕНА СТАТУСА ===
   const handleStatusChange = async (
     seller: UISeller,
     status: SellerStatus
@@ -145,9 +145,22 @@ const AdminSellers = () => {
     }
   };
 
+  // === УДАЛЕНИЕ ===
+  const handleDelete = async (seller: UISeller) => {
+    try {
+      await sellersService.remove(seller.id);
+      addToast(`Продавец «${seller.name}» удалён`, 'success');
+      await refetchSellers();
+      await refetchProducts();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Ошибка удаления';
+      addToast(msg, 'error');
+      throw e;
+    }
+  };
+
   return (
     <>
-      {/* ЗАГОЛОВОК */}
       <div
         style={{
           display: 'flex',
@@ -169,7 +182,6 @@ const AdminSellers = () => {
         </div>
       </div>
 
-      {/* СТАТИСТИКА */}
       <div
         style={{
           display: 'grid',
@@ -216,7 +228,6 @@ const AdminSellers = () => {
         ))}
       </div>
 
-      {/* ПОИСК */}
       <div
         style={{
           display: 'flex',
@@ -285,7 +296,6 @@ const AdminSellers = () => {
         </div>
       </div>
 
-      {/* ТАБЛИЦА */}
       <div
         style={{
           background: 'var(--surface)',
@@ -300,11 +310,11 @@ const AdminSellers = () => {
           productsCount={productsCountBySeller}
           onEdit={openEdit}
           onChangeStatus={handleStatusChange}
+          onDelete={handleDelete}
           search={searchDebounced}
         />
       </div>
 
-      {/* МОДАЛКА: SELLER FORM */}
       <AnimatePresence>
         {formOpen && initialForm && (
           <motion.div

@@ -58,6 +58,7 @@ const ProductCard = memo(
         name: product.name,
         price: product.price,
         image: product.image,
+        seller_id: product.sellerId,
       });
       setAdded(true);
       addToast(`${product.name} добавлен в корзину`, 'success');
@@ -148,7 +149,7 @@ const ProductCard = memo(
             }}
           />
 
-          {/* 🏪 МЕТКА МАГАЗИНА (вверху слева) */}
+          {/* МЕТКА МАГАЗИНА */}
           {sellerInfo && onGoToSeller && (
             <button
               onClick={handleSellerClick}
@@ -217,7 +218,6 @@ const ProductCard = memo(
             </button>
           )}
 
-          {/* Тег товара */}
           {product.tag && (
             <div
               style={{
@@ -445,7 +445,6 @@ const Products = ({ onProductClick }: ProductsProps) => {
   });
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Карта продавцов: id → { name, slug, logo, accentColor }
   const sellersMap = useMemo(() => {
     const map: Record<
       number,
