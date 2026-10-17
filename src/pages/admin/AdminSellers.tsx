@@ -100,6 +100,9 @@ const AdminSellers = () => {
         about_badge: form.about_badge.trim() || null,
         footer_text: form.footer_text.trim() || null,
         accent_color: form.accent_color.trim() || null,
+
+        // 🐛 ИСПРАВЛЕНИЕ: передаём Lookbook-фото
+        lookbook_images: form.lookbook_images,
       });
 
       if (form.slug.trim() !== editingSeller.slug) {
