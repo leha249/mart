@@ -36,6 +36,7 @@ import type { UIProduct } from './types/database';
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
+const SellerPage = lazy(() => import('./pages/SellerPage'));
 
 function DataSync() {
   const { products } = useProducts();
@@ -123,23 +124,28 @@ function PageLoader() {
 }
 
 function Router() {
-  const path = useRoute();
+  const route = useRoute();
 
-  if (path === '/admin') {
+  // /admin
+  if (route.path === '/admin') {
     return (
       <Suspense fallback={<PageLoader />}>
         <Admin />
       </Suspense>
     );
   }
-  if (path === '/login') {
+
+  // /login
+  if (route.path === '/login') {
     return (
       <Suspense fallback={<PageLoader />}>
         <Login />
       </Suspense>
     );
   }
-  if (path === '/favorites') {
+
+  // /favorites
+  if (route.path === '/favorites') {
     return (
       <Suspense fallback={<PageLoader />}>
         <ScrollProgress />
@@ -151,6 +157,27 @@ function Router() {
       </Suspense>
     );
   }
+
+  // /seller/:slug — публичная страница продавца
+  // ВАЖНО: проверяем, что param не 'dashboard' (это кабинет продавца)
+  if (route.path === '/seller' && route.param && route.param !== 'dashboard') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SellerPage slug={route.param} />
+      </Suspense>
+    );
+  }
+
+  // /seller/dashboard — кабинет продавца (пока ведёт в /admin)
+  if (route.path === '/seller' && route.param === 'dashboard') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Admin />
+      </Suspense>
+    );
+  }
+
+  // Главная и всё остальное
   return <AppContent />;
 }
 

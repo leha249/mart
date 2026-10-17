@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Loader2, AlertTriangle, Palette } from 'lucide-react';
+import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import type { UISeller, SellerStatus } from '../../types/database';
 import ImageUploader from '../ImageUploader';
@@ -52,11 +52,22 @@ export const sellerFormFrom = (s: UISeller): SellerFormState => ({
 interface Props {
   initialForm: SellerFormState;
   saving: boolean;
+  /** true для админа, false для продавца */
+  canEditSlugAndStatus?: boolean;
+  /** true — форма встроена в страницу (без модальных отступов) */
+  inline?: boolean;
   onSubmit: (form: SellerFormState) => void;
   onCancel: () => void;
 }
 
-const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
+const SellerForm = ({
+  initialForm,
+  saving,
+  canEditSlugAndStatus = true,
+  inline = false,
+  onSubmit,
+  onCancel,
+}: Props) => {
   const [form, setForm] = useState<SellerFormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeSection, setActiveSection] = useState<
@@ -90,11 +101,15 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
     const errs: Record<string, string> = {};
 
     if (!form.name.trim()) errs.name = 'Введите название';
-    if (!form.slug.trim()) errs.slug = 'Введите slug';
-    else if (!/^[a-z0-9-]+$/.test(form.slug.trim()))
-      errs.slug = 'Только латиница, цифры и дефис';
-    else if (form.slug.trim().length < 3) errs.slug = 'Минимум 3 символа';
-    else if (form.slug.trim().length > 40) errs.slug = 'Максимум 40 символов';
+
+    // Slug валидируем только если его можно редактировать
+    if (canEditSlugAndStatus) {
+      if (!form.slug.trim()) errs.slug = 'Введите slug';
+      else if (!/^[a-z0-9-]+$/.test(form.slug.trim()))
+        errs.slug = 'Только латиница, цифры и дефис';
+      else if (form.slug.trim().length < 3) errs.slug = 'Минимум 3 символа';
+      else if (form.slug.trim().length > 40) errs.slug = 'Максимум 40 символов';
+    }
 
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
       errs.email = 'Некорректный email';
@@ -112,7 +127,6 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      // Переключаемся на ту вкладку, где есть ошибка
       if (errs.hero_title || errs.hero_subtitle || errs.hero_image || errs.hero_badge)
         setActiveSection('hero');
       else if (errs.about_title || errs.about_text || errs.about_image || errs.about_badge)
@@ -137,12 +151,12 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) handleCancel();
+      if (e.key === 'Escape' && !saving && !inline) handleCancel();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saving, hasChanges]);
+  }, [saving, hasChanges, inline]);
 
   const sections: { key: typeof activeSection; label: string }[] = [
     { key: 'main', label: 'Основное' },
@@ -152,7 +166,16 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
   ];
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 24 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: 'grid',
+        gap: 24,
+        ...(inline
+          ? {}
+          : {}),
+      }}
+    >
       {/* Табы разделов */}
       <div
         style={{
@@ -208,17 +231,57 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
               disabled={saving}
               inputRef={firstRef}
             />
-            <Field
-              label="Slug (URL) *"
-              value={form.slug}
-              onChange={(v) =>
-                setField('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
-              }
-              placeholder="ivan-shop"
-              error={errors.slug}
-              disabled={saving}
-              hint={`/seller/${form.slug || '...'}`}
-            />
+
+            {canEditSlugAndStatus ? (
+              <Field
+                label="Slug (URL) *"
+                value={form.slug}
+                onChange={(v) =>
+                  setField('slug', v.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+                }
+                placeholder="ivan-shop"
+                error={errors.slug}
+                disabled={saving}
+                hint={`/seller/${form.slug || '...'}`}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={labelStyle}>Slug (URL)</label>
+                <input
+                  type="text"
+                  value={form.slug}
+                  disabled
+                  readOnly
+                  style={{
+                    ...inputStyle,
+                    opacity: 0.6,
+                    cursor: 'not-allowed',
+                    fontFamily: 'monospace',
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  /seller/{form.slug}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <AlertTriangle size={11} />
+                  Изменить можно только через администратора
+                </div>
+              </div>
+            )}
           </Row>
 
           <FieldArea
@@ -249,17 +312,89 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
           </Row>
 
           <Row>
-            <SelectField
-              label="Статус"
-              value={form.status}
-              onChange={(v) => setField('status', v as SellerStatus)}
-              options={[
-                { value: 'active', label: 'Активен' },
-                { value: 'paused', label: 'На паузе' },
-                { value: 'blocked', label: 'Заблокирован' },
-              ]}
-              disabled={saving}
-            />
+            {canEditSlugAndStatus ? (
+              <SelectField
+                label="Статус"
+                value={form.status}
+                onChange={(v) => setField('status', v as SellerStatus)}
+                options={[
+                  { value: 'active', label: 'Активен' },
+                  { value: 'paused', label: 'На паузе' },
+                  { value: 'blocked', label: 'Заблокирован' },
+                ]}
+                disabled={saving}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={labelStyle}>Статус магазина</label>
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    fontSize: 14,
+                    color: 'var(--muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {form.status === 'active' && (
+                    <>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: 'var(--success)',
+                        }}
+                      />
+                      Активен
+                    </>
+                  )}
+                  {form.status === 'paused' && (
+                    <>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: '#c8e03d',
+                        }}
+                      />
+                      На паузе
+                    </>
+                  )}
+                  {form.status === 'blocked' && (
+                    <>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: 'var(--danger)',
+                        }}
+                      />
+                      Заблокирован
+                    </>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <AlertTriangle size={11} />
+                  Статус меняет администратор
+                </div>
+              </div>
+            )}
+
             <div>
               <label style={labelStyle}>Акцентный цвет</label>
               <div
@@ -346,8 +481,8 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
       {activeSection === 'hero' && (
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={hintStyle}>
-            Если оставить пустым — будут использованы стандартные тексты
-            MØRA MART
+            Если оставить пустым — будут использованы стандартные тексты MØRA
+            MART
           </div>
 
           <Field
@@ -486,7 +621,7 @@ const SellerForm = ({ initialForm, saving, onSubmit, onCancel }: Props) => {
             opacity: saving ? 0.5 : 1,
           }}
         >
-          Отмена
+          {inline ? 'Отменить изменения' : 'Отмена'}
         </button>
         <motion.button
           type="submit"
