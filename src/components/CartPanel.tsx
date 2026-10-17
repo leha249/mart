@@ -96,6 +96,8 @@ const CartPanel = ({ open, onClose }: Props) => {
         grouped.get(key)!.push(item);
       });
 
+      const groupedEntries = Array.from(grouped.entries());
+
       // 2. Для каждой группы — создаём отдельный заказ
       const createdOrders: {
         id: number;
@@ -104,19 +106,30 @@ const CartPanel = ({ open, onClose }: Props) => {
         itemsCount: number;
       }[] = [];
 
-      let totalDiscountRemaining = promoDiscount;
+      // 🐛 ИСПРАВЛЕНИЕ БАГА 1: считаем доли от promoDiscount,
+      // последней группе отдаём остаток (чтобы сумма точно совпала)
+      let remainingDiscount = promoDiscount;
 
-      for (const [sellerId, groupItems] of grouped.entries()) {
+      for (let i = 0; i < groupedEntries.length; i++) {
+        const [sellerId, groupItems] = groupedEntries[i];
+        const isLast = i === groupedEntries.length - 1;
+
         const groupTotal = groupItems.reduce(
-          (sum, i) => sum + i.price * i.quantity,
+          (sum, item) => sum + item.price * item.quantity,
           0
         );
 
-        // Распределяем скидку пропорционально сумме группы
-        const groupShare =
-          totalPrice > 0 ? groupTotal / totalPrice : 0;
-        const groupDiscount = Math.round(totalDiscountRemaining * groupShare);
-        totalDiscountRemaining -= groupDiscount;
+        let groupDiscount: number;
+        if (isLast) {
+          groupDiscount = remainingDiscount;
+        } else {
+          const share = totalPrice > 0 ? groupTotal / totalPrice : 0;
+          groupDiscount = Math.round(promoDiscount * share);
+          remainingDiscount -= groupDiscount;
+        }
+
+        // 🐛 ИСПРАВЛЕНИЕ БАГА 5: защита от groupDiscount > groupTotal
+        groupDiscount = Math.min(groupDiscount, groupTotal);
 
         const groupFinalTotal = Math.max(0, groupTotal - groupDiscount);
 
@@ -124,13 +137,13 @@ const CartPanel = ({ open, onClose }: Props) => {
           customer_name: name.trim(),
           customer_phone: phone.trim(),
           customer_email: email.trim() || undefined,
-          items: groupItems.map((i) => ({
-            id: i.id,
-            name: i.name,
-            price: i.price,
-            image: i.image,
-            quantity: i.quantity,
-            size: i.size,
+          items: groupItems.map((it) => ({
+            id: it.id,
+            name: it.name,
+            price: it.price,
+            image: it.image,
+            quantity: it.quantity,
+            size: it.size,
           })),
           total: groupFinalTotal,
           promo_code: promo.applied?.code,
@@ -142,16 +155,16 @@ const CartPanel = ({ open, onClose }: Props) => {
           id: order.id,
           sellerId,
           total: groupFinalTotal,
-          itemsCount: groupItems.reduce((s, i) => s + i.quantity, 0),
+          itemsCount: groupItems.reduce((s, it) => s + it.quantity, 0),
         });
       }
 
-      // 3. Увеличиваем использование промокода (один раз, на общую сумму)
+      // 3. Увеличиваем использование промокода
       if (promo.applied) {
         incrementPromocodeUsage(promo.applied.id);
       }
 
-      // 4. Сохраняем телефоны/номера заказов для страницы "Спасибо"
+      // 4. Сохраняем данные для страницы "Спасибо"
       try {
         const orderInfo = createdOrders.map((o) => ({
           id: o.id,
@@ -167,6 +180,10 @@ const CartPanel = ({ open, onClose }: Props) => {
             createdAt: new Date().toISOString(),
           })
         );
+        // Сохраняем телефон для /my-orders
+        try {
+          localStorage.setItem('mora-my-orders-phone', phone.trim());
+        } catch {}
       } catch (e) {
         console.warn('Не удалось сохранить данные заказа:', e);
       }
@@ -189,7 +206,6 @@ const CartPanel = ({ open, onClose }: Props) => {
         setShowCheckout(false);
         onClose();
 
-        // 5. Редирект на страницу "Спасибо"
         window.history.pushState({}, '', '/order-success');
         window.dispatchEvent(new PopStateEvent('popstate'));
       }, 1200);
@@ -213,7 +229,6 @@ const CartPanel = ({ open, onClose }: Props) => {
 
   const itemWord = pluralize(totalItems, 'товар', 'товара', 'товаров');
 
-  // Сколько продавцов в корзине — для предупреждения при оформлении
   const uniqueSellers = new Set(items.map((i) => i.seller_id ?? null)).size;
   const willSplitInto = uniqueSellers > 1;
 

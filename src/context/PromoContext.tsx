@@ -22,7 +22,14 @@ const PromoContext = createContext<PromoContextType | undefined>(undefined);
 const loadApplied = (): Promocode | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Promocode;
+    // Если срок истёк — не применяем
+    if (parsed.expires_at && new Date(parsed.expires_at) < new Date()) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -48,23 +55,24 @@ export const PromoProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [applied]);
 
-  // КРИТИЧНО: пересчёт скидки при изменении корзины
+  // 🐛 ИСПРАВЛЕНИЕ БАГА 2: пересчёт скидки + явная очистка localStorage
   useEffect(() => {
     if (!applied) {
       setDiscount(0);
       return;
     }
 
-    // Проверяем, что промокод всё ещё валиден для текущей корзины
     if (applied.min_total > 0 && totalPrice < applied.min_total) {
-      // Сумма упала ниже минимальной — снимаем промокод
+      const msg = `Минимальная сумма для «${applied.code}» — ${applied.min_total.toLocaleString('ru-RU')} ₽`;
       setApplied(null);
       setDiscount(0);
-      setError(`Минимальная сумма — ${applied.min_total} ₽`);
+      setError(msg);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {}
       return;
     }
 
-    // Пересчитываем скидку
     const newDiscount = Math.round(
       (totalPrice * applied.discount_percent) / 100
     );
@@ -86,6 +94,7 @@ export const PromoProvider = ({ children }: { children: ReactNode }) => {
 
       setApplied(result.promocode!);
       setDiscount(result.discount);
+      setError(null); // 🐛 очищаем прошлую ошибку
       return true;
     } catch (e) {
       setError('Ошибка проверки промокода');
@@ -100,6 +109,9 @@ export const PromoProvider = ({ children }: { children: ReactNode }) => {
     setApplied(null);
     setDiscount(0);
     setError(null);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
   };
 
   return (

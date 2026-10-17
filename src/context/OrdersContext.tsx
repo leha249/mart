@@ -38,7 +38,7 @@ const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 const STATUS_KEY = 'mora-orders-status-v1';
 const SEARCH_KEY = 'mora-orders-search-v1';
-const SEEN_KEY = 'mora-orders-seen-v1';
+const SEEN_KEY_BASE = 'mora-orders-seen-v1';
 
 const loadInitial = <T,>(key: string, fallback: T): T => {
   try {
@@ -72,8 +72,12 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
   const mountedRef = useRef(true);
   const fetchingRef = useRef(false);
 
-  // Определяем sellerId для фильтрации: только если role = seller
   const effectiveSellerId = role === 'seller' ? sellerId : null;
+
+  // 🐛 ИСПРАВЛЕНИЕ БАГА 3: отдельный SEEN_KEY для продавцов
+  const seenKey = effectiveSellerId
+    ? `${SEEN_KEY_BASE}-seller-${effectiveSellerId}`
+    : SEEN_KEY_BASE;
 
   useEffect(() => {
     try {
@@ -157,7 +161,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     fetchFirstPage();
   }, [fetchFirstPage]);
 
-  // Realtime-подписка: фильтр по seller_id для продавца
+  // Realtime-подписка
   useEffect(() => {
     if (!user) return;
 
@@ -185,7 +189,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
       .on('postgres_changes', config, (payload) => {
         if (payload.eventType === 'INSERT' && payload.new) {
           const newOrder = payload.new as Order;
-          setNewOrdersCount((c) => c + 1);
+          // 🐛 ИСПРАВЛЕНИЕ БАГА 4: не увеличиваем вручную — пересчитается ниже
           if (
             statusFilter === 'all' ||
             statusFilter === (newOrder.status as OrderStatus)
@@ -233,20 +237,21 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [statusFilter, user, role, sellerId, effectiveSellerId]);
 
+  // 🐛 ИСПРАВЛЕНИЕ БАГА 4: пересчёт счётчика при изменении orders или seenKey
   useEffect(() => {
-    const seen = loadInitial<number[]>(SEEN_KEY, []);
+    const seen = loadInitial<number[]>(seenKey, []);
     const seenSet = new Set(seen);
     const unseen = orders.filter((o) => !seenSet.has(o.id) && o.status === 'new');
     setNewOrdersCount(unseen.length);
-  }, [orders]);
+  }, [orders, seenKey]);
 
   const markAllSeen = useCallback(() => {
     const ids = orders.map((o) => o.id);
     try {
-      localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
+      localStorage.setItem(seenKey, JSON.stringify(ids));
     } catch {}
     setNewOrdersCount(0);
-  }, [orders]);
+  }, [orders, seenKey]);
 
   const setStatusFilter = (status: OrderStatus | 'all') => {
     setStatusFilterState(status);

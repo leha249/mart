@@ -26,6 +26,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 
 // ============ DATA SYNC ============
 function DataSync() {
@@ -103,6 +104,15 @@ function Router() {
     );
   }
 
+  // /my-orders — поиск заказов по телефону
+  if (route.path === '/my-orders') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <MyOrdersPage />
+      </Suspense>
+    );
+  }
+
   // /catalog — полный каталог
   if (route.path === '/catalog') {
     return (
@@ -139,7 +149,7 @@ function Router() {
     );
   }
 
-  // / — главная (Hero + Магазины + Популярное + About + Newsletter + Footer)
+  // / — главная
   return (
     <Suspense fallback={<PageLoader />}>
       <HomePage />

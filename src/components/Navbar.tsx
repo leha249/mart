@@ -9,6 +9,7 @@ import {
   Settings,
   Store,
   Package,
+  Receipt,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -23,7 +24,7 @@ import Logo from './Logo';
 const navLinks = [
   { label: 'Магазины', kind: 'sellers' as const },
   { label: 'Каталог', kind: 'catalog' as const },
-  { label: 'Lookbook', kind: 'anchor' as const, href: '#lookbook' },
+  { label: 'Мои заказы', kind: 'myOrders' as const },
   { label: 'О нас', kind: 'anchor' as const, href: '#about' },
 ];
 
@@ -58,15 +59,16 @@ const Navbar = () => {
   const goToSellers = () => go('/sellers');
   const goToCatalog = () => go('/catalog');
   const goToAdmin = () => go('/admin');
+  const goToMyOrders = () => go('/my-orders');
 
   const handleNavClick = (
-    kind: 'sellers' | 'catalog' | 'anchor',
+    kind: 'sellers' | 'catalog' | 'myOrders' | 'anchor',
     href?: string
   ) => {
     if (kind === 'sellers') goToSellers();
     else if (kind === 'catalog') goToCatalog();
+    else if (kind === 'myOrders') goToMyOrders();
     else if (kind === 'anchor' && href) {
-      // Если мы не на главной — переходим на главную, потом к якорю
       if (window.location.pathname !== '/') {
         go('/');
         setTimeout(() => {
@@ -122,7 +124,7 @@ const Navbar = () => {
           </motion.a>
 
           <nav
-            style={{ display: 'flex', gap: 40, alignItems: 'center' }}
+            style={{ display: 'flex', gap: 32, alignItems: 'center' }}
             className="desktop-nav"
           >
             {navLinks.map((link, i) => (
@@ -150,6 +152,7 @@ const Navbar = () => {
                   position: 'relative',
                   fontFamily: 'inherit',
                   padding: 0,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {link.label}
@@ -360,12 +363,30 @@ const Navbar = () => {
               <motion.button
                 onClick={() => {
                   setMenuOpen(false);
-                  goToFavorites();
+                  goToMyOrders();
                 }}
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                 transition={{
                   delay: 0.24,
+                  duration: 0.6,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={mobileLinkStyle}
+              >
+                <Receipt size={40} strokeWidth={1.5} />
+                Мои заказы
+              </motion.button>
+
+              <motion.button
+                onClick={() => {
+                  setMenuOpen(false);
+                  goToFavorites();
+                }}
+                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{
+                  delay: 0.31,
                   duration: 0.6,
                   ease: [0.22, 1, 0.36, 1],
                 }}
@@ -397,7 +418,7 @@ const Navbar = () => {
                   initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                   animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                   transition={{
-                    delay: 0.31,
+                    delay: 0.38,
                     duration: 0.6,
                     ease: [0.22, 1, 0.36, 1],
                   }}
@@ -436,7 +457,7 @@ const Navbar = () => {
           outline-offset: 4px;
           border-radius: 4px;
         }
-        @media (max-width: 1100px) {
+        @media (max-width: 1150px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }
