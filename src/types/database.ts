@@ -12,6 +12,7 @@ export interface Product {
   colors: string[];
   rating: number;
   reviews: number;
+  purchases: number;
   in_stock: boolean;
   seller_id: number | null;
   created_at: string;
@@ -91,6 +92,7 @@ export interface UIProduct {
   colors: string[];
   rating: number;
   reviews: number;
+  purchases: number;
   inStock: boolean;
   sellerId: number | null;
 }
@@ -117,6 +119,7 @@ export const mapProductToUI = (p: Product): UIProduct => {
     colors: p.colors ?? [],
     rating: Number(p.rating),
     reviews: p.reviews,
+    purchases: p.purchases ?? 0,
     inStock: p.in_stock,
     sellerId: p.seller_id,
   };
@@ -137,7 +140,6 @@ export interface Seller {
   email: string | null;
   status: SellerStatus;
 
-  // Витрина (контент мини-MØRA MART)
   hero_title: string | null;
   hero_subtitle: string | null;
   hero_image: string | null;

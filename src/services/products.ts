@@ -29,10 +29,38 @@ export const productsService = {
     }
   },
 
+  /**
+   * Топ товаров по популярности.
+   * Сортировка: purchases DESC, потом rating DESC, потом reviews DESC.
+   * Только товары в наличии, от активных продавцов (RLS).
+   */
+  async getPopular(limit: number = 12): Promise<Product[]> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('in_stock', true)
+        .order('purchases', { ascending: false })
+        .order('rating', { ascending: false })
+        .order('reviews', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (e) {
+      console.error('[productsService.getPopular]', e);
+      throw normalizeError(e);
+    }
+  },
+
   async getPage(
     limit = 20,
     offset = 0,
-    filters?: { category?: string; search?: string; sellerId?: number | null }
+    filters?: {
+      category?: string;
+      search?: string;
+      sellerId?: number | null;
+    }
   ): Promise<ProductsPage> {
     try {
       let query = supabase
@@ -127,6 +155,28 @@ export const productsService = {
     } catch (e) {
       console.error('[productsService.remove]', e);
       throw normalizeError(e);
+    }
+  },
+
+  /**
+   * Увеличить счётчик purchases для товаров из заказа.
+   * Вызывается при создании заказа.
+   * Использует RPC-функцию на стороне БД (см. SQL).
+   */
+  async incrementPurchases(
+    items: { id: number; quantity: number }[]
+  ): Promise<void> {
+    if (items.length === 0) return;
+
+    try {
+      const { error } = await supabase.rpc('increment_product_purchases', {
+        items: items,
+      });
+
+      if (error) throw error;
+    } catch (e) {
+      // Не критично — заказ уже создан. Логируем, но не падаем.
+      console.warn('[productsService.incrementPurchases]', e);
     }
   },
 };

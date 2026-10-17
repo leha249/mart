@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { ValidationError, normalizeError } from '../utils/errors';
 import type { Order, OrderItem, OrderStatus } from '../types/database';
+import { productsService } from './products';
 
 export interface OrderFilters {
   status?: OrderStatus | 'all';
@@ -40,8 +41,10 @@ export interface CreateOrderInput {
 
 const validateOrder = (order: CreateOrderInput): void => {
   if (!order.customer_name?.trim()) throw new ValidationError('Имя обязательно');
-  if (!order.customer_phone?.trim()) throw new ValidationError('Телефон обязателен');
-  if (order.customer_phone.trim().length < 5) throw new ValidationError('Некорректный телефон');
+  if (!order.customer_phone?.trim())
+    throw new ValidationError('Телефон обязателен');
+  if (order.customer_phone.trim().length < 5)
+    throw new ValidationError('Некорректный телефон');
   if (!order.items || order.items.length === 0)
     throw new ValidationError('Корзина пуста');
   if (order.total <= 0) throw new ValidationError('Некорректная сумма');
@@ -82,6 +85,17 @@ export const ordersService = {
         .single();
 
       if (error) throw error;
+
+      // ✅ После успешного создания заказа — увеличиваем purchases у товаров
+      // Не блокируем: если упадёт — заказ уже создан, не страшно
+      const purchaseItems = order.items.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+      }));
+      productsService.incrementPurchases(purchaseItems).catch((e) => {
+        console.warn('[ordersService.create] incrementPurchases failed:', e);
+      });
+
       return data;
     } catch (e) {
       console.error('[ordersService.create]', e);

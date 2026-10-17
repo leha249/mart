@@ -1,21 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import Preloader from './components/Preloader';
-import Cursor from './components/Cursor';
-import ScrollProgress from './components/ScrollProgress';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Products from './components/Products';
-import RecentlyViewed from './components/RecentlyViewed';
-import Lookbook from './components/Lookbook';
-import About from './components/About';
-import Newsletter from './components/Newsletter';
-import Footer from './components/Footer';
-import CartPanel from './components/CartPanel';
-import FavoritesPanel from './components/FavoritesPanel';
-import SearchOverlay from './components/SearchOverlay';
-import ProductModal from './components/ProductModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import ToastContainer from './components/ToastContainer';
 import { CartProvider, useCart } from './context/CartContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
 import { ToastProvider } from './context/ToastContext';
@@ -27,17 +12,21 @@ import { PromocodesAdminProvider } from './context/PromocodesAdminContext';
 import { PromoProvider } from './context/PromoContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
-import { UIProvider, useUI } from './context/UIContext';
+import { UIProvider } from './context/UIContext';
 import { SellersProvider } from './context/SellersContext';
-import { useRoute, useProductOpenEvent } from './utils/navigate';
+import { useRoute } from './utils/navigate';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
-import type { UIProduct } from './types/database';
 
+// ============ LAZY PAGES ============
+const HomePage = lazy(() => import('./pages/HomePage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const SellersPage = lazy(() => import('./pages/SellersPage'));
+const SellerPage = lazy(() => import('./pages/SellerPage'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
-const SellerPage = lazy(() => import('./pages/SellerPage'));
 
+// ============ DATA SYNC ============
 function DataSync() {
   const { products } = useProducts();
   const { pruneMissing: pruneCart } = useCart();
@@ -55,57 +44,7 @@ function DataSync() {
   return null;
 }
 
-function GlobalProductOpener() {
-  const { openProduct } = useUI();
-
-  useProductOpenEvent((product) => {
-    if (product && typeof product === 'object') {
-      openProduct(product as UIProduct);
-    }
-  });
-
-  return null;
-}
-
-function AppContent() {
-  const {
-    activePanel,
-    closePanels,
-    selectedProduct,
-    openProduct,
-    closeProduct,
-  } = useUI();
-
-  return (
-    <div id="top" style={{ minHeight: '100vh' }}>
-      <DataSync />
-      <GlobalProductOpener />
-      <ScrollProgress />
-      <Cursor />
-      <Navbar />
-      <main>
-        <Hero />
-        <Products onProductClick={openProduct} />
-        <RecentlyViewed onProductClick={openProduct} />
-        <Lookbook />
-        <About />
-        <Newsletter />
-      </main>
-      <Footer />
-
-      <CartPanel open={activePanel === 'cart'} onClose={closePanels} />
-      <FavoritesPanel open={activePanel === 'favorites'} onClose={closePanels} />
-      <SearchOverlay
-        open={activePanel === 'search'}
-        onClose={closePanels}
-        onProductSelect={openProduct}
-      />
-      <ProductModal product={selectedProduct} onClose={closeProduct} />
-      <ToastContainer />
-    </div>
-  );
-}
-
+// ============ PAGE LOADER ============
 function PageLoader() {
   return (
     <div
@@ -123,6 +62,7 @@ function PageLoader() {
   );
 }
 
+// ============ ROUTER ============
 function Router() {
   const route = useRoute();
 
@@ -148,27 +88,30 @@ function Router() {
   if (route.path === '/favorites') {
     return (
       <Suspense fallback={<PageLoader />}>
-        <ScrollProgress />
-        <Cursor />
-        <Navbar />
         <FavoritesPage />
-        <Footer />
-        <ToastContainer />
       </Suspense>
     );
   }
 
-  // /seller/:slug — публичная страница продавца
-  // ВАЖНО: проверяем, что param не 'dashboard' (это кабинет продавца)
-  if (route.path === '/seller' && route.param && route.param !== 'dashboard') {
+  // /catalog — полный каталог
+  if (route.path === '/catalog') {
     return (
       <Suspense fallback={<PageLoader />}>
-        <SellerPage slug={route.param} />
+        <CatalogPage />
       </Suspense>
     );
   }
 
-  // /seller/dashboard — кабинет продавца (пока ведёт в /admin)
+  // /sellers — список магазинов
+  if (route.path === '/sellers') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SellersPage />
+      </Suspense>
+    );
+  }
+
+  // /seller/dashboard — кабинет продавца (ведёт в Admin)
   if (route.path === '/seller' && route.param === 'dashboard') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -177,10 +120,24 @@ function Router() {
     );
   }
 
-  // Главная и всё остальное
-  return <AppContent />;
+  // /seller/:slug — страница конкретного магазина
+  if (route.path === '/seller' && route.param) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SellerPage slug={route.param} />
+      </Suspense>
+    );
+  }
+
+  // / — главная (Hero + Магазины + Популярное + About + Newsletter + Footer)
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <HomePage />
+    </Suspense>
+  );
 }
 
+// ============ APP ============
 function App() {
   const [preloaded, setPreloaded] = useState(false);
 
@@ -199,8 +156,11 @@ function App() {
                           <PromoProvider>
                             <FavoritesProvider>
                               <UIProvider>
+                                <DataSync />
                                 {!preloaded && (
-                                  <Preloader onDone={() => setPreloaded(true)} />
+                                  <Preloader
+                                    onDone={() => setPreloaded(true)}
+                                  />
                                 )}
                                 <Router />
                               </UIProvider>

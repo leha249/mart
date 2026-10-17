@@ -2,6 +2,7 @@ import { memo, useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Plus, Star } from 'lucide-react';
 import { useProducts } from '../context/ProductsContext';
+import { useSellers } from '../context/SellersContext';
 import type { UIProduct } from '../types/database';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -19,323 +20,411 @@ interface CardProps {
   product: UIProduct;
   index: number;
   onOpen: (p: UIProduct) => void;
+  sellerInfo?: {
+    name: string;
+    slug: string;
+    logo?: string;
+    accentColor?: string;
+  };
+  onGoToSeller?: (slug: string) => void;
 }
 
-const ProductCard = memo(({ product, index, onOpen }: CardProps) => {
-  const { addItem } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const { addToast } = useToast();
-  const [hovered, setHovered] = useState(false);
-  const [added, setAdded] = useState(false);
+const ProductCard = memo(
+  ({ product, index, onOpen, sellerInfo, onGoToSeller }: CardProps) => {
+    const { addItem } = useCart();
+    const { isFavorite, toggleFavorite } = useFavorites();
+    const { addToast } = useToast();
+    const [hovered, setHovered] = useState(false);
+    const [added, setAdded] = useState(false);
 
-  const fav = isFavorite(product.id);
-  const discount = product.oldPrice
-    ? Math.round((1 - product.price / product.oldPrice) * 100)
-    : 0;
+    const fav = isFavorite(product.id);
+    const discount = product.oldPrice
+      ? Math.round((1 - product.price / product.oldPrice) * 100)
+      : 0;
 
-  const optimizedImage = useMemo(
-    () => optimizeImageUrl(product.image, 600),
-    [product.image]
-  );
-
-  const handleAdd = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (product.sizes.length > 0) {
-      onOpen(product);
-      return;
-    }
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-    });
-    setAdded(true);
-    addToast(`${product.name} добавлен в корзину`, 'success');
-    setTimeout(() => setAdded(false), 1200);
-  };
-
-  const handleFav = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleFavorite(product.id);
-    addToast(
-      fav ? 'Удалено из избранного' : 'Добавлено в избранное',
-      fav ? 'info' : 'success'
+    const optimizedImage = useMemo(
+      () => optimizeImageUrl(product.image, 600),
+      [product.image]
     );
-  };
 
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{
-        layout: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-        delay: Math.min(index * 0.04, 0.4),
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onOpen(product)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen(product);
-        }
-      }}
-      style={{
-        position: 'relative',
-        borderRadius: 20,
-        overflow: 'hidden',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        cursor: 'pointer',
-        transform: hovered ? 'translateY(-8px)' : 'translateY(0)',
-        transition:
-          'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s',
-        borderColor: hovered ? 'var(--border-hi)' : 'var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        willChange: hovered ? 'transform' : 'auto',
-        contain: 'layout style paint',
-      }}
-    >
-      <div
+    const handleAdd = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (product.sizes.length > 0) {
+        onOpen(product);
+        return;
+      }
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+      });
+      setAdded(true);
+      addToast(`${product.name} добавлен в корзину`, 'success');
+      setTimeout(() => setAdded(false), 1200);
+    };
+
+    const handleFav = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleFavorite(product.id);
+      addToast(
+        fav ? 'Удалено из избранного' : 'Добавлено в избранное',
+        fav ? 'info' : 'success'
+      );
+    };
+
+    const handleSellerClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (sellerInfo && onGoToSeller) {
+        onGoToSeller(sellerInfo.slug);
+      }
+    };
+
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-50px' }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{
+          layout: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+          delay: Math.min(index * 0.04, 0.4),
+          duration: 0.6,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => onOpen(product)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen(product);
+          }
+        }}
         style={{
           position: 'relative',
-          aspectRatio: '3/4',
+          borderRadius: 20,
           overflow: 'hidden',
-          flexShrink: 0,
-          background: 'var(--surface-hi)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          cursor: 'pointer',
+          transform: hovered ? 'translateY(-8px)' : 'translateY(0)',
+          transition:
+            'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s',
+          borderColor: hovered ? 'var(--border-hi)' : 'var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          willChange: hovered ? 'transform' : 'auto',
+          contain: 'layout style paint',
         }}
       >
-        <motion.img
-          src={optimizedImage}
-          alt={product.name}
-          loading="lazy"
-          decoding="async"
-          width={600}
-          height={800}
-          animate={{ scale: hovered ? 1.08 : 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        <div
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            willChange: hovered ? 'transform' : 'auto',
+            position: 'relative',
+            aspectRatio: '3/4',
+            overflow: 'hidden',
+            flexShrink: 0,
+            background: 'var(--surface-hi)',
           }}
-        />
-
-        {product.tag && (
-          <div
+        >
+          <motion.img
+            src={optimizedImage}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            width={600}
+            height={800}
+            animate={{ scale: hovered ? 1.08 : 1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              background:
-                product.tag === 'HOT'
-                  ? 'var(--danger)'
-                  : product.tag === 'SALE'
-                  ? '#ff8c42'
-                  : 'var(--accent)',
-              color: product.tag === 'HOT' ? '#fff' : '#000',
-              padding: '6px 12px',
-              borderRadius: 100,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '1px',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              willChange: hovered ? 'transform' : 'auto',
             }}
-          >
-            {product.tag}
-            {discount > 0 && ` −${discount}%`}
-          </div>
-        )}
+          />
 
-        {!product.inStock && (
-          <div
+          {/* 🏪 МЕТКА МАГАЗИНА (вверху слева) */}
+          {sellerInfo && onGoToSeller && (
+            <button
+              onClick={handleSellerClick}
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                background: 'rgba(10,10,10,0.75)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 100,
+                padding: '4px 10px 4px 4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                zIndex: 2,
+                transition: 'background 0.2s',
+              }}
+              title={`Перейти в ${sellerInfo.name}`}
+              aria-label={`Магазин: ${sellerInfo.name}`}
+            >
+              {sellerInfo.logo ? (
+                <img
+                  src={sellerInfo.logo}
+                  alt={sellerInfo.name}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: sellerInfo.accentColor || 'var(--accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#000',
+                    fontSize: 10,
+                    fontWeight: 900,
+                  }}
+                >
+                  {sellerInfo.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: '#fff',
+                  maxWidth: 90,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {sellerInfo.name}
+              </span>
+            </button>
+          )}
+
+          {/* Тег товара */}
+          {product.tag && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background:
+                  product.tag === 'HOT'
+                    ? 'var(--danger)'
+                    : product.tag === 'SALE'
+                    ? '#ff8c42'
+                    : 'var(--accent)',
+                color: product.tag === 'HOT' ? '#fff' : '#000',
+                padding: '6px 12px',
+                borderRadius: 100,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '1px',
+                zIndex: 2,
+              }}
+            >
+              {product.tag}
+              {discount > 0 && ` −${discount}%`}
+            </div>
+          )}
+
+          {!product.inStock && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(0,0,0,0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+              }}
+            >
+              Нет в наличии
+            </div>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleFav}
+            aria-label={fav ? 'Убрать из избранного' : 'Добавить в избранное'}
             style={{
               position: 'absolute',
-              inset: 0,
-              background: 'rgba(0,0,0,0.6)',
+              top: 12,
+              right: 12,
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(10,10,10,0.6)',
+              backdropFilter: 'blur(10px)',
+              color: fav ? 'var(--danger)' : 'var(--text)',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
+              zIndex: 3,
+              marginTop: product.tag ? 40 : 0,
             }}
           >
-            Нет в наличии
-          </div>
-        )}
+            <Heart size={16} fill={fav ? 'var(--danger)' : 'none'} />
+          </motion.button>
 
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={handleFav}
-          aria-label={fav ? 'Убрать из избранного' : 'Добавить в избранное'}
-          style={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            border: 'none',
-            background: 'rgba(10,10,10,0.6)',
-            backdropFilter: 'blur(10px)',
-            color: fav ? 'var(--danger)' : 'var(--text)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2,
-          }}
-        >
-          <Heart size={16} fill={fav ? 'var(--danger)' : 'none'} />
-        </motion.button>
+          <motion.button
+            onClick={handleAdd}
+            disabled={!product.inStock}
+            whileTap={{ scale: 0.95 }}
+            animate={{
+              opacity: hovered || added ? 1 : 0,
+              y: hovered || added ? 0 : 20,
+            }}
+            transition={{ duration: 0.3 }}
+            aria-label={`Добавить ${product.name} в корзину`}
+            style={{
+              position: 'absolute',
+              bottom: 16,
+              left: 16,
+              right: 16,
+              padding: '14px',
+              borderRadius: 12,
+              border: 'none',
+              background: !product.inStock
+                ? 'var(--muted)'
+                : added
+                ? 'var(--success)'
+                : 'var(--accent)',
+              color: '#000',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: product.inStock ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              fontFamily: 'inherit',
+              zIndex: 2,
+            }}
+          >
+            {!product.inStock ? (
+              'Нет в наличии'
+            ) : added ? (
+              <>✓ Добавлено</>
+            ) : (
+              <>
+                <Plus size={16} /> В корзину
+              </>
+            )}
+          </motion.button>
+        </div>
 
-        <motion.button
-          onClick={handleAdd}
-          disabled={!product.inStock}
-          whileTap={{ scale: 0.95 }}
-          animate={{
-            opacity: hovered || added ? 1 : 0,
-            y: hovered || added ? 0 : 20,
-          }}
-          transition={{ duration: 0.3 }}
-          aria-label={`Добавить ${product.name} в корзину`}
-          style={{
-            position: 'absolute',
-            bottom: 16,
-            left: 16,
-            right: 16,
-            padding: '14px',
-            borderRadius: 12,
-            border: 'none',
-            background: !product.inStock
-              ? 'var(--muted)'
-              : added
-              ? 'var(--success)'
-              : 'var(--accent)',
-            color: '#000',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: product.inStock ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            fontFamily: 'inherit',
-            zIndex: 2,
-          }}
-        >
-          {!product.inStock ? (
-            'Нет в наличии'
-          ) : added ? (
-            <>✓ Добавлено</>
-          ) : (
-            <>
-              <Plus size={16} /> В корзину
-            </>
-          )}
-        </motion.button>
-      </div>
-
-      <div
-        style={{
-          padding: 20,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          flex: 1,
-        }}
-      >
         <div
           style={{
+            padding: 20,
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 8,
+            flexDirection: 'column',
+            gap: 10,
+            flex: 1,
           }}
         >
-          <span
+          <div
             style={{
-              fontSize: 11,
-              color: 'var(--muted)',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
-            {product.category}
-          </span>
-          {product.rating > 0 && (
             <span
-              className="price-num"
               style={{
                 fontSize: 11,
                 color: 'var(--muted)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
               }}
             >
-              <Star size={11} fill="var(--accent)" stroke="var(--accent)" />
-              {product.rating}
+              {product.category}
             </span>
-          )}
-        </div>
+            {product.rating > 0 && (
+              <span
+                className="price-num"
+                style={{
+                  fontSize: 11,
+                  color: 'var(--muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Star size={11} fill="var(--accent)" stroke="var(--accent)" />
+                {product.rating}
+              </span>
+            )}
+          </div>
 
-        <h3
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            letterSpacing: '-0.2px',
-            lineHeight: 1.3,
-          }}
-        >
-          {product.name}
-        </h3>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: 8,
-            marginTop: 'auto',
-          }}
-        >
-          <span
-            className="price-num"
-            style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)' }}
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              letterSpacing: '-0.2px',
+              lineHeight: 1.3,
+            }}
           >
-            {formatPrice(product.price)}
-          </span>
-          {product.oldPrice && (
+            {product.name}
+          </h3>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 8,
+              marginTop: 'auto',
+            }}
+          >
             <span
               className="price-num"
-              style={{
-                fontSize: 13,
-                color: 'var(--muted)',
-                textDecoration: 'line-through',
-              }}
+              style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)' }}
             >
-              {formatPrice(product.oldPrice)}
+              {formatPrice(product.price)}
             </span>
-          )}
+            {product.oldPrice && (
+              <span
+                className="price-num"
+                style={{
+                  fontSize: 13,
+                  color: 'var(--muted)',
+                  textDecoration: 'line-through',
+                }}
+              >
+                {formatPrice(product.oldPrice)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
-  );
-});
+      </motion.div>
+    );
+  }
+);
 
 ProductCard.displayName = 'ProductCard';
 
@@ -345,6 +434,7 @@ interface ProductsProps {
 
 const Products = ({ onProductClick }: ProductsProps) => {
   const { products, loading, error } = useProducts();
+  const { sellers } = useSellers();
   const [activeCategory, setActiveCategory] = useState<string>('Все');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>(
     'default'
@@ -354,6 +444,28 @@ const Products = ({ onProductClick }: ProductsProps) => {
     max: Infinity,
   });
   const sectionRef = useRef<HTMLElement>(null);
+
+  // Карта продавцов: id → { name, slug, logo, accentColor }
+  const sellersMap = useMemo(() => {
+    const map: Record<
+      number,
+      { name: string; slug: string; logo?: string; accentColor?: string }
+    > = {};
+    sellers.forEach((s) => {
+      map[s.id] = {
+        name: s.name,
+        slug: s.slug,
+        logo: s.logo,
+        accentColor: s.accentColor,
+      };
+    });
+    return map;
+  }, [sellers]);
+
+  const goToSeller = (slug: string) => {
+    window.history.pushState({}, '', `/seller/${slug}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
 
   const absolutePriceRange = useMemo(() => {
     if (products.length === 0) return { min: 0, max: 100000 };
@@ -483,9 +595,9 @@ const Products = ({ onProductClick }: ProductsProps) => {
                 lineHeight: 1,
               }}
             >
-              Бестселлеры{' '}
+              Все{' '}
               <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
-                сезона
+                товары
               </span>
             </motion.h2>
           </div>
@@ -644,6 +756,12 @@ const Products = ({ onProductClick }: ProductsProps) => {
                     product={product}
                     index={i}
                     onOpen={onProductClick}
+                    sellerInfo={
+                      product.sellerId !== null
+                        ? sellersMap[product.sellerId]
+                        : undefined
+                    }
+                    onGoToSeller={goToSeller}
                   />
                 ))}
               </AnimatePresence>

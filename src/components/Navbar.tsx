@@ -1,19 +1,30 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Search, ShoppingBag, Heart, X } from 'lucide-react';
+import {
+  Menu,
+  Search,
+  ShoppingBag,
+  Heart,
+  X,
+  Settings,
+  Store,
+  Package,
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useUI } from '../context/UIContext';
+import { useAuth } from '../context/AuthContext';
 import { useBodyLock } from '../hooks/useBodyLock';
 import { useThrottle } from '../hooks/useDebounce';
 import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
 
-const links = [
-  { label: 'Магазин', href: '#shop' },
-  { label: 'Lookbook', href: '#lookbook' },
-  { label: 'О нас', href: '#about' },
-  { label: 'Контакты', href: '#footer' },
+// Навигация
+const navLinks = [
+  { label: 'Магазины', kind: 'sellers' as const },
+  { label: 'Каталог', kind: 'catalog' as const },
+  { label: 'Lookbook', kind: 'anchor' as const, href: '#lookbook' },
+  { label: 'О нас', kind: 'anchor' as const, href: '#about' },
 ];
 
 const Navbar = () => {
@@ -22,8 +33,11 @@ const Navbar = () => {
   const { totalItems } = useCart();
   const { favorites } = useFavorites();
   const { openCart, openSearch } = useUI();
+  const { user, role } = useAuth();
 
   useBodyLock(menuOpen);
+
+  const canManage = role === 'seller' || role === 'admin';
 
   const handleScroll = useThrottle(() => {
     setScrolled(window.scrollY > 40);
@@ -34,9 +48,33 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  const goToFavorites = () => {
-    window.history.pushState({}, '', '/favorites');
+  const go = (path: string) => {
+    window.history.pushState({}, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  const goHome = () => go('/');
+  const goToFavorites = () => go('/favorites');
+  const goToSellers = () => go('/sellers');
+  const goToCatalog = () => go('/catalog');
+  const goToAdmin = () => go('/admin');
+
+  const handleNavClick = (
+    kind: 'sellers' | 'catalog' | 'anchor',
+    href?: string
+  ) => {
+    if (kind === 'sellers') goToSellers();
+    else if (kind === 'catalog') goToCatalog();
+    else if (kind === 'anchor' && href) {
+      // Если мы не на главной — переходим на главную, потом к якорю
+      if (window.location.pathname !== '/') {
+        go('/');
+        setTimeout(() => {
+          const el = document.querySelector(href);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
   };
 
   return (
@@ -74,8 +112,7 @@ const Navbar = () => {
             href="/"
             onClick={(e) => {
               e.preventDefault();
-              window.history.pushState({}, '', '/');
-              window.dispatchEvent(new PopStateEvent('popstate'));
+              goHome();
             }}
             whileHover={{ scale: 1.02 }}
             aria-label="На главную"
@@ -84,31 +121,56 @@ const Navbar = () => {
             <Logo size="md" withSuffix />
           </motion.a>
 
-          <nav style={{ display: 'flex', gap: 48 }} className="desktop-nav">
-            {links.map((link, i) => (
-              <motion.a
+          <nav
+            style={{ display: 'flex', gap: 40, alignItems: 'center' }}
+            className="desktop-nav"
+          >
+            {navLinks.map((link, i) => (
+              <motion.button
                 key={link.label}
-                href={link.href}
+                onClick={() =>
+                  handleNavClick(
+                    link.kind,
+                    link.kind === 'anchor' ? link.href : undefined
+                  )
+                }
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.07 }}
                 whileHover={{ y: -2 }}
                 style={{
+                  background: 'none',
+                  border: 'none',
                   color: 'var(--text)',
-                  textDecoration: 'none',
+                  cursor: 'pointer',
                   fontSize: 13,
                   fontWeight: 500,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
                   position: 'relative',
+                  fontFamily: 'inherit',
+                  padding: 0,
                 }}
               >
                 {link.label}
-              </motion.a>
+              </motion.button>
             ))}
           </nav>
 
           <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+            {user && canManage && (
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
+                className="icon-btn"
+                aria-label="Управление"
+                title="Управление"
+                onClick={goToAdmin}
+              >
+                <Settings size={18} strokeWidth={1.75} />
+              </motion.button>
+            )}
+
             <div className="theme-toggle-wrap">
               <ThemeToggle />
             </div>
@@ -259,30 +321,41 @@ const Navbar = () => {
                 marginBottom: 'auto',
               }}
             >
-              {links.map((link, i) => (
-                <motion.a
-                  key={`mobile-${link.label}`}
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  transition={{
-                    delay: 0.1 + i * 0.07,
-                    duration: 0.6,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  style={{
-                    fontSize: 'clamp(40px, 10vw, 72px)',
-                    fontWeight: 700,
-                    letterSpacing: '-0.03em',
-                    color: 'var(--text)',
-                    textDecoration: 'none',
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {link.label}
-                </motion.a>
-              ))}
+              <motion.button
+                onClick={() => {
+                  setMenuOpen(false);
+                  goToSellers();
+                }}
+                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{
+                  delay: 0.1,
+                  duration: 0.6,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={mobileLinkStyle}
+              >
+                <Store size={40} strokeWidth={1.5} />
+                Магазины
+              </motion.button>
+
+              <motion.button
+                onClick={() => {
+                  setMenuOpen(false);
+                  goToCatalog();
+                }}
+                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{
+                  delay: 0.17,
+                  duration: 0.6,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={mobileLinkStyle}
+              >
+                <Package size={40} strokeWidth={1.5} />
+                Каталог
+              </motion.button>
 
               <motion.button
                 onClick={() => {
@@ -292,25 +365,11 @@ const Navbar = () => {
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                 transition={{
-                  delay: 0.1 + 4 * 0.07,
+                  delay: 0.24,
                   duration: 0.6,
                   ease: [0.22, 1, 0.36, 1],
                 }}
-                style={{
-                  fontSize: 'clamp(40px, 10vw, 72px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.03em',
-                  color: 'var(--text)',
-                  background: 'none',
-                  border: 'none',
-                  textAlign: 'left',
-                  fontFamily: 'inherit',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  lineHeight: 1.1,
-                }}
+                style={mobileLinkStyle}
               >
                 Избранное
                 {favorites.length > 0 && (
@@ -328,6 +387,26 @@ const Navbar = () => {
                   </span>
                 )}
               </motion.button>
+
+              {user && canManage && (
+                <motion.button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    goToAdmin();
+                  }}
+                  initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                  transition={{
+                    delay: 0.31,
+                    duration: 0.6,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={mobileLinkStyle}
+                >
+                  <Settings size={40} strokeWidth={1.5} />
+                  Управление
+                </motion.button>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -357,7 +436,7 @@ const Navbar = () => {
           outline-offset: 4px;
           border-radius: 4px;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }
@@ -367,6 +446,22 @@ const Navbar = () => {
       `}</style>
     </>
   );
+};
+
+const mobileLinkStyle: React.CSSProperties = {
+  fontSize: 'clamp(40px, 10vw, 72px)',
+  fontWeight: 700,
+  letterSpacing: '-0.03em',
+  color: 'var(--text)',
+  background: 'none',
+  border: 'none',
+  textAlign: 'left',
+  fontFamily: 'inherit',
+  padding: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 16,
+  lineHeight: 1.1,
 };
 
 export default Navbar;
