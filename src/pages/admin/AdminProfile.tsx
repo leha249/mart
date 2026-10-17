@@ -70,6 +70,9 @@ const AdminProfile = () => {
         about_badge: form.about_badge.trim() || null,
         footer_text: form.footer_text.trim() || null,
         accent_color: form.accent_color.trim() || null,
+
+        // 🐛 ИСПРАВЛЕНИЕ: передаём Lookbook-фото
+        lookbook_images: form.lookbook_images,
       });
 
       // Перезагружаем профиль — чтобы форма сохранила новое как "initial"
