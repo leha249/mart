@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import ImageUploader from '../ImageUploader';
 import { useToast } from '../../context/ToastContext';
-import { useCmdS, useEscape } from '../../hooks/useHotkey';
+import { useCmdS } from '../../hooks/useHotkey';
 import {
   isValidHex,
   isPositiveNumber,
@@ -169,7 +169,14 @@ const ProductForm = ({
     onCancel();
   };
 
-  useEscape(handleCancel, !saving);
+  // ❌ Убрано: useEscape(handleCancel, !saving);
+  // Причина: useEscape вешает глобальный keydown на window,
+  // а при открытии нативного диалога выбора файла (ImageUploader)
+  // система отправляет Escape в window — форма закрывалась.
+  //
+  // Закрытие через Escape доступно только по кнопке «Отмена» и клику вне формы.
+
+  // Ctrl/Cmd+S — сохранение (оставляем)
   useCmdS(() => handleSubmit(), !saving);
 
   return (
@@ -214,7 +221,7 @@ const ProductForm = ({
         label="Описание"
         value={form.description}
         onChange={(v) => setField('description', v)}
-        placeholder="Свободный шерстяной палто..."
+        placeholder="Свободный шерстяной пиджак..."
         multiline
         disabled={saving}
         maxLength={1000}
@@ -373,20 +380,7 @@ const ProductForm = ({
           >
             Ctrl/Cmd+S
           </kbd>{' '}
-          сохранить ·{' '}
-          <kbd
-            style={{
-              padding: '2px 6px',
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              fontSize: 10,
-              fontFamily: 'monospace',
-            }}
-          >
-            Esc
-          </kbd>{' '}
-          отмена
+          сохранить
         </div>
 
         <button
