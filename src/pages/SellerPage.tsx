@@ -10,6 +10,7 @@ import { mapProductToUI } from '../types/database';
 import Navbar from '../components/Navbar';
 import SellerHero from '../components/seller/SellerHero';
 import SellerCatalog from '../components/seller/SellerCatalog';
+import SellerLookbook from '../components/seller/SellerLookbook';
 import SellerAbout from '../components/seller/SellerAbout';
 import SellerFooter from '../components/seller/SellerFooter';
 import ProductModal from '../components/ProductModal';
@@ -264,6 +265,12 @@ const SellerPage = ({ slug }: Props) => {
           accent={accent}
           onProductClick={openProduct}
         />
+        {seller.lookbookImages && seller.lookbookImages.length > 0 && (
+          <SellerLookbook
+            images={seller.lookbookImages}
+            accentColor={accent}
+          />
+        )}
         <SellerAbout seller={seller} />
       </main>
 

@@ -21,12 +21,11 @@ export interface UpdateSellerInput {
   about_badge?: string | null;
   footer_text?: string | null;
   accent_color?: string | null;
+
+  lookbook_images?: string[];
 }
 
 export const sellersService = {
-  /**
-   * Все продавцы (для админа)
-   */
   async getAll(): Promise<UISeller[]> {
     try {
       const { data, error } = await supabase
@@ -42,9 +41,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Только активные продавцы (для покупателей)
-   */
   async getActive(): Promise<UISeller[]> {
     try {
       const { data, error } = await supabase
@@ -61,9 +57,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Продавец по slug (публичная страница)
-   */
   async getBySlug(slug: string): Promise<UISeller | null> {
     try {
       const { data, error } = await supabase
@@ -80,9 +73,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Продавец по id
-   */
   async getById(id: number): Promise<UISeller | null> {
     try {
       const { data, error } = await supabase
@@ -99,9 +89,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Продавец текущего авторизованного пользователя
-   */
   async getMy(): Promise<UISeller | null> {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -122,9 +109,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Обновить профиль продавца (продавец — свой, админ — любой)
-   */
   async update(id: number, input: UpdateSellerInput): Promise<UISeller> {
     if (input.name !== undefined && !input.name.trim()) {
       throw new ValidationError('Название магазина не может быть пустым');
@@ -153,9 +137,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Сменить статус продавца (только админ)
-   */
   async updateStatus(id: number, status: SellerStatus): Promise<void> {
     try {
       const { error } = await supabase
@@ -170,9 +151,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Сменить slug продавца (только админ, через прямой вызов)
-   */
   async updateSlug(id: number, slug: string): Promise<void> {
     const clean = slug.trim().toLowerCase();
     if (!/^[a-z0-9-]+$/.test(clean)) {
@@ -199,10 +177,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Удалить продавца навсегда.
-   * Каскадно удаляет: товары, заказы, категории, промокоды, отзывы.
-   */
   async remove(id: number): Promise<void> {
     try {
       const { error } = await supabase
@@ -217,9 +191,6 @@ export const sellersService = {
     }
   },
 
-  /**
-   * Сырые данные (для контекста с realtime)
-   */
   async getRawAll(): Promise<Seller[]> {
     try {
       const { data, error } = await supabase

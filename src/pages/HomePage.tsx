@@ -1,9 +1,6 @@
 import { useEffect } from 'react';
-import Hero from '../components/Hero';
 import SellersSection from '../components/home/SellersSection';
 import PopularProducts from '../components/home/PopularProducts';
-import About from '../components/About';
-import Newsletter from '../components/Newsletter';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import Cursor from '../components/Cursor';
@@ -52,8 +49,7 @@ const HomePage = () => {
       <Cursor />
       <Navbar />
 
-      <main>
-        <Hero />
+      <main style={{ paddingTop: 84 }}>
         <SellersSection
           limit={6}
           onGoToSellers={goToSellers}
@@ -64,8 +60,6 @@ const HomePage = () => {
           onProductClick={openProduct}
           onGoToCatalog={goToCatalog}
         />
-        <About />
-        <Newsletter />
       </main>
 
       <Footer />

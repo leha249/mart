@@ -25,6 +25,8 @@ export interface SellerFormState {
   about_badge: string;
   footer_text: string;
   accent_color: string;
+
+  lookbook_images: string[];
 }
 
 export const sellerFormFrom = (s: UISeller): SellerFormState => ({
@@ -47,14 +49,14 @@ export const sellerFormFrom = (s: UISeller): SellerFormState => ({
   about_badge: s.aboutBadge ?? '',
   footer_text: s.footerText ?? '',
   accent_color: s.accentColor ?? '#e8ff5a',
+
+  lookbook_images: s.lookbookImages ?? [],
 });
 
 interface Props {
   initialForm: SellerFormState;
   saving: boolean;
-  /** true для админа, false для продавца */
   canEditSlugAndStatus?: boolean;
-  /** true — форма встроена в страницу (без модальных отступов) */
   inline?: boolean;
   onSubmit: (form: SellerFormState) => void;
   onCancel: () => void;
@@ -71,7 +73,7 @@ const SellerForm = ({
   const [form, setForm] = useState<SellerFormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeSection, setActiveSection] = useState<
-    'main' | 'hero' | 'about' | 'footer'
+    'main' | 'hero' | 'about' | 'lookbook' | 'footer'
   >('main');
   const firstRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
@@ -102,7 +104,6 @@ const SellerForm = ({
 
     if (!form.name.trim()) errs.name = 'Введите название';
 
-    // Slug валидируем только если его можно редактировать
     if (canEditSlugAndStatus) {
       if (!form.slug.trim()) errs.slug = 'Введите slug';
       else if (!/^[a-z0-9-]+$/.test(form.slug.trim()))
@@ -131,6 +132,7 @@ const SellerForm = ({
         setActiveSection('hero');
       else if (errs.about_title || errs.about_text || errs.about_image || errs.about_badge)
         setActiveSection('about');
+      else if (errs.lookbook_images) setActiveSection('lookbook');
       else if (errs.footer_text) setActiveSection('footer');
       else setActiveSection('main');
       addToast('Проверьте поля формы', 'error');
@@ -161,21 +163,13 @@ const SellerForm = ({
   const sections: { key: typeof activeSection; label: string }[] = [
     { key: 'main', label: 'Основное' },
     { key: 'hero', label: 'Hero' },
+    { key: 'lookbook', label: 'Lookbook' },
     { key: 'about', label: 'About' },
     { key: 'footer', label: 'Footer' },
   ];
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: 'grid',
-        gap: 24,
-        ...(inline
-          ? {}
-          : {}),
-      }}
-    >
+    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 24 }}>
       {/* Табы разделов */}
       <div
         style={{
@@ -519,6 +513,27 @@ const SellerForm = ({
         </div>
       )}
 
+      {/* === LOOKBOOK === */}
+      {activeSection === 'lookbook' && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={hintStyle}>
+            Загрузите до 4 фотографий — они появятся в секции Lookbook на
+            странице вашего магазина. Если не загружено ни одного фото, секция
+            скроется.
+          </div>
+
+          <ImageUploader
+            multiple
+            maxImages={4}
+            label="Фотографии Lookbook"
+            value={form.lookbook_images}
+            onChange={(urls) => setField('lookbook_images', urls)}
+            aspect="3/4"
+            disabled={saving}
+          />
+        </div>
+      )}
+
       {/* === ABOUT === */}
       {activeSection === 'about' && (
         <div style={{ display: 'grid', gap: 16 }}>
@@ -670,8 +685,6 @@ const SellerForm = ({
     </form>
   );
 };
-
-// === Стили и вспомогательные компоненты ===
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,

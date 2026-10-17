@@ -151,6 +151,8 @@ export interface Seller {
   footer_text: string | null;
   accent_color: string | null;
 
+  lookbook_images: string[] | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -177,6 +179,8 @@ export interface UISeller {
   footerText?: string;
   accentColor?: string;
 
+  lookbookImages: string[];
+
   createdAt: string;
 }
 
@@ -201,6 +205,8 @@ export const mapSellerToUI = (s: Seller): UISeller => ({
   aboutBadge: s.about_badge ?? undefined,
   footerText: s.footer_text ?? undefined,
   accentColor: s.accent_color ?? undefined,
+
+  lookbookImages: s.lookbook_images ?? [],
 
   createdAt: s.created_at,
 });
