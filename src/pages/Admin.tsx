@@ -16,10 +16,12 @@ import { useOrders } from '../context/OrdersContext';
 import { useCategories } from '../context/CategoriesContext';
 import { useReviews } from '../context/ReviewsContext';
 import { usePromocodesAdmin } from '../context/PromocodesAdminContext';
+import { useSellers } from '../context/SellersContext';
 import { useAuth } from '../context/AuthContext';
 import { productsService } from '../services/products';
 import { categoriesService } from '../services/categories';
 import { promocodesService } from '../services/promocodes';
+import { sellersService } from '../services/sellers';
 import { storageService } from '../services/storage';
 import { useToast } from '../context/ToastContext';
 import { useBodyLock } from '../hooks/useBodyLock';
@@ -50,13 +52,20 @@ import PromocodeForm, {
   promoFormFrom,
 } from '../components/admin/PromocodeForm';
 import type { PromoFormState } from '../components/admin/PromocodeForm';
+import SellersTable from '../components/admin/SellersTable';
+import SellerForm, {
+  sellerFormFrom,
+} from '../components/admin/SellerForm';
+import type { SellerFormState } from '../components/admin/SellerForm';
 import type {
   Category,
   Order,
   OrderStatus,
   Product,
   Promocode,
+  SellerStatus,
   UIProduct,
+  UISeller,
 } from '../types/database';
 import { formatPrice } from '../utils/format';
 import {
@@ -66,7 +75,7 @@ import {
 } from '../utils/export';
 
 const Admin = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, role, sellerId } = useAuth();
   const { products, loading: productsLoading, refetch } = useProducts();
   const {
     orders,
@@ -104,7 +113,13 @@ const Admin = () => {
     promocodes,
     loading: promocodesLoading,
     refetch: refetchPromocodes,
+    currentSellerId,
   } = usePromocodesAdmin();
+  const {
+    sellers,
+    loading: sellersLoading,
+    refetch: refetchSellers,
+  } = useSellers();
   const { addToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -139,15 +154,24 @@ const Admin = () => {
   const [deletePromoId, setDeletePromoId] = useState<number | null>(null);
   const [promoSearch, setPromoSearch] = useState('');
 
+  const [sellerFormOpen, setSellerFormOpen] = useState(false);
+  const [editingSeller, setEditingSeller] = useState<UISeller | null>(null);
+  const [initialSellerForm, setInitialSellerForm] =
+    useState<SellerFormState | null>(null);
+  const [savingSeller, setSavingSeller] = useState(false);
+  const [sellerSearch, setSellerSearch] = useState('');
+
   const search = useDebounce(productSearch, 250);
   const categorySearchDebounced = useDebounce(categorySearch, 250);
   const orderSearchDebounced = useDebounce(filters.search || '', 300);
   const reviewSearchDebounced = useDebounce(reviewSearchInput, 300);
+  const sellerSearchDebounced = useDebounce(sellerSearch, 250);
 
   const isModalOpen =
     formOpen ||
     categoryFormOpen ||
     promoFormOpen ||
+    sellerFormOpen ||
     selectedOrder !== null ||
     deleteIds.length > 0 ||
     deleteCategoryId !== null ||
@@ -165,7 +189,9 @@ const Admin = () => {
   });
 
   useBodyLock(isModalOpen);
-  useUnsavedChanges((formOpen || categoryFormOpen || promoFormOpen) && !saving);
+  useUnsavedChanges(
+    (formOpen || categoryFormOpen || promoFormOpen || sellerFormOpen) && !saving
+  );
 
   useEffect(() => {
     if (filters.search !== orderSearchDebounced) {
@@ -196,18 +222,23 @@ const Admin = () => {
 
   useEffect(() => {
     let title = 'Админ — MØRA MART';
-    if (activeTab === 'dashboard') title = 'Дашборд — MØRA MART';
-    if (activeTab === 'orders') title = `Заказы (${newOrdersCount}) — MØRA MART`;
-    if (activeTab === 'products') title = 'Товары — MØRA MART';
-    if (activeTab === 'categories') title = 'Категории — MØRA MART';
-    if (activeTab === 'reviews')
-      title = `Отзывы (${reviewsPendingCount}) — MØRA MART`;
-    if (activeTab === 'promocodes') title = 'Промокоды — MØRA MART';
+    if (role === 'seller') {
+      title = `Кабинет продавца — MØRA MART`;
+    } else {
+      if (activeTab === 'dashboard') title = 'Дашборд — MØRA MART';
+      if (activeTab === 'orders') title = `Заказы (${newOrdersCount}) — MØRA MART`;
+      if (activeTab === 'products') title = 'Товары — MØRA MART';
+      if (activeTab === 'categories') title = 'Категории — MØRA MART';
+      if (activeTab === 'reviews')
+        title = `Отзывы (${reviewsPendingCount}) — MØRA MART`;
+      if (activeTab === 'promocodes') title = 'Промокоды — MØRA MART';
+      if (activeTab === 'sellers') title = 'Продавцы — MØRA MART';
+    }
     document.title = title;
     return () => {
       document.title = 'MØRA MART';
     };
-  }, [activeTab, newOrdersCount, reviewsPendingCount]);
+  }, [activeTab, newOrdersCount, reviewsPendingCount, role]);
 
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
@@ -235,6 +266,7 @@ const Admin = () => {
     }
   };
 
+  // ============ PRODUCTS ============
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
@@ -301,6 +333,7 @@ const Admin = () => {
         rating: Number(form.rating) || 0,
         reviews: Number(form.reviews) || 0,
         in_stock: form.in_stock,
+        seller_id: sellerId,
       };
 
       if (editingProduct) {
@@ -382,6 +415,7 @@ const Admin = () => {
       await productsService.create({
         ...rest,
         name: `${rest.name} (копия)`,
+        seller_id: sellerId,
       } as Omit<Product, 'id' | 'created_at' | 'updated_at'>);
       addToast('Товар дублирован', 'success');
       await refetch();
@@ -430,6 +464,7 @@ const Admin = () => {
     [products]
   );
 
+  // ============ ORDERS ============
   const handleOrderStatusUpdate = async (id: number, status: OrderStatus) => {
     try {
       await updateStatus(id, status);
@@ -477,6 +512,7 @@ const Admin = () => {
     addToast(`Экспортировано промокодов: ${promocodes.length}`, 'success');
   };
 
+  // ============ CATEGORIES ============
   const productsCountByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     products.forEach((p) => {
@@ -515,14 +551,24 @@ const Admin = () => {
         slug: form.slug.trim(),
         description: form.description.trim() || null,
         sort_order: Number(form.sort_order) || 0,
+        seller_id: sellerId,
       };
 
       if (editingCategory) {
         const oldName = editingCategory.name;
-        await categoriesService.update(editingCategory.id, payload);
+        await categoriesService.update(editingCategory.id, {
+          name: payload.name,
+          slug: payload.slug,
+          description: payload.description,
+          sort_order: payload.sort_order,
+        });
         if (oldName !== payload.name) {
           try {
-            await categoriesService.renameInProducts(oldName, payload.name);
+            await categoriesService.renameInProducts(
+              oldName,
+              payload.name,
+              sellerId
+            );
             await refetch();
           } catch (e) {
             console.warn('Не удалось переименовать категорию в товарах:', e);
@@ -566,6 +612,7 @@ const Admin = () => {
     }
   };
 
+  // ============ REVIEWS ============
   const productsMap = useMemo(() => {
     const map: Record<number, { name: string; image: string }> = {};
     products.forEach((p) => {
@@ -604,6 +651,7 @@ const Admin = () => {
     }
   };
 
+  // ============ PROMOCODES ============
   const filteredPromocodes = useMemo(() => {
     if (!promoSearch.trim()) return promocodes;
     const q = promoSearch.toLowerCase();
@@ -635,10 +683,18 @@ const Admin = () => {
           ? new Date(form.expires_at).toISOString()
           : null,
         active: form.active,
+        seller_id: currentSellerId,
       };
 
       if (editingPromo) {
-        await promocodesService.update(editingPromo.id, payload);
+        await promocodesService.update(editingPromo.id, {
+          code: payload.code,
+          discount_percent: payload.discount_percent,
+          min_total: payload.min_total,
+          max_uses: payload.max_uses,
+          expires_at: payload.expires_at,
+          active: payload.active,
+        });
         addToast('Промокод обновлён', 'success');
       } else {
         await promocodesService.create(payload);
@@ -686,6 +742,103 @@ const Admin = () => {
     }
   };
 
+  // ============ SELLERS ============
+  const productsCountBySeller = useMemo(() => {
+    const map: Record<number, number> = {};
+    products.forEach((p) => {
+      if (p.sellerId !== null) {
+        map[p.sellerId] = (map[p.sellerId] || 0) + 1;
+      }
+    });
+    return map;
+  }, [products]);
+
+  const filteredSellers = useMemo(() => {
+    if (!sellerSearchDebounced.trim()) return sellers;
+    const q = sellerSearchDebounced.toLowerCase();
+    return sellers.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.slug.toLowerCase().includes(q) ||
+        (s.email && s.email.toLowerCase().includes(q))
+    );
+  }, [sellers, sellerSearchDebounced]);
+
+  const openSellerEdit = (seller: UISeller) => {
+    setEditingSeller(seller);
+    setInitialSellerForm(sellerFormFrom(seller));
+    setSellerFormOpen(true);
+  };
+
+  const handleSellerSubmit = async (form: SellerFormState) => {
+    if (!editingSeller || savingSeller) return;
+    setSavingSeller(true);
+    try {
+      await sellersService.update(editingSeller.id, {
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        logo: form.logo || null,
+        cover: form.cover || null,
+
+        hero_title: form.hero_title.trim() || null,
+        hero_subtitle: form.hero_subtitle.trim() || null,
+        hero_image: form.hero_image || null,
+        hero_badge: form.hero_badge.trim() || null,
+        about_title: form.about_title.trim() || null,
+        about_text: form.about_text.trim() || null,
+        about_image: form.about_image || null,
+        about_badge: form.about_badge.trim() || null,
+        footer_text: form.footer_text.trim() || null,
+        accent_color: form.accent_color.trim() || null,
+      });
+
+      // Если изменился slug — обновляем отдельно
+      if (form.slug.trim() !== editingSeller.slug) {
+        await sellersService.updateSlug(editingSeller.id, form.slug);
+      }
+
+      // Если изменился статус — обновляем отдельно
+      if (form.status !== editingSeller.status) {
+        await sellersService.updateStatus(editingSeller.id, form.status);
+      }
+
+      addToast('Продавец обновлён', 'success');
+      setSellerFormOpen(false);
+      setEditingSeller(null);
+      setInitialSellerForm(null);
+      await refetchSellers();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Ошибка сохранения';
+      addToast(msg, 'error');
+      throw e;
+    } finally {
+      setSavingSeller(false);
+    }
+  };
+
+  const handleSellerStatusChange = async (
+    seller: UISeller,
+    status: SellerStatus
+  ) => {
+    try {
+      await sellersService.updateStatus(seller.id, status);
+      addToast(
+        status === 'active'
+          ? 'Продавец активирован'
+          : status === 'paused'
+          ? 'Продавец поставлен на паузу'
+          : 'Продавец заблокирован',
+        'success'
+      );
+      await refetchSellers();
+    } catch (e) {
+      addToast('Ошибка изменения статуса', 'error');
+    }
+  };
+
+  // ============ MODES ============
   const formMode: 'create' | 'edit' = editingProduct ? 'edit' : 'create';
   const categoryFormMode: 'create' | 'edit' = editingCategory
     ? 'edit'
@@ -726,6 +879,9 @@ const Admin = () => {
 
   if (!user) return null;
 
+  const isSeller = role === 'seller';
+  const headerLabel = isSeller ? 'Кабинет продавца' : 'Админ-панель';
+
   return (
     <div
       style={{
@@ -735,6 +891,7 @@ const Admin = () => {
       }}
     >
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {/* HEADER */}
         <div
           style={{
             display: 'flex',
@@ -755,7 +912,7 @@ const Admin = () => {
                 marginBottom: 8,
               }}
             >
-              Админ-панель
+              {headerLabel}
             </div>
             <h1
               className="serif"
@@ -935,29 +1092,31 @@ const Admin = () => {
               </motion.button>
             )}
 
-            {activeTab === 'reviews' && reviews.length > 0 && (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleExportReviews}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: 100,
-                  border: '1px solid var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Download size={16} /> Экспорт отзывов
-              </motion.button>
-            )}
+            {activeTab === 'reviews' &&
+              reviews.length > 0 &&
+              !isSeller && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleExportReviews}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: 100,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Download size={16} /> Экспорт отзывов
+                </motion.button>
+              )}
 
             {activeTab === 'promocodes' && promocodes.length > 0 && (
               <motion.button
@@ -990,10 +1149,13 @@ const Admin = () => {
           onChange={handleTabChange}
           ordersBadge={newOrdersCount}
           reviewsBadge={reviewsPendingCount}
+          role={role}
         />
 
+        {/* DASHBOARD */}
         {activeTab === 'dashboard' && <Dashboard />}
 
+        {/* PRODUCTS */}
         {activeTab === 'products' && (
           <>
             <div
@@ -1189,6 +1351,7 @@ const Admin = () => {
           </>
         )}
 
+        {/* ORDERS */}
         {activeTab === 'orders' && (
           <>
             {orderStats && (
@@ -1436,6 +1599,7 @@ const Admin = () => {
           </>
         )}
 
+        {/* CATEGORIES */}
         {activeTab === 'categories' && (
           <>
             <div
@@ -1581,72 +1745,75 @@ const Admin = () => {
           </>
         )}
 
+        {/* REVIEWS */}
         {activeTab === 'reviews' && (
           <>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: 12,
-                marginBottom: 24,
-              }}
-            >
-              {[
-                {
-                  label: 'Ожидают модерации',
-                  value: reviewsPendingCount,
-                  accent: reviewsPendingCount > 0,
-                },
-                {
-                  label: 'Всего показано',
-                  value: reviews.length,
-                },
-                {
-                  label: 'Одобренных',
-                  value: reviews.filter((r) => r.approved).length,
-                },
-                {
-                  label: 'Средний рейтинг',
-                  value:
-                    reviews.length > 0
-                      ? (
-                          reviews.reduce((s, r) => s + r.rating, 0) /
-                          reviews.length
-                        ).toFixed(1)
-                      : '—',
-                },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    padding: 16,
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 16,
-                  }}
-                >
+            {!isSeller && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: 12,
+                  marginBottom: 24,
+                }}
+              >
+                {[
+                  {
+                    label: 'Ожидают модерации',
+                    value: reviewsPendingCount,
+                    accent: reviewsPendingCount > 0,
+                  },
+                  {
+                    label: 'Всего показано',
+                    value: reviews.length,
+                  },
+                  {
+                    label: 'Одобренных',
+                    value: reviews.filter((r) => r.approved).length,
+                  },
+                  {
+                    label: 'Средний рейтинг',
+                    value:
+                      reviews.length > 0
+                        ? (
+                            reviews.reduce((s, r) => s + r.rating, 0) /
+                            reviews.length
+                          ).toFixed(1)
+                        : '—',
+                  },
+                ].map((s) => (
                   <div
+                    key={s.label}
                     style={{
-                      fontSize: 11,
-                      color: 'var(--muted)',
-                      marginBottom: 4,
+                      padding: 16,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 16,
                     }}
                   >
-                    {s.label}
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--muted)',
+                        marginBottom: 4,
+                      }}
+                    >
+                      {s.label}
+                    </div>
+                    <div
+                      className="price-num"
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 700,
+                        color: s.accent ? 'var(--accent)' : 'var(--text)',
+                      }}
+                    >
+                      {s.value}
+                    </div>
                   </div>
-                  <div
-                    className="price-num"
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: s.accent ? 'var(--accent)' : 'var(--text)',
-                    }}
-                  >
-                    {s.value}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div
               style={{
@@ -1715,65 +1882,70 @@ const Admin = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {[
-                  { key: 'pending' as const, label: 'Ожидают' },
-                  { key: 'approved' as const, label: 'Одобрены' },
-                  { key: 'all' as const, label: 'Все' },
-                ].map((f) => {
-                  const isActive = reviewsFilter === f.key;
-                  return (
-                    <button
-                      key={f.key}
-                      onClick={() => setReviewsFilter(f.key)}
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: 100,
-                        border: '1px solid',
-                        borderColor: isActive
-                          ? 'var(--accent)'
-                          : 'var(--border)',
-                        background: isActive
-                          ? 'var(--accent)'
-                          : 'transparent',
-                        color: isActive ? '#000' : 'var(--muted)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      {f.label}
-                      {f.key === 'pending' && reviewsPendingCount > 0 && (
-                        <span
-                          style={{
-                            minWidth: 16,
-                            height: 16,
-                            padding: '0 4px',
-                            borderRadius: 100,
-                            background: isActive ? '#000' : 'var(--danger)',
-                            color: isActive ? 'var(--accent)' : '#fff',
-                            fontSize: 9,
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {reviewsPendingCount > 99
-                            ? '99+'
-                            : reviewsPendingCount}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {!isSeller && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'pending' as const, label: 'Ожидают' },
+                    { key: 'approved' as const, label: 'Одобрены' },
+                    { key: 'all' as const, label: 'Все' },
+                  ].map((f) => {
+                    const isActive = reviewsFilter === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => setReviewsFilter(f.key)}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: 100,
+                          border: '1px solid',
+                          borderColor: isActive
+                            ? 'var(--accent)'
+                            : 'var(--border)',
+                          background: isActive
+                            ? 'var(--accent)'
+                            : 'transparent',
+                          color: isActive ? '#000' : 'var(--muted)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {f.label}
+                        {f.key === 'pending' &&
+                          reviewsPendingCount > 0 && (
+                            <span
+                              style={{
+                                minWidth: 16,
+                                height: 16,
+                                padding: '0 4px',
+                                borderRadius: 100,
+                                background: isActive
+                                  ? '#000'
+                                  : 'var(--danger)',
+                                color: isActive ? 'var(--accent)' : '#fff',
+                                fontSize: 9,
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {reviewsPendingCount > 99
+                                ? '99+'
+                                : reviewsPendingCount}
+                            </span>
+                          )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div
@@ -1792,11 +1964,13 @@ const Admin = () => {
                 onReject={handleRejectReview}
                 onDelete={handleDeleteReview}
                 search={reviewsSearch}
+                readonly={isSeller}
               />
             </div>
           </>
         )}
 
+        {/* PROMOCODES */}
         {activeTab === 'promocodes' && (
           <>
             <div
@@ -1946,8 +2120,177 @@ const Admin = () => {
             </div>
           </>
         )}
+
+        {/* SELLERS (только админ) */}
+        {activeTab === 'sellers' && !isSeller && (
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: 12,
+                marginBottom: 24,
+              }}
+            >
+              {[
+                { label: 'Всего продавцов', value: sellers.length },
+                {
+                  label: 'Активных',
+                  value: sellers.filter((s) => s.status === 'active').length,
+                  accent: true,
+                },
+                {
+                  label: 'На паузе',
+                  value: sellers.filter((s) => s.status === 'paused').length,
+                },
+                {
+                  label: 'Заблокировано',
+                  value: sellers.filter((s) => s.status === 'blocked').length,
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    padding: 16,
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--muted)',
+                      marginBottom: 4,
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                  <div
+                    className="price-num"
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: s.accent ? 'var(--accent)' : 'var(--text)',
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'center',
+                marginBottom: 16,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  flex: 1,
+                  maxWidth: 400,
+                  minWidth: 200,
+                }}
+              >
+                <Search
+                  size={16}
+                  color="var(--muted)"
+                  style={{
+                    position: 'absolute',
+                    left: 16,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Поиск по имени, slug или email..."
+                  value={sellerSearch}
+                  onChange={(e) => setSellerSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 40px 12px 42px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 100,
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                {sellerSearch && (
+                  <button
+                    onClick={() => setSellerSearch('')}
+                    aria-label="Очистить"
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--muted)',
+                      cursor: 'pointer',
+                      padding: 4,
+                      display: 'flex',
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 16,
+                overflow: 'hidden',
+              }}
+            >
+              <SellersTable
+                sellers={filteredSellers}
+                loading={sellersLoading}
+                productsCount={productsCountBySeller}
+                onEdit={openSellerEdit}
+                onChangeStatus={handleSellerStatusChange}
+                search={sellerSearchDebounced}
+              />
+            </div>
+          </>
+        )}
+
+        {/* PROFILE (только продавец) */}
+        {activeTab === 'profile' && isSeller && (
+          <div
+            style={{
+              padding: 60,
+              textAlign: 'center',
+              color: 'var(--muted)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+            }}
+          >
+            <div style={{ fontSize: 16, marginBottom: 8 }}>
+              Профиль магазина
+            </div>
+            <div style={{ fontSize: 13 }}>
+              Скоро здесь будет форма редактирования витрины магазина
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* МОДАЛКА: PRODUCT FORM */}
       <AnimatePresence>
         {formOpen && (
           <motion.div
@@ -2025,6 +2368,7 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
+      {/* МОДАЛКА: CATEGORY FORM */}
       <AnimatePresence>
         {categoryFormOpen && (
           <motion.div
@@ -2104,6 +2448,7 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
+      {/* МОДАЛКА: PROMO FORM */}
       <AnimatePresence>
         {promoFormOpen && (
           <motion.div
@@ -2182,6 +2527,83 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
+      {/* МОДАЛКА: SELLER FORM */}
+      <AnimatePresence>
+        {sellerFormOpen && initialSellerForm && (
+          <motion.div
+            key="seller-form-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !savingSeller && setSellerFormOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 500,
+              overflowY: 'auto',
+              padding: 20,
+            }}
+          >
+            <motion.div
+              key="seller-form-panel"
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--bg-soft)',
+                border: '1px solid var(--border)',
+                borderRadius: 24,
+                padding: 32,
+                width: '100%',
+                maxWidth: 720,
+                margin: '40px auto',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 24,
+                }}
+              >
+                <h2 style={{ fontSize: 22, fontWeight: 700 }}>
+                  Редактировать продавца
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => !savingSeller && setSellerFormOpen(false)}
+                  disabled={savingSeller}
+                  aria-label="Закрыть"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    cursor: savingSeller ? 'not-allowed' : 'pointer',
+                    padding: 4,
+                    opacity: savingSeller ? 0.5 : 1,
+                  }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              <SellerForm
+                initialForm={initialSellerForm}
+                saving={savingSeller}
+                onSubmit={handleSellerSubmit}
+                onCancel={() => setSellerFormOpen(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* МОДАЛКА: DELETE PRODUCTS */}
       <AnimatePresence>
         {deleteIds.length > 0 && (
           <motion.div
@@ -2307,6 +2729,7 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
+      {/* МОДАЛКА: DELETE CATEGORY */}
       <AnimatePresence>
         {deletingCategory && (
           <motion.div
@@ -2433,6 +2856,7 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
+      {/* МОДАЛКА: DELETE PROMO */}
       <AnimatePresence>
         {deletingPromo && (
           <motion.div

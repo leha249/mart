@@ -13,6 +13,7 @@ export interface Product {
   rating: number;
   reviews: number;
   in_stock: boolean;
+  seller_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface Category {
   slug: string;
   description: string | null;
   sort_order: number;
+  seller_id: number | null;
   created_at: string;
 }
 
@@ -50,6 +52,9 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: OrderStatus;
+  promo_code: string | null;
+  promo_discount: number | null;
+  seller_id: number | null;
   created_at: string;
 }
 
@@ -87,6 +92,7 @@ export interface UIProduct {
   rating: number;
   reviews: number;
   inStock: boolean;
+  sellerId: number | null;
 }
 
 export const mapProductToUI = (p: Product): UIProduct => {
@@ -112,8 +118,90 @@ export const mapProductToUI = (p: Product): UIProduct => {
     rating: Number(p.rating),
     reviews: p.reviews,
     inStock: p.in_stock,
+    sellerId: p.seller_id,
   };
 };
+
+// ============= SELLERS =============
+export type SellerStatus = 'active' | 'paused' | 'blocked';
+
+export interface Seller {
+  id: number;
+  user_id: string | null;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo: string | null;
+  cover: string | null;
+  phone: string | null;
+  email: string | null;
+  status: SellerStatus;
+
+  // Витрина (контент мини-MØRA MART)
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  hero_image: string | null;
+  hero_badge: string | null;
+  about_title: string | null;
+  about_text: string | null;
+  about_image: string | null;
+  about_badge: string | null;
+  footer_text: string | null;
+  accent_color: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UISeller {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  logo?: string;
+  cover?: string;
+  phone?: string;
+  email?: string;
+  status: SellerStatus;
+
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroImage?: string;
+  heroBadge?: string;
+  aboutTitle?: string;
+  aboutText?: string;
+  aboutImage?: string;
+  aboutBadge?: string;
+  footerText?: string;
+  accentColor?: string;
+
+  createdAt: string;
+}
+
+export const mapSellerToUI = (s: Seller): UISeller => ({
+  id: s.id,
+  name: s.name,
+  slug: s.slug,
+  description: s.description ?? undefined,
+  logo: s.logo ?? undefined,
+  cover: s.cover ?? undefined,
+  phone: s.phone ?? undefined,
+  email: s.email ?? undefined,
+  status: s.status,
+
+  heroTitle: s.hero_title ?? undefined,
+  heroSubtitle: s.hero_subtitle ?? undefined,
+  heroImage: s.hero_image ?? undefined,
+  heroBadge: s.hero_badge ?? undefined,
+  aboutTitle: s.about_title ?? undefined,
+  aboutText: s.about_text ?? undefined,
+  aboutImage: s.about_image ?? undefined,
+  aboutBadge: s.about_badge ?? undefined,
+  footerText: s.footer_text ?? undefined,
+  accentColor: s.accent_color ?? undefined,
+
+  createdAt: s.created_at,
+});
 
 // ============= PROMOCODES =============
 export interface Promocode {
@@ -125,6 +213,7 @@ export interface Promocode {
   used_count: number;
   expires_at: string | null;
   active: boolean;
+  seller_id: number | null;
   created_at: string;
 }
 

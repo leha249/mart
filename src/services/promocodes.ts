@@ -9,6 +9,7 @@ export interface CreatePromoInput {
   max_uses: number | null;
   expires_at: string | null;
   active: boolean;
+  seller_id: number | null;
 }
 
 const validate = (input: CreatePromoInput) => {
@@ -26,13 +27,23 @@ const validate = (input: CreatePromoInput) => {
 };
 
 export const promocodesService = {
-  async getAll(): Promise<Promocode[]> {
+  /**
+   * Список промокодов.
+   * Если sellerId передан — только промокоды этого продавца.
+   * Если не передан — все промокоды (для админа).
+   */
+  async getAll(sellerId: number | null = null): Promise<Promocode[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('promocodes')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (sellerId !== null) {
+        query = query.eq('seller_id', sellerId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     } catch (e) {
@@ -49,6 +60,32 @@ export const promocodesService = {
         .eq('id', id)
         .maybeSingle();
 
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      throw normalizeError(e);
+    }
+  },
+
+  /**
+   * Найти активный промокод по коду в рамках продавца (или глобальный)
+   */
+  async findByCode(
+    code: string,
+    sellerId: number | null = null
+  ): Promise<Promocode | null> {
+    try {
+      let query = supabase
+        .from('promocodes')
+        .select('*')
+        .eq('code', code.trim().toUpperCase())
+        .eq('active', true);
+
+      if (sellerId !== null) {
+        query = query.eq('seller_id', sellerId);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     } catch (e) {
@@ -84,7 +121,7 @@ export const promocodesService = {
 
   async update(
     id: number,
-    input: Partial<CreatePromoInput>
+    input: Partial<Omit<CreatePromoInput, 'seller_id'>>
   ): Promise<Promocode> {
     try {
       const payload: Record<string, unknown> = { ...input };

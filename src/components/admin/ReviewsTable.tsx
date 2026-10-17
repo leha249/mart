@@ -9,6 +9,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Eye,
 } from 'lucide-react';
 import type { Review } from '../../types/database';
 import { formatDate } from '../../utils/format';
@@ -21,6 +22,8 @@ interface Props {
   onReject: (id: number) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   search: string;
+  /** Продавец видит отзывы только в режиме просмотра */
+  readonly?: boolean;
 }
 
 const ReviewsTable = ({
@@ -31,6 +34,7 @@ const ReviewsTable = ({
   onReject,
   onDelete,
   search,
+  readonly = false,
 }: Props) => {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [processing, setProcessing] = useState<number | null>(null);
@@ -118,11 +122,17 @@ const ReviewsTable = ({
           style={{ marginBottom: 16, opacity: 0.5 }}
         />
         <div style={{ fontSize: 16, marginBottom: 8 }}>
-          {search ? 'Ничего не найдено' : 'Отзывов пока нет'}
+          {search
+            ? 'Ничего не найдено'
+            : readonly
+            ? 'Отзывов на ваши товары пока нет'
+            : 'Отзывов пока нет'}
         </div>
         <div style={{ fontSize: 13 }}>
           {search
             ? 'Попробуйте изменить запрос'
+            : readonly
+            ? 'Одобренные отзывы покупателей появятся здесь'
             : 'Отзывы от покупателей появятся здесь'}
         </div>
       </div>
@@ -318,28 +328,73 @@ const ReviewsTable = ({
                     </button>
                   )}
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      marginTop: 14,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    {!review.approved && (
-                      <motion.button
-                        whileHover={{ scale: isProcessing ? 1 : 1.03 }}
-                        whileTap={{ scale: isProcessing ? 1 : 0.97 }}
-                        onClick={() => handle(review.id, onApprove)}
+                  {readonly ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginTop: 14,
+                        fontSize: 11,
+                        color: 'var(--muted)',
+                      }}
+                    >
+                      <Eye size={12} />
+                      Только просмотр — модерация отзывов за админом
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        marginTop: 14,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      {!review.approved && (
+                        <motion.button
+                          whileHover={{ scale: isProcessing ? 1 : 1.03 }}
+                          whileTap={{ scale: isProcessing ? 1 : 0.97 }}
+                          onClick={() => handle(review.id, onApprove)}
+                          disabled={isProcessing}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: 100,
+                            border: 'none',
+                            background: 'var(--success)',
+                            color: '#000',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: isProcessing ? 'wait' : 'pointer',
+                            fontFamily: 'inherit',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          {isProcessing ? (
+                            <Loader2
+                              size={12}
+                              style={{ animation: 'spin 1s linear infinite' }}
+                            />
+                          ) : (
+                            <Check size={12} strokeWidth={3} />
+                          )}
+                          Одобрить
+                        </motion.button>
+                      )}
+
+                      <button
+                        onClick={() => handle(review.id, onReject)}
                         disabled={isProcessing}
                         style={{
                           padding: '8px 14px',
                           borderRadius: 100,
-                          border: 'none',
-                          background: 'var(--success)',
-                          color: '#000',
+                          border: '1px solid var(--border)',
+                          background: 'transparent',
+                          color: 'var(--text)',
                           fontSize: 12,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: isProcessing ? 'wait' : 'pointer',
                           fontFamily: 'inherit',
                           display: 'flex',
@@ -347,63 +402,34 @@ const ReviewsTable = ({
                           gap: 6,
                         }}
                       >
-                        {isProcessing ? (
-                          <Loader2
-                            size={12}
-                            style={{ animation: 'spin 1s linear infinite' }}
-                          />
-                        ) : (
-                          <Check size={12} strokeWidth={3} />
-                        )}
-                        Одобрить
-                      </motion.button>
-                    )}
+                        <X size={12} />
+                        Отклонить
+                      </button>
 
-                    <button
-                      onClick={() => handle(review.id, onReject)}
-                      disabled={isProcessing}
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: 100,
-                        border: '1px solid var(--border)',
-                        background: 'transparent',
-                        color: 'var(--text)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: isProcessing ? 'wait' : 'pointer',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <X size={12} />
-                      Отклонить
-                    </button>
-
-                    <button
-                      onClick={() => setConfirmDelete(review.id)}
-                      disabled={isProcessing}
-                      aria-label="Удалить отзыв"
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: 100,
-                        border: '1px solid var(--border)',
-                        background: 'transparent',
-                        color: 'var(--danger)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: isProcessing ? 'wait' : 'pointer',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <Trash2 size={12} />
-                      Удалить
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => setConfirmDelete(review.id)}
+                        disabled={isProcessing}
+                        aria-label="Удалить отзыв"
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: 100,
+                          border: '1px solid var(--border)',
+                          background: 'transparent',
+                          color: 'var(--danger)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: isProcessing ? 'wait' : 'pointer',
+                          fontFamily: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        Удалить
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -412,7 +438,7 @@ const ReviewsTable = ({
       </div>
 
       <AnimatePresence>
-        {confirmDelete !== null && (
+        {confirmDelete !== null && !readonly && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -6,7 +6,9 @@ import {
   MessageSquare,
   BarChart3,
   Tag,
+  Store,
 } from 'lucide-react';
+import type { UserRole } from '../../context/AuthContext';
 
 export type AdminTab =
   | 'dashboard'
@@ -14,13 +16,16 @@ export type AdminTab =
   | 'orders'
   | 'categories'
   | 'reviews'
-  | 'promocodes';
+  | 'promocodes'
+  | 'sellers'
+  | 'profile';
 
 interface Props {
   active: AdminTab;
   onChange: (tab: AdminTab) => void;
   ordersBadge?: number;
   reviewsBadge?: number;
+  role?: UserRole;
 }
 
 const AdminTabs = ({
@@ -28,12 +33,17 @@ const AdminTabs = ({
   onChange,
   ordersBadge = 0,
   reviewsBadge = 0,
+  role = 'admin',
 }: Props) => {
-  const tabs: {
+  const isSeller = role === 'seller';
+
+  const allTabs: {
     key: AdminTab;
     label: string;
     icon: React.ReactNode;
     badge?: number;
+    seller?: boolean;
+    admin?: boolean;
   }[] = [
     { key: 'dashboard', label: 'Дашборд', icon: <BarChart3 size={16} /> },
     { key: 'products', label: 'Товары', icon: <Package size={16} /> },
@@ -52,10 +62,28 @@ const AdminTabs = ({
       key: 'reviews',
       label: 'Отзывы',
       icon: <MessageSquare size={16} />,
-      badge: reviewsBadge > 0 ? reviewsBadge : undefined,
+      badge: isSeller ? undefined : reviewsBadge > 0 ? reviewsBadge : undefined,
     },
     { key: 'promocodes', label: 'Промокоды', icon: <Tag size={16} /> },
+    {
+      key: 'profile',
+      label: 'Профиль',
+      icon: <Store size={16} />,
+      seller: true,
+    },
+    {
+      key: 'sellers',
+      label: 'Продавцы',
+      icon: <Store size={16} />,
+      admin: true,
+    },
   ];
+
+  const tabs = allTabs.filter((tab) => {
+    if (tab.seller && !isSeller) return false;
+    if (tab.admin && isSeller) return false;
+    return true;
+  });
 
   return (
     <div

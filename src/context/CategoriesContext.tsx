@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { categoriesService } from '../services/categories';
 import type { Category } from '../types/database';
+import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface CategoriesContextType {
@@ -23,6 +24,8 @@ const CategoriesContext = createContext<CategoriesContextType | undefined>(
 );
 
 export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
+  const { user, role, sellerId } = useAuth();
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,9 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
   const mountedRef = useRef(true);
   const pendingRefetchRef = useRef(false);
   const fetchingRef = useRef(false);
+
+  // Продавец видит только свои категории; админ и гость — все публичные
+  const effectiveSellerId = role === 'seller' ? sellerId : null;
 
   const fetchCategories = async () => {
     if (fetchingRef.current) {
@@ -40,7 +46,7 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setError(null);
-      const data = await categoriesService.getAll();
+      const data = await categoriesService.getAll(effectiveSellerId);
       if (mountedRef.current) setCategories(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка загрузки категорий';
@@ -60,41 +66,57 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
     mountedRef.current = true;
     fetchCategories();
 
+    // Realtime-канал: для продавца — только его категории
+    const channelName =
+      role === 'seller' && sellerId !== null
+        ? `mora-categories-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
+        : `mora-categories-${Math.random().toString(36).slice(2)}`;
+
+    const config =
+      role === 'seller' && sellerId !== null
+        ? {
+            event: '*' as const,
+            schema: 'public',
+            table: 'categories',
+            filter: `seller_id=eq.${sellerId}`,
+          }
+        : {
+            event: '*' as const,
+            schema: 'public',
+            table: 'categories',
+          };
+
     const channel = supabase
-      .channel(`mora-categories-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'categories' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newCat = payload.new as Category;
-            setCategories((prev) => {
-              if (prev.some((c) => c.id === newCat.id)) return prev;
-              return [...prev, newCat].sort(
-                (a, b) =>
-                  a.sort_order - b.sort_order || a.name.localeCompare(b.name)
-              );
-            });
-            return;
-          }
-
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updated = payload.new as Category;
-            setCategories((prev) =>
-              prev
-                .map((c) => (c.id === updated.id ? updated : c))
-                .sort(
-                  (a, b) =>
-                    a.sort_order - b.sort_order ||
-                    a.name.localeCompare(b.name)
-                )
+      .channel(channelName)
+      .on('postgres_changes', config, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newCat = payload.new as Category;
+          setCategories((prev) => {
+            if (prev.some((c) => c.id === newCat.id)) return prev;
+            return [...prev, newCat].sort(
+              (a, b) =>
+                a.sort_order - b.sort_order || a.name.localeCompare(b.name)
             );
-            return;
-          }
-
-          fetchCategories();
+          });
+          return;
         }
-      )
+
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          const updated = payload.new as Category;
+          setCategories((prev) =>
+            prev
+              .map((c) => (c.id === updated.id ? updated : c))
+              .sort(
+                (a, b) =>
+                  a.sort_order - b.sort_order ||
+                  a.name.localeCompare(b.name)
+              )
+          );
+          return;
+        }
+
+        fetchCategories();
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -107,7 +129,7 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, role, sellerId, effectiveSellerId]);
 
   return (
     <CategoriesContext.Provider

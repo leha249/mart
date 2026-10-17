@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { promocodesService } from '../services/promocodes';
 import type { Promocode } from '../types/database';
+import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ContextType {
@@ -16,6 +17,8 @@ interface ContextType {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  /** sellerId для использования в создании промокодов */
+  currentSellerId: number | null;
 }
 
 const Ctx = createContext<ContextType | undefined>(undefined);
@@ -25,16 +28,21 @@ export const PromocodesAdminProvider = ({
 }: {
   children: ReactNode;
 }) => {
+  const { user, role, sellerId } = useAuth();
+
   const [promocodes, setPromocodes] = useState<Promocode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const mountedRef = useRef(true);
 
+  // Продавец видит только свои промокоды; админ — все
+  const effectiveSellerId = role === 'seller' ? sellerId : null;
+
   const fetch = async () => {
     try {
       setError(null);
-      const data = await promocodesService.getAll();
+      const data = await promocodesService.getAll(effectiveSellerId);
       if (mountedRef.current) setPromocodes(data);
     } catch (e) {
       if (mountedRef.current)
@@ -48,13 +56,28 @@ export const PromocodesAdminProvider = ({
     mountedRef.current = true;
     fetch();
 
+    const channelName =
+      role === 'seller' && sellerId !== null
+        ? `mora-promos-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
+        : `mora-promos-${Math.random().toString(36).slice(2)}`;
+
+    const config =
+      role === 'seller' && sellerId !== null
+        ? {
+            event: '*' as const,
+            schema: 'public',
+            table: 'promocodes',
+            filter: `seller_id=eq.${sellerId}`,
+          }
+        : {
+            event: '*' as const,
+            schema: 'public',
+            table: 'promocodes',
+          };
+
     const channel = supabase
-      .channel(`mora-promos-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'promocodes' },
-        () => fetch()
-      )
+      .channel(channelName)
+      .on('postgres_changes', config, () => fetch())
       .subscribe();
 
     channelRef.current = channel;
@@ -66,10 +89,19 @@ export const PromocodesAdminProvider = ({
         channelRef.current = null;
       }
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, role, sellerId, effectiveSellerId]);
 
   return (
-    <Ctx.Provider value={{ promocodes, loading, error, refetch: fetch }}>
+    <Ctx.Provider
+      value={{
+        promocodes,
+        loading,
+        error,
+        refetch: fetch,
+        currentSellerId: sellerId,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

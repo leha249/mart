@@ -28,11 +28,11 @@ import { PromoProvider } from './context/PromoContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { UIProvider, useUI } from './context/UIContext';
+import { SellersProvider } from './context/SellersContext';
 import { useRoute, useProductOpenEvent } from './utils/navigate';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
 import type { UIProduct } from './types/database';
 
-// Lazy-loaded страницы (загружаются только когда нужны)
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
@@ -164,24 +164,26 @@ function App() {
           <AuthProvider>
             <ProductsProvider>
               <CategoriesProvider>
-                <OrdersProvider>
-                  <ReviewsProvider>
-                    <PromocodesAdminProvider>
-                      <CartProvider>
-                        <PromoProvider>
-                          <FavoritesProvider>
-                            <UIProvider>
-                              {!preloaded && (
-                                <Preloader onDone={() => setPreloaded(true)} />
-                              )}
-                              <Router />
-                            </UIProvider>
-                          </FavoritesProvider>
-                        </PromoProvider>
-                      </CartProvider>
-                    </PromocodesAdminProvider>
-                  </ReviewsProvider>
-                </OrdersProvider>
+                <SellersProvider>
+                  <OrdersProvider>
+                    <ReviewsProvider>
+                      <PromocodesAdminProvider>
+                        <CartProvider>
+                          <PromoProvider>
+                            <FavoritesProvider>
+                              <UIProvider>
+                                {!preloaded && (
+                                  <Preloader onDone={() => setPreloaded(true)} />
+                                )}
+                                <Router />
+                              </UIProvider>
+                            </FavoritesProvider>
+                          </PromoProvider>
+                        </CartProvider>
+                      </PromocodesAdminProvider>
+                    </ReviewsProvider>
+                  </OrdersProvider>
+                </SellersProvider>
               </CategoriesProvider>
             </ProductsProvider>
           </AuthProvider>

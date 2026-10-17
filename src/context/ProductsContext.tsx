@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { productsService } from '../services/products';
 import type { Product, UIProduct } from '../types/database';
 import { mapProductToUI } from '../types/database';
+import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ProductsContextType {
@@ -17,6 +18,8 @@ interface ProductsContextType {
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
+  const { user, role, sellerId } = useAuth();
+
   const [rawProducts, setRawProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const mountedRef = useRef(true);
   const pendingRefetchRef = useRef(false);
   const fetchingRef = useRef(false);
+
+  // Фильтр по продавцу применяется только в кабинете продавца.
+  // На публичном каталоге (role = guest/admin) показываем всё.
+  const effectiveSellerId = role === 'seller' ? sellerId : null;
 
   const fetchProducts = async () => {
     if (fetchingRef.current) {
@@ -34,7 +41,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setError(null);
-      const data = await productsService.getAll();
+      const data = await productsService.getAll(effectiveSellerId);
       if (mountedRef.current) setRawProducts(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка загрузки товаров';
@@ -54,32 +61,48 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     mountedRef.current = true;
     fetchProducts();
 
+    // Realtime-подписка: для продавца — только его товары
+    const channelName =
+      role === 'seller' && sellerId !== null
+        ? `mora-products-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
+        : `mora-products-${Math.random().toString(36).slice(2)}`;
+
+    const config =
+      role === 'seller' && sellerId !== null
+        ? {
+            event: '*' as const,
+            schema: 'public',
+            table: 'products',
+            filter: `seller_id=eq.${sellerId}`,
+          }
+        : {
+            event: '*' as const,
+            schema: 'public',
+            table: 'products',
+          };
+
     const channel = supabase
-      .channel(`mora-products-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newProduct = payload.new as Product;
-            setRawProducts((prev) => {
-              if (prev.some((p) => p.id === newProduct.id)) return prev;
-              return [newProduct, ...prev];
-            });
-            return;
-          }
-
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updated = payload.new as Product;
-            setRawProducts((prev) =>
-              prev.map((p) => (p.id === updated.id ? updated : p))
-            );
-            return;
-          }
-
-          fetchProducts();
+      .channel(channelName)
+      .on('postgres_changes', config, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newProduct = payload.new as Product;
+          setRawProducts((prev) => {
+            if (prev.some((p) => p.id === newProduct.id)) return prev;
+            return [newProduct, ...prev];
+          });
+          return;
         }
-      )
+
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          const updated = payload.new as Product;
+          setRawProducts((prev) =>
+            prev.map((p) => (p.id === updated.id ? updated : p))
+          );
+          return;
+        }
+
+        fetchProducts();
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -92,7 +115,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, role, sellerId, effectiveSellerId]);
 
   const products = rawProducts.map(mapProductToUI);
 

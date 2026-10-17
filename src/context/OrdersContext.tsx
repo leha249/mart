@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { ordersService } from '../services/orders';
 import type { OrdersStats, OrderFilters } from '../services/orders';
 import type { Order, OrderStatus } from '../types/database';
+import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const PAGE_SIZE = 20;
@@ -50,6 +51,8 @@ const loadInitial = <T,>(key: string, fallback: T): T => {
 };
 
 export const OrdersProvider = ({ children }: { children: ReactNode }) => {
+  const { user, role, sellerId } = useAuth();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrdersStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +71,9 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const mountedRef = useRef(true);
   const fetchingRef = useRef(false);
+
+  // Определяем sellerId для фильтрации: только если role = seller
+  const effectiveSellerId = role === 'seller' ? sellerId : null;
 
   useEffect(() => {
     try {
@@ -93,8 +99,9 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
           search,
           limit: PAGE_SIZE,
           offset: 0,
+          sellerId: effectiveSellerId,
         }),
-        ordersService.getStats(),
+        ordersService.getStats(effectiveSellerId),
       ]);
 
       if (!mountedRef.current) return;
@@ -110,7 +117,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
       if (mountedRef.current) setLoading(false);
       fetchingRef.current = false;
     }
-  }, [statusFilter, search]);
+  }, [statusFilter, search, effectiveSellerId]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || fetchingRef.current) return;
@@ -123,6 +130,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         search,
         limit: PAGE_SIZE,
         offset,
+        sellerId: effectiveSellerId,
       });
 
       if (!mountedRef.current) return;
@@ -140,7 +148,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
       if (mountedRef.current) setLoadingMore(false);
       fetchingRef.current = false;
     }
-  }, [loadingMore, hasMore, statusFilter, search, offset]);
+  }, [loadingMore, hasMore, statusFilter, search, offset, effectiveSellerId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -149,52 +157,70 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     fetchFirstPage();
   }, [fetchFirstPage]);
 
+  // Realtime-подписка: фильтр по seller_id для продавца
   useEffect(() => {
+    if (!user) return;
+
+    const channelName =
+      role === 'seller'
+        ? `mora-orders-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
+        : `mora-orders-admin-${Math.random().toString(36).slice(2)}`;
+
+    const config =
+      role === 'seller' && sellerId !== null
+        ? {
+            event: '*' as const,
+            schema: 'public',
+            table: 'orders',
+            filter: `seller_id=eq.${sellerId}`,
+          }
+        : {
+            event: '*' as const,
+            schema: 'public',
+            table: 'orders',
+          };
+
     const channel = supabase
-      .channel(`mora-orders-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newOrder = payload.new as Order;
-            setNewOrdersCount((c) => c + 1);
-            if (
-              statusFilter === 'all' ||
-              statusFilter === (newOrder.status as OrderStatus)
-            ) {
-              setOrders((prev) => {
-                if (prev.some((o) => o.id === newOrder.id)) return prev;
-                return [newOrder, ...prev];
-              });
-            }
-            ordersService.getStats().then((st) => {
-              if (mountedRef.current) setStats(st);
+      .channel(channelName)
+      .on('postgres_changes', config, (payload) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newOrder = payload.new as Order;
+          setNewOrdersCount((c) => c + 1);
+          if (
+            statusFilter === 'all' ||
+            statusFilter === (newOrder.status as OrderStatus)
+          ) {
+            setOrders((prev) => {
+              if (prev.some((o) => o.id === newOrder.id)) return prev;
+              return [newOrder, ...prev];
             });
-            return;
           }
-
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updated = payload.new as Order;
-            setOrders((prev) =>
-              prev.map((o) => (o.id === updated.id ? updated : o))
-            );
-            ordersService.getStats().then((st) => {
-              if (mountedRef.current) setStats(st);
-            });
-            return;
-          }
-
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const deleted = payload.old as { id: number };
-            setOrders((prev) => prev.filter((o) => o.id !== deleted.id));
-            ordersService.getStats().then((st) => {
-              if (mountedRef.current) setStats(st);
-            });
-            return;
-          }
+          ordersService.getStats(effectiveSellerId).then((st) => {
+            if (mountedRef.current) setStats(st);
+          });
+          return;
         }
-      )
+
+        if (payload.eventType === 'UPDATE' && payload.new) {
+          const updated = payload.new as Order;
+          setOrders((prev) =>
+            prev.map((o) => (o.id === updated.id ? updated : o))
+          );
+          ordersService.getStats(effectiveSellerId).then((st) => {
+            if (mountedRef.current) setStats(st);
+          });
+          return;
+        }
+
+        if (payload.eventType === 'DELETE' && payload.old) {
+          const deleted = payload.old as { id: number };
+          setOrders((prev) => prev.filter((o) => o.id !== deleted.id));
+          ordersService.getStats(effectiveSellerId).then((st) => {
+            if (mountedRef.current) setStats(st);
+          });
+          return;
+        }
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -205,7 +231,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         channelRef.current = null;
       }
     };
-  }, [statusFilter]);
+  }, [statusFilter, user, role, sellerId, effectiveSellerId]);
 
   useEffect(() => {
     const seen = loadInitial<number[]>(SEEN_KEY, []);
@@ -239,7 +265,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updated = await ordersService.updateStatus(id, status);
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
-      const st = await ordersService.getStats();
+      const st = await ordersService.getStats(effectiveSellerId);
       if (mountedRef.current) setStats(st);
     } catch (e) {
       setOrders(prevOrders);
@@ -253,7 +279,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       await ordersService.remove(id);
-      const st = await ordersService.getStats();
+      const st = await ordersService.getStats(effectiveSellerId);
       if (mountedRef.current) setStats(st);
     } catch (e) {
       setOrders(prevOrders);

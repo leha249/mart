@@ -9,13 +9,18 @@ export interface ProductsPage {
 }
 
 export const productsService = {
-  async getAll(): Promise<Product[]> {
+  async getAll(sellerId: number | null = null): Promise<Product[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (sellerId !== null) {
+        query = query.eq('seller_id', sellerId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     } catch (e) {
@@ -27,7 +32,7 @@ export const productsService = {
   async getPage(
     limit = 20,
     offset = 0,
-    filters?: { category?: string; search?: string }
+    filters?: { category?: string; search?: string; sellerId?: number | null }
   ): Promise<ProductsPage> {
     try {
       let query = supabase
@@ -35,6 +40,10 @@ export const productsService = {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
+
+      if (filters?.sellerId !== undefined && filters?.sellerId !== null) {
+        query = query.eq('seller_id', filters.sellerId);
+      }
 
       if (filters?.category && filters.category !== 'Все') {
         query = query.eq('category', filters.category);

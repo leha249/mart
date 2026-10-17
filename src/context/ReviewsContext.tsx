@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { normalizeError } from '../utils/errors';
 import type { Review } from '../types/database';
+import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export type ReviewsFilter = 'pending' | 'approved' | 'rejected' | 'all';
@@ -45,6 +46,8 @@ const loadFromStorage = <T,>(key: string, fallback: T): T => {
 };
 
 export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
+  const { user, role, sellerId } = useAuth();
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +64,9 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
   const pendingRefetchRef = useRef(false);
   const fetchingRef = useRef(false);
 
+  // Продавец видит только отзывы на свои товары (и только одобренные)
+  const isSeller = role === 'seller' && sellerId !== null;
+
   useEffect(() => {
     try {
       localStorage.setItem(FILTER_KEY, JSON.stringify(filter));
@@ -74,6 +80,12 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
   }, [search]);
 
   const fetchPendingCount = useCallback(async () => {
+    // Продавцу нечего модерировать — pending count не нужен
+    if (isSeller) {
+      if (mountedRef.current) setPendingCount(0);
+      return;
+    }
+
     try {
       const { count, error } = await supabase
         .from('reviews')
@@ -85,7 +97,7 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.warn('[ReviewsContext] pending count failed:', e);
     }
-  }, []);
+  }, [isSeller]);
 
   const fetchReviews = useCallback(async () => {
     if (fetchingRef.current) {
@@ -97,6 +109,40 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
     try {
       setError(null);
 
+      // Для продавца: join через products, чтобы получить только его отзывы
+      if (isSeller && sellerId !== null) {
+        let productQuery = supabase
+          .from('products')
+          .select('id')
+          .eq('seller_id', sellerId);
+
+        const { data: sellerProducts } = await productQuery;
+        const productIds = (sellerProducts ?? []).map((p) => p.id);
+
+        if (productIds.length === 0) {
+          if (mountedRef.current) setReviews([]);
+          return;
+        }
+
+        let query = supabase
+          .from('reviews')
+          .select('*')
+          .in('product_id', productIds)
+          .eq('approved', true)
+          .order('created_at', { ascending: false });
+
+        if (search.trim()) {
+          const q = search.trim();
+          query = query.or(`author_name.ilike.%${q}%,text.ilike.%${q}%`);
+        }
+
+        const { data, error: dbError } = await query;
+        if (dbError) throw dbError;
+        if (mountedRef.current) setReviews(data ?? []);
+        return;
+      }
+
+      // Для админа: обычная логика с фильтрами
       let query = supabase
         .from('reviews')
         .select('*')
@@ -107,16 +153,12 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
       } else if (filter === 'approved') {
         query = query.eq('approved', true);
       } else if (filter === 'rejected') {
-        // rejected — помечаем через отдельный признак, если есть колонка
-        // иначе показываем "все с false approved"
         query = query.eq('approved', false);
       }
 
       if (search.trim()) {
         const q = search.trim();
-        query = query.or(
-          `author_name.ilike.%${q}%,text.ilike.%${q}%`
-        );
+        query = query.or(`author_name.ilike.%${q}%,text.ilike.%${q}%`);
       }
 
       const { data, error: dbError } = await query;
@@ -135,7 +177,7 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(fetchReviews, 100);
       }
     }
-  }, [filter, search]);
+  }, [filter, search, isSeller, sellerId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -143,71 +185,25 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
     fetchReviews();
     fetchPendingCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, search]);
+  }, [filter, search, isSeller, sellerId]);
 
+  // Realtime: для продавца — все события (RLS отсечёт чужие),
+  // для админа — все события
   useEffect(() => {
+    if (!user) return;
+
+    const channelName = isSeller
+      ? `mora-reviews-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
+      : `mora-reviews-${Math.random().toString(36).slice(2)}`;
+
     const channel = supabase
-      .channel(`mora-reviews-${Math.random().toString(36).slice(2)}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reviews' },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newReview = payload.new as Review;
-            setPendingCount((c) => c + 1);
-
-            if (
-              (filter === 'pending' || filter === 'all') &&
-              !newReview.approved
-            ) {
-              setReviews((prev) => {
-                if (prev.some((r) => r.id === newReview.id)) return prev;
-                return [newReview, ...prev];
-              });
-            } else if (filter === 'approved' && newReview.approved) {
-              setReviews((prev) => {
-                if (prev.some((r) => r.id === newReview.id)) return prev;
-                return [newReview, ...prev];
-              });
-            }
-            return;
-          }
-
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updated = payload.new as Review;
-
-            // Проверяем, подходит ли под текущий фильтр
-            const matchesFilter =
-              filter === 'all' ||
-              (filter === 'pending' && !updated.approved) ||
-              (filter === 'approved' && updated.approved) ||
-              (filter === 'rejected' && !updated.approved);
-
-            if (matchesFilter) {
-              setReviews((prev) => {
-                if (prev.some((r) => r.id === updated.id)) {
-                  return prev.map((r) => (r.id === updated.id ? updated : r));
-                }
-                return [updated, ...prev];
-              });
-            } else {
-              // Убираем из списка, если больше не подходит
-              setReviews((prev) => prev.filter((r) => r.id !== updated.id));
-            }
-
-            fetchPendingCount();
-            return;
-          }
-
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const deleted = payload.old as { id: number };
-            setReviews((prev) => prev.filter((r) => r.id !== deleted.id));
-            fetchPendingCount();
-            return;
-          }
-
+        () => {
           fetchReviews();
-          fetchPendingCount();
+          if (!isSeller) fetchPendingCount();
         }
       )
       .subscribe();
@@ -221,7 +217,8 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
         channelRef.current = null;
       }
     };
-  }, [filter, fetchReviews, fetchPendingCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isSeller, sellerId]);
 
   const approve = async (id: number) => {
     const prev = reviews;
@@ -236,7 +233,6 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
 
-      // Если фильтр "pending" — убираем одобренный из списка
       if (filter === 'pending') {
         setTimeout(() => {
           setReviews((rs) => rs.filter((r) => r.id !== id));

@@ -7,6 +7,7 @@ export interface OrderFilters {
   search?: string;
   limit?: number;
   offset?: number;
+  sellerId?: number | null;
 }
 
 export interface OrdersStats {
@@ -34,6 +35,7 @@ export interface CreateOrderInput {
   total: number;
   promo_code?: string;
   promo_discount?: number;
+  seller_id?: number | null;
 }
 
 const validateOrder = (order: CreateOrderInput): void => {
@@ -64,10 +66,13 @@ export const ordersService = {
         total: order.total,
       };
 
-      // Если колонки добавлены в БД — сохраняем
       if (order.promo_code) {
         payload.promo_code = order.promo_code;
         payload.promo_discount = order.promo_discount ?? 0;
+      }
+
+      if (order.seller_id !== undefined && order.seller_id !== null) {
+        payload.seller_id = order.seller_id;
       }
 
       const { data, error } = await supabase
@@ -85,7 +90,13 @@ export const ordersService = {
   },
 
   async getPage(filters: OrderFilters = {}): Promise<OrdersPage> {
-    const { status = 'all', search = '', limit = 20, offset = 0 } = filters;
+    const {
+      status = 'all',
+      search = '',
+      limit = 20,
+      offset = 0,
+      sellerId = null,
+    } = filters;
 
     try {
       let query = supabase
@@ -93,6 +104,10 @@ export const ordersService = {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
+
+      if (sellerId !== null) {
+        query = query.eq('seller_id', sellerId);
+      }
 
       if (status !== 'all') query = query.eq('status', status);
 
@@ -158,12 +173,15 @@ export const ordersService = {
     }
   },
 
-  async getStats(): Promise<OrdersStats> {
+  async getStats(sellerId: number | null = null): Promise<OrdersStats> {
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('status, total');
+      let query = supabase.from('orders').select('status, total');
 
+      if (sellerId !== null) {
+        query = query.eq('seller_id', sellerId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       const orders = data ?? [];
