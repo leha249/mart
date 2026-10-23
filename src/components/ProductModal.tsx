@@ -3,9 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Heart,
-  Truck,
-  RotateCcw,
-  ShieldCheck,
   Check,
   Star,
   ChevronLeft,
@@ -13,6 +10,7 @@ import {
   Ruler,
   Share2,
   ZoomIn,
+  MessageCircle,
 } from 'lucide-react';
 import type { UIProduct } from '../types/database';
 import { useCart } from '../context/CartContext';
@@ -651,38 +649,33 @@ const ProductModal = ({ product, onClose }: Props) => {
                   </div>
                 )}
 
+                {/* 🐛 УБРАН БЛОК ДОСТАВКИ / ВОЗВРАТА / ГАРАНТИИ */}
+                {/* Заменён на: «Свяжитесь с продавцом» */}
+
                 <div
                   style={{
+                    padding: 16,
+                    background: 'rgba(232,255,90,0.04)',
+                    border: '1px solid rgba(232,255,90,0.15)',
+                    borderRadius: 12,
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
+                    gap: 12,
+                    alignItems: 'flex-start',
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: 'var(--text-dim)',
                     marginBottom: 24,
-                    paddingBottom: 24,
-                    borderBottom: '1px solid var(--border)',
                   }}
                 >
-                  {[
-                    { icon: Truck, text: 'Бесплатная доставка от 5 000 ₽' },
-                    { icon: RotateCcw, text: 'Возврат в течение 30 дней' },
-                    { icon: ShieldCheck, text: 'Гарантия качества' },
-                  ].map((item, i) => (
-                    <div
-                      key={`feature-${i}`}
-                      style={{
-                        display: 'flex',
-                        gap: 12,
-                        alignItems: 'center',
-                        fontSize: 13,
-                      }}
-                    >
-                      <item.icon
-                        size={16}
-                        color="var(--accent)"
-                        style={{ flexShrink: 0 }}
-                      />
-                      <span>{item.text}</span>
-                    </div>
-                  ))}
+                  <MessageCircle
+                    size={16}
+                    color="var(--accent)"
+                    style={{ flexShrink: 0, marginTop: 2 }}
+                  />
+                  <div>
+                    Свяжитесь с продавцом для уточнения деталей покупки,
+                    оплаты и получения товара.
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>

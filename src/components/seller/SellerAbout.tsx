@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Leaf, Sparkles, Truck } from 'lucide-react';
+import { Leaf, Sparkles } from 'lucide-react';
 import type { UISeller } from '../../types/database';
 
 interface Props {
@@ -17,25 +17,17 @@ const features = [
     title: 'Лимитированные серии',
     text: 'Каждая коллекция выпускается ограниченным тиражом. Уникальность в каждой вещи.',
   },
-  {
-    icon: Truck,
-    title: 'Бесплатная доставка',
-    text: 'По всей России при заказе от 5 000 ₽. Возврат в течение 30 дней.',
-  },
 ];
 
 const SellerAbout = ({ seller }: Props) => {
   const accent = seller.accentColor || 'var(--accent)';
 
-  // Дефолты MØRA MART
   const title = seller.aboutTitle || 'Мы создаём одежду с характером';
   const text =
     seller.aboutText ||
     'MØRA MART — это больше, чем магазин. Это философия осознанного потребления, где каждый предмет одежды создаётся с уважением к природе и человеку.';
   const badge = seller.aboutBadge || '100% ORGANIC';
 
-  // Разбиваем заголовок на «до» и «курсив в конце»
-  // Логика: последнее слово — курсивом акцентом.
   const titleWords = title.trim().split(' ');
   const titleLast = titleWords.length > 1 ? titleWords[titleWords.length - 1] : '';
   const titleMain =

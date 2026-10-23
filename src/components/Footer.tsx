@@ -1,10 +1,23 @@
 import { motion } from 'framer-motion';
-import { Send, Play, Mail, Camera } from 'lucide-react';
+import { Send, Play, Mail, Camera, ArrowUpRight } from 'lucide-react';
 import Logo from './Logo';
 
 const noop = (e: React.MouseEvent) => e.preventDefault();
 
 const Footer = () => {
+  const go = (path: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  const navLinks = [
+    { label: 'О платформе', path: '/about' },
+    { label: 'Магазины', path: '/sellers' },
+    { label: 'Каталог', path: '/catalog' },
+    { label: 'Контакты', path: '/contacts' },
+  ];
+
   return (
     <footer
       id="footer"
@@ -15,19 +28,18 @@ const Footer = () => {
       }}
     >
       <div className="container">
-        {/* Верхняя часть: Лого + описание + соцсети */}
+        {/* Верхняя часть */}
         <div
           className="footer-top"
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 40,
+            display: 'grid',
+            gridTemplateColumns: '1.5fr 1fr 1.5fr',
+            gap: 60,
             marginBottom: 60,
           }}
         >
-          <div style={{ maxWidth: 400 }}>
+          {/* Лого + описание + соцсети */}
+          <div style={{ maxWidth: 360 }}>
             <div style={{ marginBottom: 24 }}>
               <Logo size="lg" withSuffix />
             </div>
@@ -72,41 +84,87 @@ const Footer = () => {
             </div>
           </div>
 
+          {/* Навигация */}
+          <div>
+            <div
+              style={{
+                fontSize: 12,
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                color: 'var(--muted)',
+                marginBottom: 20,
+              }}
+            >
+              Платформа
+            </div>
+            <ul
+              style={{
+                listStyle: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}
+            >
+              {navLinks.map((link) => (
+                <li key={link.path}>
+                  <motion.a
+                    href={link.path}
+                    onClick={go(link.path)}
+                    whileHover={{ x: 4 }}
+                    style={{
+                      color: 'var(--text)',
+                      textDecoration: 'none',
+                      fontSize: 14,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'color 0.2s',
+                    }}
+                    className="footer-nav-link"
+                  >
+                    {link.label}
+                    <ArrowUpRight size={12} style={{ opacity: 0.4 }} />
+                  </motion.a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {/* Контакты */}
-          <div style={{ display: 'flex', gap: 60, flexWrap: 'wrap' }}>
-            <div>
-              <div
-                style={{
-                  fontSize: 12,
-                  letterSpacing: '1.5px',
-                  textTransform: 'uppercase',
-                  color: 'var(--muted)',
-                  marginBottom: 16,
-                }}
-              >
-                Связаться с нами
-              </div>
-              <a
-                href="mailto:hello@moramart.ru"
-                style={{
-                  color: 'var(--text)',
-                  textDecoration: 'none',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  display: 'block',
-                  marginBottom: 8,
-                }}
-              >
-                hello@moramart.ru
-              </a>
-              <div style={{ color: 'var(--muted)', fontSize: 14 }}>
-                Пн–Пт, 10:00–19:00
-              </div>
+          <div>
+            <div
+              style={{
+                fontSize: 12,
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                color: 'var(--muted)',
+                marginBottom: 20,
+              }}
+            >
+              Связаться с нами
+            </div>
+            <a
+              href="mailto:hello@moramart.ru"
+              style={{
+                color: 'var(--text)',
+                textDecoration: 'none',
+                fontSize: 16,
+                fontWeight: 600,
+                display: 'block',
+                marginBottom: 8,
+              }}
+            >
+              hello@moramart.ru
+            </a>
+            <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.6 }}>
+              Пн–Пт, 10:00–19:00
+              <br />
+              Отвечаем в течение 1 рабочего дня
             </div>
           </div>
         </div>
 
-        {/* Нижняя часть: копирайт + документы */}
+        {/* Нижняя часть */}
         <div
           style={{
             paddingTop: 40,
@@ -123,26 +181,26 @@ const Footer = () => {
           <div>© 2025 MØRA MART. Все права защищены.</div>
           <div style={{ display: 'flex', gap: 24 }}>
             <a
-              href="#"
-              onClick={noop}
+              href="/privacy"
+              onClick={go('/privacy')}
               style={{
                 color: 'var(--muted)',
                 textDecoration: 'none',
                 transition: 'color 0.2s',
               }}
-              className="footer-link"
+              className="footer-bottom-link"
             >
               Политика конфиденциальности
             </a>
             <a
-              href="#"
-              onClick={noop}
+              href="/terms"
+              onClick={go('/terms')}
               style={{
                 color: 'var(--muted)',
                 textDecoration: 'none',
                 transition: 'color 0.2s',
               }}
-              className="footer-link"
+              className="footer-bottom-link"
             >
               Условия
             </a>
@@ -155,12 +213,22 @@ const Footer = () => {
           border-color: var(--accent) !important;
           color: var(--accent) !important;
         }
-        .footer-link:hover {
+        .footer-nav-link:hover {
+          color: var(--accent) !important;
+        }
+        .footer-bottom-link:hover {
           color: var(--text) !important;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
           .footer-top {
-            flex-direction: column !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 40px !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .footer-top {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
           }
         }
       `}</style>

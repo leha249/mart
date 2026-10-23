@@ -28,6 +28,12 @@ const FavoritesPage = lazy(() => import('./pages/Favorites'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
 const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 
+// ============ INFO PAGES ============
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ContactsPage = lazy(() => import('./pages/ContactsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+
 // ============ DATA SYNC ============
 function DataSync() {
   const { products } = useProducts();
@@ -95,7 +101,7 @@ function Router() {
     );
   }
 
-  // /order-success — страница «Спасибо»
+  // /order-success
   if (route.path === '/order-success') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -104,7 +110,7 @@ function Router() {
     );
   }
 
-  // /my-orders — поиск заказов по телефону
+  // /my-orders
   if (route.path === '/my-orders') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -113,7 +119,7 @@ function Router() {
     );
   }
 
-  // /catalog — полный каталог
+  // /catalog
   if (route.path === '/catalog') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -122,7 +128,7 @@ function Router() {
     );
   }
 
-  // /sellers — список магазинов
+  // /sellers
   if (route.path === '/sellers') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -131,7 +137,40 @@ function Router() {
     );
   }
 
-  // /seller/dashboard — кабинет продавца (ведёт в Admin)
+  // ============ INFO PAGES ============
+  if (route.path === '/about') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AboutPage />
+      </Suspense>
+    );
+  }
+
+  if (route.path === '/contacts') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <ContactsPage />
+      </Suspense>
+    );
+  }
+
+  if (route.path === '/privacy') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PrivacyPage />
+      </Suspense>
+    );
+  }
+
+  if (route.path === '/terms') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <TermsPage />
+      </Suspense>
+    );
+  }
+
+  // ============ SELLER ============
   if (route.path === '/seller' && route.param === 'dashboard') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -140,7 +179,6 @@ function Router() {
     );
   }
 
-  // /seller/:slug — страница конкретного магазина
   if (route.path === '/seller' && route.param) {
     return (
       <Suspense fallback={<PageLoader />}>
