@@ -25,7 +25,6 @@ const navLinks = [
   { label: 'Магазины', kind: 'sellers' as const },
   { label: 'Каталог', kind: 'catalog' as const },
   { label: 'Мои заказы', kind: 'myOrders' as const },
-  { label: 'О нас', kind: 'anchor' as const, href: '#about' },
 ];
 
 const Navbar = () => {
@@ -62,21 +61,11 @@ const Navbar = () => {
   const goToMyOrders = () => go('/my-orders');
 
   const handleNavClick = (
-    kind: 'sellers' | 'catalog' | 'myOrders' | 'anchor',
-    href?: string
+    kind: 'sellers' | 'catalog' | 'myOrders'
   ) => {
     if (kind === 'sellers') goToSellers();
     else if (kind === 'catalog') goToCatalog();
     else if (kind === 'myOrders') goToMyOrders();
-    else if (kind === 'anchor' && href) {
-      if (window.location.pathname !== '/') {
-        go('/');
-        setTimeout(() => {
-          const el = document.querySelector(href);
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
-    }
   };
 
   return (
@@ -130,12 +119,7 @@ const Navbar = () => {
             {navLinks.map((link, i) => (
               <motion.button
                 key={link.label}
-                onClick={() =>
-                  handleNavClick(
-                    link.kind,
-                    link.kind === 'anchor' ? link.href : undefined
-                  )
-                }
+                onClick={() => handleNavClick(link.kind)}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.07 }}
@@ -366,7 +350,7 @@ const Navbar = () => {
                   goToMyOrders();
                 }}
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(8px)' }}
                 transition={{
                   delay: 0.24,
                   duration: 0.6,
@@ -457,7 +441,7 @@ const Navbar = () => {
           outline-offset: 4px;
           border-radius: 4px;
         }
-        @media (max-width: 1150px) {
+        @media (max-width: 1050px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }

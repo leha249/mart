@@ -2,21 +2,6 @@ import { motion } from 'framer-motion';
 import { Send, Play, Mail, Camera } from 'lucide-react';
 import Logo from './Logo';
 
-const columns = [
-  {
-    title: 'Магазин',
-    links: ['Новинки', 'Бестселлеры', 'Распродажа', 'Подарочные карты'],
-  },
-  {
-    title: 'Помощь',
-    links: ['Доставка', 'Возврат', 'Размеры', 'Контакты'],
-  },
-  {
-    title: 'О нас',
-    links: ['История', 'Устойчивость', 'Карьера', 'Пресса'],
-  },
-];
-
 const noop = (e: React.MouseEvent) => e.preventDefault();
 
 const Footer = () => {
@@ -30,29 +15,32 @@ const Footer = () => {
       }}
     >
       <div className="container">
+        {/* Верхняя часть: Лого + описание + соцсети */}
         <div
-          className="footer-grid"
+          className="footer-top"
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
-            gap: 60,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 40,
             marginBottom: 60,
           }}
         >
-          <div>
-            <div style={{ marginBottom: 20 }}>
+          <div style={{ maxWidth: 400 }}>
+            <div style={{ marginBottom: 24 }}>
               <Logo size="lg" withSuffix />
             </div>
             <p
               style={{
                 color: 'var(--muted)',
-                fontSize: 14,
+                fontSize: 15,
                 lineHeight: 1.7,
-                maxWidth: 320,
-                marginBottom: 28,
+                marginBottom: 32,
               }}
             >
               Осознанная мода для тех, кто ценит качество, стиль и природу.
+              Платформа независимых магазинов.
             </p>
 
             <div style={{ display: 'flex', gap: 12 }}>
@@ -66,66 +54,59 @@ const Footer = () => {
                     ['Instagram', 'Telegram', 'YouTube', 'Email'][i]
                   }
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     borderRadius: '50%',
                     border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--text)',
+                    transition: 'border-color 0.2s',
                   }}
+                  className="social-btn"
                 >
-                  <Icon size={16} />
+                  <Icon size={18} />
                 </motion.a>
               ))}
             </div>
           </div>
 
-          {columns.map((col) => (
-            <div key={col.title}>
+          {/* Контакты */}
+          <div style={{ display: 'flex', gap: 60, flexWrap: 'wrap' }}>
+            <div>
               <div
                 style={{
                   fontSize: 12,
                   letterSpacing: '1.5px',
                   textTransform: 'uppercase',
                   color: 'var(--muted)',
-                  marginBottom: 20,
+                  marginBottom: 16,
                 }}
               >
-                {col.title}
+                Связаться с нами
               </div>
-              <ul
+              <a
+                href="mailto:hello@moramart.ru"
                 style={{
-                  listStyle: 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
+                  color: 'var(--text)',
+                  textDecoration: 'none',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  display: 'block',
+                  marginBottom: 8,
                 }}
               >
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <motion.a
-                      href="#"
-                      onClick={noop}
-                      whileHover={{ x: 4, color: 'var(--accent)' }}
-                      style={{
-                        color: 'var(--text)',
-                        textDecoration: 'none',
-                        fontSize: 14,
-                        display: 'inline-block',
-                        transition: 'color 0.2s',
-                      }}
-                    >
-                      {link}
-                    </motion.a>
-                  </li>
-                ))}
-              </ul>
+                hello@moramart.ru
+              </a>
+              <div style={{ color: 'var(--muted)', fontSize: 14 }}>
+                Пн–Пт, 10:00–19:00
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
+        {/* Нижняя часть: копирайт + документы */}
         <div
           style={{
             paddingTop: 40,
@@ -144,14 +125,24 @@ const Footer = () => {
             <a
               href="#"
               onClick={noop}
-              style={{ color: 'var(--muted)', textDecoration: 'none' }}
+              style={{
+                color: 'var(--muted)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+              }}
+              className="footer-link"
             >
               Политика конфиденциальности
             </a>
             <a
               href="#"
               onClick={noop}
-              style={{ color: 'var(--muted)', textDecoration: 'none' }}
+              style={{
+                color: 'var(--muted)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+              }}
+              className="footer-link"
             >
               Условия
             </a>
@@ -160,11 +151,17 @@ const Footer = () => {
       </div>
 
       <style>{`
-        @media (max-width: 900px) {
-          .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 40px !important; }
+        .social-btn:hover {
+          border-color: var(--accent) !important;
+          color: var(--accent) !important;
         }
-        @media (max-width: 500px) {
-          .footer-grid { grid-template-columns: 1fr !important; }
+        .footer-link:hover {
+          color: var(--text) !important;
+        }
+        @media (max-width: 768px) {
+          .footer-top {
+            flex-direction: column !important;
+          }
         }
       `}</style>
     </footer>
