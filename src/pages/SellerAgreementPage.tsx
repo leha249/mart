@@ -98,7 +98,6 @@ const SellerAgreementPage = () => {
                 gap: 24,
               }}
             >
-              {/* ВАЖНОЕ ПРЕДУПРЕЖДЕНИЕ */}
               <div
                 style={{
                   padding: 24,
@@ -204,12 +203,9 @@ const SellerAgreementPage = () => {
                 <li>
                   Урегулирование претензий и споров с покупателями
                 </li>
-                <li>
-                  Уплату налогов с дохода от продаж
-                </li>
+                <li>Уплату налогов с дохода от продаж</li>
               </ul>
 
-              {/* НОВЫЙ РАЗДЕЛ: ДОСТАВКА И ВОЗВРАТ */}
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
@@ -316,12 +312,8 @@ const SellerAgreementPage = () => {
                 <li>
                   Товары индивидуального пошива и персонализации
                 </li>
-                <li>
-                  Товары, бывшие в употреблении
-                </li>
-                <li>
-                  Товары без оригинальной упаковки и бирок
-                </li>
+                <li>Товары, бывшие в употреблении</li>
+                <li>Товары без оригинальной упаковки и бирок</li>
               </ul>
               <p>
                 Продавец обязан уведомить Покупателя о невозвратности товара до
@@ -428,30 +420,43 @@ const SellerAgreementPage = () => {
                 ознакомился с настоящей офертой и принимает все её условия.
               </p>
 
-              {/* РЕКВИЗИТЫ */}
               <div
                 style={{
                   marginTop: 32,
-                  padding: 24,
+                  padding: 20,
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
                   borderRadius: 16,
                   fontSize: 14,
                   color: 'var(--muted)',
-                  lineHeight: 1.7,
+                  lineHeight: 1.8,
                 }}
               >
-                <strong style={{ color: 'var(--text)' }}>
-                  Реквизиты платформы:
-                </strong>
-                <br />
-                Оператор платформы: [ФИО]
-                <br />
-                Статус: самозанятый (плательщик НПД)
-                <br />
-                ИНН: [ИНН]
-                <br />
-                Email для вопросов: hello@moramart.ru
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>
+                    Реквизиты платформы:
+                  </strong>
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <strong style={{ color: 'var(--text)' }}>ФИО:</strong>{' '}
+                  [УКАЖИТЕ ФИО ОПЕРАТОРА]
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <strong style={{ color: 'var(--text)' }}>Статус:</strong>{' '}
+                  самозанятый (плательщик НПД)
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <strong style={{ color: 'var(--text)' }}>ИНН:</strong>{' '}
+                  [УКАЖИТЕ ИНН]
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <strong style={{ color: 'var(--text)' }}>Адрес:</strong>{' '}
+                  [УКАЖИТЕ АДРЕС]
+                </div>
+                <div>
+                  <strong style={{ color: 'var(--text)' }}>Email:</strong>{' '}
+                  hello@moramart.ru
+                </div>
               </div>
             </div>
           </motion.div>

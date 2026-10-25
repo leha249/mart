@@ -1,6 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { normalizeError, ValidationError } from '../utils/errors';
-import type { Seller, SellerStatus, UISeller } from '../types/database';
+import type {
+  Seller,
+  SellerStatus,
+  SellerLegalType,
+  UISeller,
+} from '../types/database';
 import { mapSellerToUI } from '../types/database';
 
 export interface UpdateSellerInput {
@@ -23,6 +28,11 @@ export interface UpdateSellerInput {
   accent_color?: string | null;
 
   lookbook_images?: string[];
+
+  legal_name?: string | null;
+  legal_type?: SellerLegalType | null;
+  ogrnip?: string | null;
+  legal_address?: string | null;
 }
 
 export const sellersService = {

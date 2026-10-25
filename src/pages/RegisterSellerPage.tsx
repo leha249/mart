@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Store,
@@ -26,6 +26,7 @@ const RegisterSellerPage = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -57,6 +58,7 @@ const RegisterSellerPage = () => {
       return 'Некорректный email';
     if (!password) return 'Введите пароль';
     if (password.length < 6) return 'Пароль минимум 6 символов';
+    if (!agreed) return 'Необходимо согласие на обработку данных и принятие оферты';
     return null;
   };
 
@@ -380,61 +382,102 @@ const RegisterSellerPage = () => {
                 </div>
               )}
 
-              <div
+              {/* ✅ ОБЯЗАТЕЛЬНЫЙ ЧЕКБОКС СОГЛАСИЯ */}
+              <label
                 style={{
-                  padding: 12,
-                  background: 'rgba(232,255,90,0.04)',
-                  border: '1px solid rgba(232,255,90,0.15)',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  padding: '14px 16px',
+                  background: agreed
+                    ? 'rgba(74,222,128,0.06)'
+                    : 'rgba(255,77,77,0.04)',
+                  border: agreed
+                    ? '1px solid rgba(74,222,128,0.3)'
+                    : '1px solid rgba(255,77,77,0.2)',
                   borderRadius: 12,
                   fontSize: 12,
-                  color: 'var(--muted)',
                   lineHeight: 1.6,
+                  transition: 'all 0.2s',
+                  opacity: submitting ? 0.5 : 1,
                 }}
               >
-                Регистрируясь, вы принимаете{' '}
-                <a
-                  href="/seller-agreement"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--accent)', textDecoration: 'underline' }}
-                >
-                  оферту для продавцов
-                </a>
-                ,{' '}
-                <a
-                  href="/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--accent)', textDecoration: 'underline' }}
-                >
-                  условия использования
-                </a>{' '}
-                и{' '}
-                <a
-                  href="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--accent)', textDecoration: 'underline' }}
-                >
-                  политику конфиденциальности
-                </a>
-                .
-              </div>
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => {
+                    setAgreed(e.target.checked);
+                    if (error) setError(null);
+                  }}
+                  disabled={submitting}
+                  style={{
+                    marginTop: 2,
+                    width: 16,
+                    height: 16,
+                    accentColor: 'var(--accent)',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: 'var(--text-dim)' }}>
+                  Я даю согласие на{' '}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      color: 'var(--accent)',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    обработку персональных данных
+                  </a>{' '}
+                  в соответствии с 152-ФЗ, принимаю{' '}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      color: 'var(--accent)',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    условия использования
+                  </a>{' '}
+                  и{' '}
+                  <a
+                    href="/seller-agreement"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      color: 'var(--accent)',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    оферту для продавцов
+                  </a>
+                  .
+                </span>
+              </label>
 
               <motion.button
                 type="submit"
-                whileHover={{ scale: submitting ? 1 : 1.02 }}
-                whileTap={{ scale: submitting ? 1 : 0.98 }}
-                disabled={submitting}
+                whileHover={{ scale: submitting || !agreed ? 1 : 1.02 }}
+                whileTap={{ scale: submitting || !agreed ? 1 : 0.98 }}
+                disabled={submitting || !agreed}
                 style={{
                   padding: '16px',
                   borderRadius: 100,
-                  border: 'none',
-                  background: 'var(--accent)',
-                  color: '#000',
+                  border: !agreed ? '1px solid var(--border)' : 'none',
+                  background: !agreed ? 'var(--surface-hi)' : 'var(--accent)',
+                  color: !agreed ? 'var(--muted)' : '#000',
                   fontSize: 15,
                   fontWeight: 700,
-                  cursor: submitting ? 'wait' : 'pointer',
+                  cursor: submitting || !agreed ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
                   display: 'flex',
                   alignItems: 'center',
@@ -452,6 +495,8 @@ const RegisterSellerPage = () => {
                     />
                     Регистрация...
                   </>
+                ) : !agreed ? (
+                  'Примите условия'
                 ) : (
                   'Зарегистрироваться'
                 )}

@@ -26,6 +26,7 @@ const CustomerLoginPage = () => {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [displayedCode, setDisplayedCode] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +38,6 @@ const CustomerLoginPage = () => {
     };
   }, []);
 
-  // Если уже вошёл — редирект в кабинет
   useEffect(() => {
     if (isAuthenticated) {
       window.history.pushState({}, '', '/account');
@@ -53,6 +53,11 @@ const CustomerLoginPage = () => {
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+
+    if (!agreed) {
+      setError('Необходимо согласие на обработку данных');
+      return;
+    }
 
     const trimmed = phone.trim();
     if (!trimmed) {
@@ -263,6 +268,62 @@ const CustomerLoginPage = () => {
                     />
                   </div>
 
+                  {/* ✅ ОБЯЗАТЕЛЬНЫЙ ЧЕКБОКС */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      gap: 12,
+                      alignItems: 'flex-start',
+                      cursor: submitting ? 'not-allowed' : 'pointer',
+                      padding: '12px 14px',
+                      background: agreed
+                        ? 'rgba(74,222,128,0.06)'
+                        : 'rgba(255,77,77,0.04)',
+                      border: agreed
+                        ? '1px solid rgba(74,222,128,0.3)'
+                        : '1px solid rgba(255,77,77,0.2)',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      transition: 'all 0.2s',
+                      opacity: submitting ? 0.5 : 1,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => {
+                        setAgreed(e.target.checked);
+                        if (error) setError(null);
+                      }}
+                      disabled={submitting}
+                      style={{
+                        marginTop: 2,
+                        width: 16,
+                        height: 16,
+                        accentColor: 'var(--accent)',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ color: 'var(--text-dim)' }}>
+                      Я даю согласие на{' '}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          color: 'var(--accent)',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        обработку персональных данных
+                      </a>{' '}
+                      в соответствии с 152-ФЗ.
+                    </span>
+                  </label>
+
                   {error && (
                     <div
                       style={{
@@ -283,19 +344,21 @@ const CustomerLoginPage = () => {
 
                   <motion.button
                     type="submit"
-                    whileHover={{ scale: submitting ? 1 : 1.02 }}
-                    whileTap={{ scale: submitting ? 1 : 0.98 }}
-                    disabled={submitting || !phone.trim()}
+                    whileHover={{ scale: submitting || !agreed ? 1 : 1.02 }}
+                    whileTap={{ scale: submitting || !agreed ? 1 : 0.98 }}
+                    disabled={submitting || !phone.trim() || !agreed}
                     style={{
                       padding: '16px',
                       borderRadius: 100,
-                      border: 'none',
-                      background: 'var(--accent)',
-                      color: '#000',
+                      border: !agreed ? '1px solid var(--border)' : 'none',
+                      background: !agreed
+                        ? 'var(--surface-hi)'
+                        : 'var(--accent)',
+                      color: !agreed ? 'var(--muted)' : '#000',
                       fontSize: 15,
                       fontWeight: 700,
                       cursor:
-                        submitting || !phone.trim()
+                        submitting || !phone.trim() || !agreed
                           ? 'not-allowed'
                           : 'pointer',
                       fontFamily: 'inherit',
@@ -315,34 +378,14 @@ const CustomerLoginPage = () => {
                         />
                         Отправка...
                       </>
+                    ) : !agreed ? (
+                      'Примите условия'
                     ) : (
                       <>
                         Получить код <ArrowRight size={16} />
                       </>
                     )}
                   </motion.button>
-
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--muted)',
-                      textAlign: 'center',
-                      lineHeight: 1.6,
-                      paddingTop: 8,
-                      borderTop: '1px solid var(--border)',
-                    }}
-                  >
-                    Продолжая, вы соглашаетесь с{' '}
-                    <a
-                      href="/privacy"
-                      style={{
-                        color: 'var(--accent)',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      политикой конфиденциальности
-                    </a>
-                  </div>
                 </motion.form>
               ) : (
                 <motion.form
@@ -361,7 +404,6 @@ const CustomerLoginPage = () => {
                     gap: 16,
                   }}
                 >
-                  {/* Тестовый код */}
                   {displayedCode && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}

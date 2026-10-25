@@ -118,22 +118,39 @@ const PrivacyPage = () => {
               </h2>
               <div
                 style={{
-                  padding: 16,
+                  padding: 20,
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
                   borderRadius: 12,
                   fontSize: 14,
                   color: 'var(--muted)',
-                  lineHeight: 1.7,
+                  lineHeight: 1.8,
                 }}
               >
-                Оператор: [ФИО]
-                <br />
-                Статус: самозанятый (плательщик НПД)
-                <br />
-                ИНН: [ИНН]
-                <br />
-                Email для обращений: privacy@moramart.ru
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>ФИО:</strong>{' '}
+                  [УКАЖИТЕ ФИО ОПЕРАТОРА]
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>Статус:</strong>{' '}
+                  самозанятый (плательщик налога на профессиональный доход)
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>ИНН:</strong>{' '}
+                  [УКАЖИТЕ ИНН]
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>Адрес:</strong>{' '}
+                  [УКАЖИТЕ АДРЕС ДЛЯ ОБРАЩЕНИЙ]
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>Email:</strong>{' '}
+                  privacy@moramart.ru
+                </div>
+                <div>
+                  <strong style={{ color: 'var(--text)' }}>Телефон:</strong>{' '}
+                  [УКАЖИТЕ ТЕЛЕФОН]
+                </div>
               </div>
 
               <h2
@@ -155,6 +172,12 @@ const PrivacyPage = () => {
                     При оформлении заказа:
                   </strong>{' '}
                   имя, телефон, email (по желанию)
+                </li>
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>
+                    При регистрации продавца:
+                  </strong>{' '}
+                  ФИО, телефон, email
                 </li>
                 <li>
                   <strong style={{ color: 'var(--text)' }}>
@@ -186,6 +209,7 @@ const PrivacyPage = () => {
               >
                 <li>Обработка и исполнение заказов</li>
                 <li>Связь с покупателем по вопросам заказа</li>
+                <li>Модерация продавцов и управление платформой</li>
                 <li>Улучшение работы платформы</li>
                 <li>Соблюдение требований законодательства</li>
               </ul>
@@ -197,9 +221,8 @@ const PrivacyPage = () => {
                 4. Передача данных третьим лицам
               </h2>
               <p>
-                При оформлении заказа данные покупателя (имя, телефон, email)
+                При оформлении заказа данные покупателя (имя, телефон, email){' '}
                 <strong style={{ color: 'var(--text)' }}>
-                  {' '}
                   передаются продавцу
                 </strong>
                 , чьи товары заказаны, для исполнения заказа. Продавец обязуется
@@ -215,7 +238,7 @@ const PrivacyPage = () => {
               </h2>
               <div
                 style={{
-                  padding: 16,
+                  padding: 20,
                   background: 'rgba(255,77,77,0.06)',
                   border: '1px solid rgba(255,77,77,0.25)',
                   borderRadius: 12,
@@ -240,7 +263,8 @@ const PrivacyPage = () => {
               <p>
                 Данные хранятся до достижения целей обработки или до отзыва
                 согласия. Заказы хранятся в течение 3 лет в соответствии с
-                требованиями бухгалтерского учёта.
+                требованиями бухгалтерского учёта. Коды подтверждения — 10
+                минут, после чего удаляются автоматически.
               </p>
 
               <h2
@@ -314,11 +338,59 @@ const PrivacyPage = () => {
                 сотрудники и продавцы (в части своих заказов).
               </p>
 
+              {/* ✅ НОВЫЙ РАЗДЕЛ: ДЕЙСТВИЯ ПРИ УТЕЧКЕ */}
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                10. Изменения
+                10. Действия при утечке персональных данных
+              </h2>
+              <div
+                style={{
+                  padding: 20,
+                  background: 'rgba(255,77,77,0.06)',
+                  border: '1px solid rgba(255,77,77,0.25)',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: 'var(--text-dim)',
+                }}
+              >
+                В случае неправомерной или случайной передачи (утечки)
+                персональных данных Оператор обязуется:
+                <ul style={{ margin: '12px 0 0', paddingLeft: 24 }}>
+                  <li>
+                    <strong style={{ color: 'var(--text)' }}>
+                      в течение 24 часов
+                    </strong>{' '}
+                    уведомить Роскомнадзор о факте утечки;
+                  </li>
+                  <li>
+                    <strong style={{ color: 'var(--text)' }}>
+                      в течение 72 часов
+                    </strong>{' '}
+                    провести внутреннее расследование и уведомить РКН о его
+                    результатах;
+                  </li>
+                  <li>
+                    <strong style={{ color: 'var(--text)' }}>
+                      в течение 24 часов
+                    </strong>{' '}
+                    с момента выявления инцидента уведомить субъектов ПД, чьи
+                    данные были затронуты;
+                  </li>
+                  <li>
+                    принять меры по устранению последствий и предотвращению
+                    повторных инцидентов.
+                  </li>
+                </ul>
+              </div>
+
+              <h2
+                className="serif"
+                style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
+              >
+                11. Изменения
               </h2>
               <p>
                 Актуальная версия политики всегда доступна на этой странице.

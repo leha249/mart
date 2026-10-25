@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Send, Play, Mail, Camera, Phone, ArrowLeft } from 'lucide-react';
+import { Send, Play, Mail, Camera, Phone, ArrowLeft, Building2 } from 'lucide-react';
 import type { UISeller } from '../../types/database';
 
 interface Props {
@@ -31,6 +31,18 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
     },
   ];
 
+  // Реквизиты продавца (если заполнены)
+  const hasLegalInfo =
+    seller.legalName || seller.ogrnip || seller.legalAddress;
+
+  // Тип продавца
+  const legalTypeLabel =
+    seller.legalType === 'ip'
+      ? 'Индивидуальный предприниматель'
+      : seller.legalType === 'ooo'
+      ? 'Общество с ограниченной ответственностью'
+      : 'Самозанятый (плательщик НПД)';
+
   return (
     <footer
       id="footer"
@@ -51,16 +63,9 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
           }}
         >
           <div>
-            {/* Лого продавца или название */}
             <div style={{ marginBottom: 20 }}>
               {seller.logo ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}
-                >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <img
                     src={seller.logo}
                     alt={seller.name}
@@ -226,7 +231,63 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
           ))}
         </div>
 
-        {/* Кнопка «На главную MØRA MART» + копирайт */}
+        {/* РЕКВИЗИТЫ ПРОДАВЦА */}
+        {hasLegalInfo && (
+          <div
+            style={{
+              padding: '20px 24px',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              marginBottom: 32,
+              fontSize: 12,
+              color: 'var(--muted)',
+              lineHeight: 1.8,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 8,
+                fontSize: 11,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                color: 'var(--text)',
+              }}
+            >
+              <Building2 size={12} />
+              Реквизиты продавца
+            </div>
+            <div>
+              <strong style={{ color: 'var(--text)' }}>Форма:</strong>{' '}
+              {legalTypeLabel}
+            </div>
+            {seller.legalName && (
+              <div>
+                <strong style={{ color: 'var(--text)' }}>Наименование:</strong>{' '}
+                {seller.legalName}
+              </div>
+            )}
+            {seller.ogrnip && (
+              <div>
+                <strong style={{ color: 'var(--text)' }}>
+                  {seller.legalType === 'ooo' ? 'ОГРН' : 'ОГРНИП'}:
+                </strong>{' '}
+                {seller.ogrnip}
+              </div>
+            )}
+            {seller.legalAddress && (
+              <div>
+                <strong style={{ color: 'var(--text)' }}>Адрес:</strong>{' '}
+                {seller.legalAddress}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Кнопка «На главную» + копирайт */}
         <div
           style={{
             paddingTop: 40,
@@ -281,18 +342,16 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
             </button>
 
             <a
-              href="#"
-              onClick={noop}
-              style={{ color: 'var(--muted)', textDecoration: 'none' }}
-            >
-              Политика конфиденциальности
-            </a>
-            <a
-              href="#"
-              onClick={noop}
+              href="/terms"
               style={{ color: 'var(--muted)', textDecoration: 'none' }}
             >
               Условия
+            </a>
+            <a
+              href="/privacy"
+              style={{ color: 'var(--muted)', textDecoration: 'none' }}
+            >
+              Политика
             </a>
           </div>
         </div>
