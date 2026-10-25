@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { ArrowLeft, LogOut, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Loader2, Clock, ShieldAlert } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useOrders } from '../../context/OrdersContext';
 import { useReviews } from '../../context/ReviewsContext';
@@ -19,8 +20,12 @@ const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
   const { pendingCount: reviewsPendingCount } = useReviews();
   const { addToast } = useToast();
 
-  const isSeller = role === 'seller';
-  const headerLabel = isSeller ? 'Кабинет продавца' : 'Админ-панель';
+  const isPending = role === 'pending';
+  const headerLabel = isPending
+    ? 'Аккаунт на модерации'
+    : role === 'seller'
+    ? 'Кабинет продавца'
+    : 'Админ-панель';
 
   const handleTabChange = (tab: AdminTab) => {
     onTabChange(tab);
@@ -77,6 +82,87 @@ const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
       }}
     >
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {/* БАННЕР ДЛЯ PENDING */}
+        {isPending && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              marginBottom: 24,
+              padding: '20px 24px',
+              background: 'rgba(232,255,90,0.08)',
+              border: '1px solid rgba(232,255,90,0.3)',
+              borderRadius: 16,
+              display: 'flex',
+              gap: 16,
+              alignItems: 'flex-start',
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#000',
+                flexShrink: 0,
+              }}
+            >
+              <Clock size={22} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  marginBottom: 6,
+                  color: 'var(--accent)',
+                }}
+              >
+                Аккаунт на модерации
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  color: 'var(--text-dim)',
+                  lineHeight: 1.6,
+                }}
+              >
+                Мы проверим вашу заявку в течение 24 часов и свяжемся по email.
+                Пока вы можете <strong>только смотреть</strong> свой кабинет —
+                добавлять товары, редактировать профиль и принимать заказы
+                станет доступно после активации и оплаты подписки.
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ПРЕДУПРЕЖДЕНИЕ О READONLY */}
+        {isPending && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              marginBottom: 16,
+              padding: '10px 16px',
+              background: 'rgba(255,77,77,0.06)',
+              border: '1px solid rgba(255,77,77,0.2)',
+              borderRadius: 10,
+              fontSize: 12,
+              color: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <ShieldAlert size={14} />
+            Действия недоступны — аккаунт ожидает активации
+          </motion.div>
+        )}
+
         {/* HEADER */}
         <div
           style={{
@@ -187,11 +273,26 @@ const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
           onChange={handleTabChange}
           ordersBadge={newOrdersCount}
           reviewsBadge={reviewsPendingCount}
-          role={role}
+          role={isPending ? 'seller' : role}
         />
 
-        {/* Content */}
-        {children}
+        {/* Контент — обёрнут в fieldset для блокировки взаимодействия */}
+        {isPending ? (
+          <fieldset
+            disabled
+            style={{
+              border: 'none',
+              padding: 0,
+              margin: 0,
+              opacity: 0.5,
+              pointerEvents: 'none',
+            }}
+          >
+            {children}
+          </fieldset>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

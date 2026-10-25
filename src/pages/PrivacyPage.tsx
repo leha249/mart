@@ -20,6 +20,12 @@ const PrivacyPage = () => {
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
+  const goToDataRequest = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.history.pushState({}, '', '/data-request');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   return (
     <div style={{ minHeight: '100vh' }}>
       <ScrollProgress />
@@ -84,7 +90,7 @@ const PrivacyPage = () => {
                 marginBottom: 40,
               }}
             >
-              Последнее обновление: 17 октября 2026 г.
+              Редакция от 17 октября 2026 г.
             </p>
 
             <div
@@ -98,67 +104,166 @@ const PrivacyPage = () => {
               }}
             >
               <p>
-                Настоящая Политика конфиденциальности описывает, как платформа{' '}
+                Настоящая Политика описывает, как платформа{' '}
                 <strong style={{ color: 'var(--text)' }}>MØRA MART</strong>{' '}
-                собирает, использует и защищает вашу персональную информацию.
+                обрабатывает персональные данные пользователей в соответствии с
+                Федеральным законом № 152-ФЗ «О персональных данных».
               </p>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                1. Какие данные мы собираем
+                1. Оператор персональных данных
               </h2>
-              <p>
-                При оформлении заказа мы запрашиваем имя, телефон и, по желанию,
-                email. Эти данные используются только для связи с вами по
-                вопросам заказа и не передаются третьим лицам.
-              </p>
+              <div
+                style={{
+                  padding: 16,
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  color: 'var(--muted)',
+                  lineHeight: 1.7,
+                }}
+              >
+                Оператор: [ФИО]
+                <br />
+                Статус: самозанятый (плательщик НПД)
+                <br />
+                ИНН: [ИНН]
+                <br />
+                Email для обращений: privacy@moramart.ru
+              </div>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                2. Как мы используем данные
+                2. Какие данные мы собираем
               </h2>
-              <ul style={{ paddingLeft: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <li>Для обработки и подтверждения заказов</li>
-                <li>Для связи с вами по вопросам заказа</li>
-                <li>Для улучшения работы платформы</li>
+              <ul
+                style={{
+                  paddingLeft: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>
+                    При оформлении заказа:
+                  </strong>{' '}
+                  имя, телефон, email (по желанию)
+                </li>
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>
+                    Автоматически:
+                  </strong>{' '}
+                  IP-адрес, тип браузера, время посещения
+                </li>
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>
+                    Локально (localStorage):
+                  </strong>{' '}
+                  корзина, избранное, история поиска, тема
+                </li>
               </ul>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                3. Cookies и локальное хранилище
+                3. Цели обработки
+              </h2>
+              <ul
+                style={{
+                  paddingLeft: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <li>Обработка и исполнение заказов</li>
+                <li>Связь с покупателем по вопросам заказа</li>
+                <li>Улучшение работы платформы</li>
+                <li>Соблюдение требований законодательства</li>
+              </ul>
+
+              <h2
+                className="serif"
+                style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
+              >
+                4. Передача данных третьим лицам
               </h2>
               <p>
-                Платформа использует localStorage для сохранения содержимого
-                корзины, избранного и истории поиска. Эти данные хранятся
-                локально в вашем браузере и не передаются на сервер.
+                При оформлении заказа данные покупателя (имя, телефон, email)
+                <strong style={{ color: 'var(--text)' }}>
+                  {' '}
+                  передаются продавцу
+                </strong>
+                , чьи товары заказаны, для исполнения заказа. Продавец обязуется
+                использовать эти данные исключительно для исполнения заказа и не
+                передавать третьим лицам.
               </p>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                4. Защита данных
+                5. Трансграничная передача
+              </h2>
+              <div
+                style={{
+                  padding: 16,
+                  background: 'rgba(255,77,77,0.06)',
+                  border: '1px solid rgba(255,77,77,0.25)',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: 'var(--text-dim)',
+                }}
+              >
+                Персональные данные хранятся на серверах{' '}
+                <strong style={{ color: 'var(--text)' }}>Supabase</strong>{' '}
+                (Amazon Web Services, США/ЕС). Пользуясь сайтом и оформляя заказ,
+                вы даёте согласие на трансграничную передачу ваших данных в
+                соответствии со ст. 12 152-ФЗ.
+              </div>
+
+              <h2
+                className="serif"
+                style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
+              >
+                6. Срок хранения
               </h2>
               <p>
-                Мы используем шифрование (HTTPS) и защищённое хранилище
-                Supabase. Доступ к персональным данным имеют только продавцы, чьи
-                товары вы заказали, и администрация платформы.
+                Данные хранятся до достижения целей обработки или до отзыва
+                согласия. Заказы хранятся в течение 3 лет в соответствии с
+                требованиями бухгалтерского учёта.
               </p>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                5. Ваши права
+                7. Ваши права и отзыв согласия
               </h2>
+              <ul
+                style={{
+                  paddingLeft: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <li>Запросить доступ к вашим данным</li>
+                <li>Требовать исправления неточных данных</li>
+                <li>Отозвать согласие на обработку</li>
+                <li>Требовать удаления данных</li>
+              </ul>
               <p>
-                Вы можете запросить удаление ваших данных, написав на{' '}
+                Для реализации прав напишите на{' '}
                 <a
                   href="mailto:privacy@moramart.ru"
                   style={{
@@ -168,19 +273,55 @@ const PrivacyPage = () => {
                   }}
                 >
                   privacy@moramart.ru
+                </a>{' '}
+                или заполните{' '}
+                <a
+                  href="/data-request"
+                  onClick={goToDataRequest}
+                  style={{
+                    color: 'var(--accent)',
+                    textDecoration: 'underline',
+                    fontWeight: 600,
+                  }}
+                >
+                  форму запроса
                 </a>
-                .
+                . Мы ответим в течение 10 рабочих дней.
               </p>
 
               <h2
                 className="serif"
                 style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
               >
-                6. Изменения
+                8. Cookies и localStorage
               </h2>
               <p>
-                Мы можем обновлять эту политику. Актуальная версия всегда
-                доступна на этой странице.
+                Платформа использует cookies и localStorage для работы корзины,
+                избранного, темы и истории поиска. Эти данные хранятся локально в
+                вашем браузере и не передаются на сервер без вашего действия
+                (например, при оформлении заказа).
+              </p>
+
+              <h2
+                className="serif"
+                style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
+              >
+                9. Защита данных
+              </h2>
+              <p>
+                Мы используем HTTPS, шифрование и защищённое хранилище Supabase.
+                Доступ к персональным данным имеют только уполномоченные
+                сотрудники и продавцы (в части своих заказов).
+              </p>
+
+              <h2
+                className="serif"
+                style={{ fontSize: 24, fontWeight: 900, marginTop: 16 }}
+              >
+                10. Изменения
+              </h2>
+              <p>
+                Актуальная версия политики всегда доступна на этой странице.
               </p>
             </div>
           </motion.div>

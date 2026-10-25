@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
 import { Send, Play, Mail, Camera, ArrowUpRight } from 'lucide-react';
 import Logo from './Logo';
+import { useCustomer } from '../context/CustomerContext';
 
 const noop = (e: React.MouseEvent) => e.preventDefault();
 
 const Footer = () => {
+  const { isAuthenticated: isCustomer } = useCustomer();
+
   const go = (path: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     window.history.pushState({}, '', path);
@@ -16,6 +19,7 @@ const Footer = () => {
     { label: 'Магазины', path: '/sellers' },
     { label: 'Каталог', path: '/catalog' },
     { label: 'Контакты', path: '/contacts' },
+    { label: isCustomer ? 'Мой кабинет' : 'Войти', path: isCustomer ? '/account' : '/login-customer' },
   ];
 
   return (
@@ -28,7 +32,6 @@ const Footer = () => {
       }}
     >
       <div className="container">
-        {/* Верхняя часть */}
         <div
           className="footer-top"
           style={{
@@ -38,7 +41,6 @@ const Footer = () => {
             marginBottom: 60,
           }}
         >
-          {/* Лого + описание + соцсети */}
           <div style={{ maxWidth: 360 }}>
             <div style={{ marginBottom: 24 }}>
               <Logo size="lg" withSuffix />
@@ -84,7 +86,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Навигация */}
           <div>
             <div
               style={{
@@ -106,7 +107,7 @@ const Footer = () => {
               }}
             >
               {navLinks.map((link) => (
-                <li key={link.path}>
+                <li key={link.path + link.label}>
                   <motion.a
                     href={link.path}
                     onClick={go(link.path)}
@@ -130,7 +131,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Контакты */}
           <div>
             <div
               style={{
@@ -164,7 +164,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Нижняя часть */}
         <div
           style={{
             paddingTop: 40,
@@ -179,7 +178,31 @@ const Footer = () => {
           }}
         >
           <div>© 2025 MØRA MART. Все права защищены.</div>
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            <a
+              href="/seller-agreement"
+              onClick={go('/seller-agreement')}
+              style={{
+                color: 'var(--muted)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+              }}
+              className="footer-bottom-link"
+            >
+              Оферта для продавцов
+            </a>
+            <a
+              href="/data-request"
+              onClick={go('/data-request')}
+              style={{
+                color: 'var(--muted)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+              }}
+              className="footer-bottom-link"
+            >
+              Управление данными
+            </a>
             <a
               href="/privacy"
               onClick={go('/privacy')}
@@ -190,7 +213,7 @@ const Footer = () => {
               }}
               className="footer-bottom-link"
             >
-              Политика конфиденциальности
+              Политика
             </a>
             <a
               href="/terms"

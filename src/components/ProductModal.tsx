@@ -10,7 +10,8 @@ import {
   Ruler,
   Share2,
   ZoomIn,
-  MessageCircle,
+  Store,
+  ArrowRight,
 } from 'lucide-react';
 import type { UIProduct } from '../types/database';
 import { useCart } from '../context/CartContext';
@@ -19,6 +20,7 @@ import { useToast } from '../context/ToastContext';
 import { useBodyLock } from '../hooks/useBodyLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { useSellers } from '../context/SellersContext';
 import { formatPrice } from '../utils/format';
 import { shareProduct } from '../utils/share';
 import SizeChartModal from './SizeChartModal';
@@ -36,6 +38,7 @@ const ProductModal = ({ product, onClose }: Props) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToast } = useToast();
   const { add: addToRecentlyViewed } = useRecentlyViewed();
+  const { sellers } = useSellers();
   const [added, setAdded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState(0);
@@ -51,6 +54,11 @@ const ProductModal = ({ product, onClose }: Props) => {
     !!product && !sizeChartOpen && !reviewOpen && !lightboxOpen,
     modalRef
   );
+
+  // Находим продавца товара
+  const seller = product?.sellerId
+    ? sellers.find((s) => s.id === product.sellerId)
+    : null;
 
   useEffect(() => {
     if (!product) {
@@ -125,6 +133,13 @@ const ProductModal = ({ product, onClose }: Props) => {
     } finally {
       setSharing(false);
     }
+  };
+
+  const handleGoToSeller = () => {
+    if (!seller) return;
+    onClose();
+    window.history.pushState({}, '', `/seller/${seller.slug}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const needsSize = !!product && product.sizes.length > 0 && !selectedSize;
@@ -541,7 +556,7 @@ const ProductModal = ({ product, onClose }: Props) => {
                     display: 'flex',
                     alignItems: 'baseline',
                     gap: 12,
-                    marginBottom: 24,
+                    marginBottom: 20,
                   }}
                 >
                   <span
@@ -568,13 +583,97 @@ const ProductModal = ({ product, onClose }: Props) => {
                   )}
                 </div>
 
+                {/* ✅ БЛОК ПРОДАВЦА */}
+                {seller && (
+                  <button
+                    onClick={handleGoToSeller}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 16px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      marginBottom: 20,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                      width: '100%',
+                      transition: 'border-color 0.2s',
+                    }}
+                    className="seller-card"
+                  >
+                    {seller.logo ? (
+                      <img
+                        src={seller.logo}
+                        alt={seller.name}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          background: seller.accentColor || 'var(--accent)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#000',
+                          fontSize: 14,
+                          fontWeight: 900,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {seller.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--muted)',
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          marginBottom: 2,
+                        }}
+                      >
+                        Продавец
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {seller.name}
+                      </div>
+                    </div>
+                    <ArrowRight
+                      size={16}
+                      color="var(--muted)"
+                      style={{ flexShrink: 0 }}
+                    />
+                  </button>
+                )}
+
                 {product.description && (
                   <p
                     style={{
                       color: 'var(--muted)',
                       fontSize: 14,
                       lineHeight: 1.7,
-                      marginBottom: 24,
+                      marginBottom: 20,
                     }}
                   >
                     {product.description}
@@ -582,7 +681,7 @@ const ProductModal = ({ product, onClose }: Props) => {
                 )}
 
                 {product.sizes.length > 0 && (
-                  <div style={{ marginBottom: 24 }}>
+                  <div style={{ marginBottom: 20 }}>
                     <div
                       style={{
                         fontSize: 12,
@@ -649,36 +748,13 @@ const ProductModal = ({ product, onClose }: Props) => {
                   </div>
                 )}
 
-                {/* 🐛 УБРАН БЛОК ДОСТАВКИ / ВОЗВРАТА / ГАРАНТИИ */}
-                {/* Заменён на: «Свяжитесь с продавцом» */}
-
                 <div
                   style={{
-                    padding: 16,
-                    background: 'rgba(232,255,90,0.04)',
-                    border: '1px solid rgba(232,255,90,0.15)',
-                    borderRadius: 12,
                     display: 'flex',
                     gap: 12,
-                    alignItems: 'flex-start',
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    color: 'var(--text-dim)',
                     marginBottom: 24,
                   }}
                 >
-                  <MessageCircle
-                    size={16}
-                    color="var(--accent)"
-                    style={{ flexShrink: 0, marginTop: 2 }}
-                  />
-                  <div>
-                    Свяжитесь с продавцом для уточнения деталей покупки,
-                    оплаты и получения товара.
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
                   <motion.button
                     whileHover={{ scale: added ? 1 : 1.02 }}
                     whileTap={{ scale: added ? 1 : 0.98 }}
@@ -751,6 +827,33 @@ const ProductModal = ({ product, onClose }: Props) => {
                   </motion.button>
                 </div>
 
+                {/* НАПОМИНАНИЕ ОБ ОТВЕТСТВЕННОСТИ */}
+                <div
+                  style={{
+                    padding: 12,
+                    background: 'rgba(232,255,90,0.04)',
+                    border: '1px solid rgba(232,255,90,0.15)',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                    marginBottom: 16,
+                  }}
+                >
+                  <Store
+                    size={14}
+                    color="var(--accent)"
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
+                  <div>
+                    Продавец несёт ответственность за товар, доставку и возврат.
+                    Платформа — информационный посредник.
+                  </div>
+                </div>
+
                 <ReviewsSection
                   productId={product.id}
                   onWriteReview={() => setReviewOpen(true)}
@@ -792,6 +895,9 @@ const ProductModal = ({ product, onClose }: Props) => {
           .product-modal-content { padding: 24px 20px !important; }
         }
         div[style*="cursor: zoom-in"]:hover .zoom-hint { opacity: 1 !important; }
+        .seller-card:hover {
+          border-color: var(--accent) !important;
+        }
       `}</style>
     </>
   );

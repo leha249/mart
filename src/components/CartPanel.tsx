@@ -36,6 +36,8 @@ const CartPanel = ({ open, onClose }: Props) => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedData, setAgreedData] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useBodyLock(open);
@@ -45,6 +47,8 @@ const CartPanel = ({ open, onClose }: Props) => {
     if (!open) {
       setShowCheckout(false);
       setOrderSent(false);
+      setAgreedTerms(false);
+      setAgreedData(false);
     }
   }, [open]);
 
@@ -67,6 +71,8 @@ const CartPanel = ({ open, onClose }: Props) => {
   const promoDiscount = promo.applied ? promo.discount : 0;
   const finalTotal = Math.max(0, totalPrice - promoDiscount);
 
+  const canCheckout = agreedTerms && agreedData;
+
   const validateCheckout = (): string | null => {
     if (!name.trim()) return 'Введите имя';
     if (!phone.trim()) return 'Введите телефон';
@@ -74,6 +80,8 @@ const CartPanel = ({ open, onClose }: Props) => {
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return 'Некорректный email';
     }
+    if (!agreedData) return 'Необходимо согласие на обработку данных';
+    if (!agreedTerms) return 'Необходимо согласие с условиями';
     return null;
   };
 
@@ -88,7 +96,6 @@ const CartPanel = ({ open, onClose }: Props) => {
 
     setSubmitting(true);
     try {
-      // 1. Группируем товары по seller_id
       const grouped = new Map<number | null, typeof items>();
       items.forEach((item) => {
         const key = item.seller_id ?? null;
@@ -98,7 +105,6 @@ const CartPanel = ({ open, onClose }: Props) => {
 
       const groupedEntries = Array.from(grouped.entries());
 
-      // 2. Для каждой группы — создаём отдельный заказ
       const createdOrders: {
         id: number;
         sellerId: number | null;
@@ -106,8 +112,6 @@ const CartPanel = ({ open, onClose }: Props) => {
         itemsCount: number;
       }[] = [];
 
-      // 🐛 ИСПРАВЛЕНИЕ БАГА 1: считаем доли от promoDiscount,
-      // последней группе отдаём остаток (чтобы сумма точно совпала)
       let remainingDiscount = promoDiscount;
 
       for (let i = 0; i < groupedEntries.length; i++) {
@@ -128,7 +132,6 @@ const CartPanel = ({ open, onClose }: Props) => {
           remainingDiscount -= groupDiscount;
         }
 
-        // 🐛 ИСПРАВЛЕНИЕ БАГА 5: защита от groupDiscount > groupTotal
         groupDiscount = Math.min(groupDiscount, groupTotal);
 
         const groupFinalTotal = Math.max(0, groupTotal - groupDiscount);
@@ -159,12 +162,10 @@ const CartPanel = ({ open, onClose }: Props) => {
         });
       }
 
-      // 3. Увеличиваем использование промокода
       if (promo.applied) {
         incrementPromocodeUsage(promo.applied.id);
       }
 
-      // 4. Сохраняем данные для страницы "Спасибо"
       try {
         const orderInfo = createdOrders.map((o) => ({
           id: o.id,
@@ -180,7 +181,6 @@ const CartPanel = ({ open, onClose }: Props) => {
             createdAt: new Date().toISOString(),
           })
         );
-        // Сохраняем телефон для /my-orders
         try {
           localStorage.setItem('mora-my-orders-phone', phone.trim());
         } catch {}
@@ -202,6 +202,8 @@ const CartPanel = ({ open, onClose }: Props) => {
         setName('');
         setPhone('');
         setEmail('');
+        setAgreedTerms(false);
+        setAgreedData(false);
         setOrderSent(false);
         setShowCheckout(false);
         onClose();
@@ -221,7 +223,10 @@ const CartPanel = ({ open, onClose }: Props) => {
     if (!promo.code.trim()) return;
     const ok = await promo.applyCode(totalPrice);
     if (ok) {
-      addToast(`Промокод применён: ${promo.applied?.discount_percent}%`, 'success');
+      addToast(
+        `Промокод применён: ${promo.applied?.discount_percent}%`,
+        'success'
+      );
     } else if (promo.error) {
       addToast(promo.error, 'error');
     }
@@ -424,6 +429,58 @@ const CartPanel = ({ open, onClose }: Props) => {
                       продавец получит только свою часть.
                     </div>
                   )}
+
+                  {/* ✅ ЧЕКБОКС 1: ОБРАБОТКА ПД */}
+                  <CheckboxRow
+                    checked={agreedData}
+                    onChange={setAgreedData}
+                    disabled={submitting || orderSent}
+                    text={
+                      <>
+                        Даю согласие на{' '}
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            color: 'var(--accent)',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          обработку персональных данных
+                        </a>{' '}
+                        в соответствии с 152-ФЗ.
+                      </>
+                    }
+                  />
+
+                  {/* ✅ ЧЕКБОКС 2: УСЛОВИЯ + ТРАНСГРАНИЧНАЯ ПЕРЕДАЧА */}
+                  <CheckboxRow
+                    checked={agreedTerms}
+                    onChange={setAgreedTerms}
+                    disabled={submitting || orderSent}
+                    text={
+                      <>
+                        Согласен с{' '}
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            color: 'var(--accent)',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          условиями использования
+                        </a>
+                        , включая трансграничную передачу данных. Понимаю, что
+                        платформа — посредник, а ответственность за товар,
+                        доставку и возврат несёт продавец.
+                      </>
+                    }
+                  />
                 </div>
               ) : (
                 <div
@@ -637,7 +694,8 @@ const CartPanel = ({ open, onClose }: Props) => {
                           }}
                         >
                           <Check size={14} />
-                          {promo.applied.code} · −{promo.applied.discount_percent}%
+                          {promo.applied.code} · −
+                          {promo.applied.discount_percent}%
                         </div>
                         <button
                           onClick={promo.clearCode}
@@ -810,23 +868,40 @@ const CartPanel = ({ open, onClose }: Props) => {
                   onClick={
                     showCheckout ? handleCheckout : () => setShowCheckout(true)
                   }
-                  disabled={submitting || orderSent}
+                  disabled={
+                    submitting ||
+                    orderSent ||
+                    (showCheckout && !canCheckout)
+                  }
                   style={{
                     width: '100%',
                     padding: '18px',
-                    background: orderSent ? 'var(--success)' : 'var(--accent)',
-                    color: '#000',
-                    border: 'none',
+                    background: orderSent
+                      ? 'var(--success)'
+                      : showCheckout && !canCheckout
+                      ? 'var(--surface-hi)'
+                      : 'var(--accent)',
+                    color:
+                      showCheckout && !canCheckout ? 'var(--muted)' : '#000',
+                    border:
+                      showCheckout && !canCheckout
+                        ? '1px solid var(--border)'
+                        : 'none',
                     borderRadius: 100,
                     fontSize: 15,
                     fontWeight: 700,
-                    cursor: submitting || orderSent ? 'default' : 'pointer',
+                    cursor:
+                      submitting ||
+                      orderSent ||
+                      (showCheckout && !canCheckout)
+                        ? 'not-allowed'
+                        : 'pointer',
                     fontFamily: 'inherit',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 10,
-                    transition: 'background 0.3s',
+                    transition: 'all 0.3s',
                     opacity: submitting ? 0.7 : 1,
                   }}
                 >
@@ -837,9 +912,13 @@ const CartPanel = ({ open, onClose }: Props) => {
                   ) : submitting ? (
                     'Отправка...'
                   ) : showCheckout ? (
-                    willSplitInto
-                      ? `Оформить (${uniqueSellers} заказа)`
-                      : 'Подтвердить заказ'
+                    !canCheckout ? (
+                      'Примите условия'
+                    ) : willSplitInto ? (
+                      `Оформить (${uniqueSellers} заказа)`
+                    ) : (
+                      'Подтвердить заказ'
+                    )
                   ) : (
                     'Оформить заказ'
                   )}
@@ -907,6 +986,52 @@ const Field = ({
       }}
     />
   </div>
+);
+
+interface CheckboxRowProps {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  text: React.ReactNode;
+}
+
+const CheckboxRow = ({ checked, onChange, disabled, text }: CheckboxRowProps) => (
+  <label
+    style={{
+      display: 'flex',
+      gap: 12,
+      alignItems: 'flex-start',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      padding: '12px 14px',
+      background: checked
+        ? 'rgba(74,222,128,0.06)'
+        : 'rgba(255,77,77,0.04)',
+      border: checked
+        ? '1px solid rgba(74,222,128,0.3)'
+        : '1px solid rgba(255,77,77,0.2)',
+      borderRadius: 12,
+      fontSize: 12,
+      lineHeight: 1.5,
+      transition: 'all 0.2s',
+      opacity: disabled ? 0.5 : 1,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      disabled={disabled}
+      style={{
+        marginTop: 2,
+        width: 16,
+        height: 16,
+        accentColor: 'var(--accent)',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        flexShrink: 0,
+      }}
+    />
+    <span style={{ color: 'var(--text-dim)' }}>{text}</span>
+  </label>
 );
 
 export default CartPanel;

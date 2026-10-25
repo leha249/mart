@@ -4,7 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { normalizeError } from '../utils/errors';
 
-export type UserRole = 'admin' | 'seller' | 'guest';
+export type UserRole = 'admin' | 'seller' | 'pending' | 'guest';
 
 interface AuthContextType {
   user: User | null;
@@ -77,12 +77,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setRole('guest');
           setSellerId(null);
           setSellerName(null);
-          // Сообщение покажем через toast (в Admin.tsx)
           sessionStorage.setItem('mora-auth-error', 'blocked');
           return;
         }
 
-        // 2.1.2. Активен или на паузе — продавец
+        // 2.1.2. Pending — может войти, но только смотреть
+        if (sellerData.status === 'pending') {
+          setRole('pending');
+          setSellerId(sellerData.id);
+          setSellerName(sellerData.name);
+          return;
+        }
+
+        // 2.1.3. Активен или на паузе — продавец
         setRole('seller');
         setSellerId(sellerData.id);
         setSellerName(sellerData.name);
@@ -100,7 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.setItem('mora-auth-error', 'no-role');
     } catch (e) {
       console.error('[AuthContext] resolveRole failed:', e);
-      // При ошибке — не даём доступ
       setRole('guest');
       setSellerId(null);
       setSellerName(null);
@@ -147,7 +153,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // При входе / обновлении токена — пересчитываем роль
       await resolveRole(session?.user ?? null);
     });
 

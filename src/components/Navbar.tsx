@@ -9,22 +9,21 @@ import {
   Settings,
   Store,
   Package,
-  Receipt,
+  User,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
+import { useCustomer } from '../context/CustomerContext';
 import { useBodyLock } from '../hooks/useBodyLock';
 import { useThrottle } from '../hooks/useDebounce';
 import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
 
-// Навигация
 const navLinks = [
   { label: 'Магазины', kind: 'sellers' as const },
   { label: 'Каталог', kind: 'catalog' as const },
-  { label: 'Мои заказы', kind: 'myOrders' as const },
 ];
 
 const Navbar = () => {
@@ -34,10 +33,14 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const { openCart, openSearch } = useUI();
   const { user, role } = useAuth();
+  const { isAuthenticated: isCustomer } = useCustomer();
 
   useBodyLock(menuOpen);
 
-  const canManage = role === 'seller' || role === 'admin';
+  const isSellerOrAdmin = role === 'seller' || role === 'admin';
+  const isPending = role === 'pending';
+  const canManage = isSellerOrAdmin || isPending;
+  const canBecomeSeller = role === 'guest';
 
   const handleScroll = useThrottle(() => {
     setScrolled(window.scrollY > 40);
@@ -58,15 +61,8 @@ const Navbar = () => {
   const goToSellers = () => go('/sellers');
   const goToCatalog = () => go('/catalog');
   const goToAdmin = () => go('/admin');
-  const goToMyOrders = () => go('/my-orders');
-
-  const handleNavClick = (
-    kind: 'sellers' | 'catalog' | 'myOrders'
-  ) => {
-    if (kind === 'sellers') goToSellers();
-    else if (kind === 'catalog') goToCatalog();
-    else if (kind === 'myOrders') goToMyOrders();
-  };
+  const goToAccount = () => go(isCustomer ? '/account' : '/login-customer');
+  const goToRegisterSeller = () => go('/register-seller');
 
   return (
     <>
@@ -119,7 +115,10 @@ const Navbar = () => {
             {navLinks.map((link, i) => (
               <motion.button
                 key={link.label}
-                onClick={() => handleNavClick(link.kind)}
+                onClick={() => {
+                  if (link.kind === 'sellers') goToSellers();
+                  else if (link.kind === 'catalog') goToCatalog();
+                }}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.07 }}
@@ -145,16 +144,29 @@ const Navbar = () => {
           </nav>
 
           <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-            {user && canManage && (
+            {canManage && (
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.94 }}
                 className="icon-btn"
                 aria-label="Управление"
-                title="Управление"
+                title={isPending ? 'Аккаунт на модерации' : 'Управление'}
                 onClick={goToAdmin}
               >
                 <Settings size={18} strokeWidth={1.75} />
+              </motion.button>
+            )}
+
+            {canBecomeSeller && (
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
+                className="icon-btn"
+                aria-label="Стать продавцом"
+                title="Стать продавцом"
+                onClick={goToRegisterSeller}
+              >
+                <Store size={18} strokeWidth={1.75} />
               </motion.button>
             )}
 
@@ -170,6 +182,20 @@ const Navbar = () => {
               onClick={openSearch}
             >
               <Search size={18} strokeWidth={1.75} />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.94 }}
+              className="icon-btn"
+              aria-label={isCustomer ? 'Личный кабинет' : 'Войти'}
+              title={isCustomer ? 'Личный кабинет' : 'Войти'}
+              onClick={goToAccount}
+              style={{
+                color: isCustomer ? 'var(--accent)' : 'var(--text)',
+              }}
+            >
+              <User size={18} strokeWidth={1.75} />
             </motion.button>
 
             <motion.button
@@ -315,11 +341,7 @@ const Navbar = () => {
                 }}
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{
-                  delay: 0.1,
-                  duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
+                transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 style={mobileLinkStyle}
               >
                 <Store size={40} strokeWidth={1.5} />
@@ -333,11 +355,7 @@ const Navbar = () => {
                 }}
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{
-                  delay: 0.17,
-                  duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
+                transition={{ delay: 0.17, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 style={mobileLinkStyle}
               >
                 <Package size={40} strokeWidth={1.5} />
@@ -347,53 +365,37 @@ const Navbar = () => {
               <motion.button
                 onClick={() => {
                   setMenuOpen(false);
-                  goToMyOrders();
-                }}
-                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(8px)' }}
-                transition={{
-                  delay: 0.24,
-                  duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                style={mobileLinkStyle}
-              >
-                <Receipt size={40} strokeWidth={1.5} />
-                Мои заказы
-              </motion.button>
-
-              <motion.button
-                onClick={() => {
-                  setMenuOpen(false);
-                  goToFavorites();
+                  goToAccount();
                 }}
                 initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{
-                  delay: 0.31,
-                  duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1],
+                transition={{ delay: 0.24, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  ...mobileLinkStyle,
+                  color: isCustomer ? 'var(--accent)' : 'var(--text)',
                 }}
-                style={mobileLinkStyle}
               >
-                Избранное
-                {favorites.length > 0 && (
-                  <span
-                    style={{
-                      fontSize: 16,
-                      padding: '4px 12px',
-                      background: 'var(--danger)',
-                      color: '#fff',
-                      borderRadius: 100,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {favorites.length}
-                  </span>
-                )}
+                <User size={40} strokeWidth={1.5} />
+                {isCustomer ? 'Кабинет' : 'Войти'}
               </motion.button>
 
-              {user && canManage && (
+              {canBecomeSeller && (
+                <motion.button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    goToRegisterSeller();
+                  }}
+                  initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                  transition={{ delay: 0.31, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  style={mobileLinkStyle}
+                >
+                  <Store size={40} strokeWidth={1.5} />
+                  Стать продавцом
+                </motion.button>
+              )}
+
+              {canManage && (
                 <motion.button
                   onClick={() => {
                     setMenuOpen(false);
@@ -401,15 +403,11 @@ const Navbar = () => {
                   }}
                   initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
                   animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  transition={{
-                    delay: 0.38,
-                    duration: 0.6,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
+                  transition={{ delay: 0.38, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   style={mobileLinkStyle}
                 >
                   <Settings size={40} strokeWidth={1.5} />
-                  Управление
+                  {isPending ? 'Аккаунт на модерации' : 'Управление'}
                 </motion.button>
               )}
             </div>
@@ -441,7 +439,7 @@ const Navbar = () => {
           outline-offset: 4px;
           border-radius: 4px;
         }
-        @media (max-width: 1050px) {
+        @media (max-width: 1150px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }

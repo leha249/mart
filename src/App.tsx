@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
+import CookieBanner from './components/CookieBanner';
 import { CartProvider, useCart } from './context/CartContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
 import { ToastProvider } from './context/ToastContext';
@@ -12,12 +13,12 @@ import { PromocodesAdminProvider } from './context/PromocodesAdminContext';
 import { PromoProvider } from './context/PromoContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
+import { CustomerProvider } from './context/CustomerContext';
 import { UIProvider } from './context/UIContext';
 import { SellersProvider } from './context/SellersContext';
 import { useRoute } from './utils/navigate';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
 
-// ============ LAZY PAGES ============
 const HomePage = lazy(() => import('./pages/HomePage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const SellersPage = lazy(() => import('./pages/SellersPage'));
@@ -28,13 +29,17 @@ const FavoritesPage = lazy(() => import('./pages/Favorites'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
 const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 
-// ============ INFO PAGES ============
+const CustomerLoginPage = lazy(() => import('./pages/CustomerLoginPage'));
+const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'));
+
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+const SellerAgreementPage = lazy(() => import('./pages/SellerAgreementPage'));
+const DataRequestPage = lazy(() => import('./pages/DataRequestPage'));
+const RegisterSellerPage = lazy(() => import('./pages/RegisterSellerPage'));
 
-// ============ DATA SYNC ============
 function DataSync() {
   const { products } = useProducts();
   const { pruneMissing: pruneCart } = useCart();
@@ -52,7 +57,6 @@ function DataSync() {
   return null;
 }
 
-// ============ PAGE LOADER ============
 function PageLoader() {
   return (
     <div
@@ -70,11 +74,9 @@ function PageLoader() {
   );
 }
 
-// ============ ROUTER ============
 function Router() {
   const route = useRoute();
 
-  // /admin
   if (route.path === '/admin') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -83,7 +85,6 @@ function Router() {
     );
   }
 
-  // /login
   if (route.path === '/login') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -92,7 +93,14 @@ function Router() {
     );
   }
 
-  // /favorites
+  if (route.path === '/register-seller') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <RegisterSellerPage />
+      </Suspense>
+    );
+  }
+
   if (route.path === '/favorites') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -101,7 +109,6 @@ function Router() {
     );
   }
 
-  // /order-success
   if (route.path === '/order-success') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -110,7 +117,6 @@ function Router() {
     );
   }
 
-  // /my-orders
   if (route.path === '/my-orders') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -119,7 +125,22 @@ function Router() {
     );
   }
 
-  // /catalog
+  if (route.path === '/login-customer') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <CustomerLoginPage />
+      </Suspense>
+    );
+  }
+
+  if (route.path === '/account') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <CustomerAccountPage />
+      </Suspense>
+    );
+  }
+
   if (route.path === '/catalog') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -128,7 +149,6 @@ function Router() {
     );
   }
 
-  // /sellers
   if (route.path === '/sellers') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -137,7 +157,6 @@ function Router() {
     );
   }
 
-  // ============ INFO PAGES ============
   if (route.path === '/about') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -170,7 +189,22 @@ function Router() {
     );
   }
 
-  // ============ SELLER ============
+  if (route.path === '/seller-agreement') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SellerAgreementPage />
+      </Suspense>
+    );
+  }
+
+  if (route.path === '/data-request') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <DataRequestPage />
+      </Suspense>
+    );
+  }
+
   if (route.path === '/seller' && route.param === 'dashboard') {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -187,7 +221,6 @@ function Router() {
     );
   }
 
-  // / — главная
   return (
     <Suspense fallback={<PageLoader />}>
       <HomePage />
@@ -195,7 +228,6 @@ function Router() {
   );
 }
 
-// ============ APP ============
 function App() {
   const [preloaded, setPreloaded] = useState(false);
 
@@ -204,33 +236,36 @@ function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <ProductsProvider>
-              <CategoriesProvider>
-                <SellersProvider>
-                  <OrdersProvider>
-                    <ReviewsProvider>
-                      <PromocodesAdminProvider>
-                        <CartProvider>
-                          <PromoProvider>
-                            <FavoritesProvider>
-                              <UIProvider>
-                                <DataSync />
-                                {!preloaded && (
-                                  <Preloader
-                                    onDone={() => setPreloaded(true)}
-                                  />
-                                )}
-                                <Router />
-                              </UIProvider>
-                            </FavoritesProvider>
-                          </PromoProvider>
-                        </CartProvider>
-                      </PromocodesAdminProvider>
-                    </ReviewsProvider>
-                  </OrdersProvider>
-                </SellersProvider>
-              </CategoriesProvider>
-            </ProductsProvider>
+            <CustomerProvider>
+              <ProductsProvider>
+                <CategoriesProvider>
+                  <SellersProvider>
+                    <OrdersProvider>
+                      <ReviewsProvider>
+                        <PromocodesAdminProvider>
+                          <CartProvider>
+                            <PromoProvider>
+                              <FavoritesProvider>
+                                <UIProvider>
+                                  <DataSync />
+                                  {!preloaded && (
+                                    <Preloader
+                                      onDone={() => setPreloaded(true)}
+                                    />
+                                  )}
+                                  <Router />
+                                  <CookieBanner />
+                                </UIProvider>
+                              </FavoritesProvider>
+                            </PromoProvider>
+                          </CartProvider>
+                        </PromocodesAdminProvider>
+                      </ReviewsProvider>
+                    </OrdersProvider>
+                  </SellersProvider>
+                </CategoriesProvider>
+              </ProductsProvider>
+            </CustomerProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

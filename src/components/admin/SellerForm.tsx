@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Loader2, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import type { UISeller, SellerStatus } from '../../types/database';
 import ImageUploader from '../ImageUploader';
@@ -75,6 +75,7 @@ const SellerForm = ({
   const [activeSection, setActiveSection] = useState<
     'main' | 'hero' | 'about' | 'lookbook' | 'footer'
   >('main');
+  const [agreed, setAgreed] = useState(false);
   const firstRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
 
@@ -124,6 +125,11 @@ const SellerForm = ({
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (saving) return;
+
+    if (!agreed) {
+      addToast('Примите условия оферты для продавцов', 'error');
+      return;
+    }
 
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -611,6 +617,60 @@ const SellerForm = ({
         </div>
       )}
 
+      {/* ✅ ОБЯЗАТЕЛЬНЫЙ ЧЕКБОКС */}
+      <label
+        style={{
+          display: 'flex',
+          gap: 12,
+          alignItems: 'flex-start',
+          cursor: saving ? 'not-allowed' : 'pointer',
+          padding: '14px 16px',
+          background: agreed
+            ? 'rgba(74,222,128,0.06)'
+            : 'rgba(255,77,77,0.04)',
+          border: agreed
+            ? '1px solid rgba(74,222,128,0.3)'
+            : '1px solid rgba(255,77,77,0.2)',
+          borderRadius: 12,
+          fontSize: 13,
+          lineHeight: 1.5,
+          transition: 'all 0.2s',
+          opacity: saving ? 0.5 : 1,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          disabled={saving}
+          style={{
+            marginTop: 2,
+            width: 16,
+            height: 16,
+            accentColor: 'var(--accent)',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ color: 'var(--text-dim)' }}>
+          Я принимаю{' '}
+          <a
+            href="/seller-agreement"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              color: 'var(--accent)',
+              textDecoration: 'underline',
+            }}
+          >
+            публичную оферту для продавцов
+          </a>
+          . Понимаю, что несу полную ответственность за качество товаров,
+          доставку, возврат и законность продаж.
+        </span>
+      </label>
+
       <div
         style={{
           display: 'flex',
@@ -640,18 +700,18 @@ const SellerForm = ({
         </button>
         <motion.button
           type="submit"
-          whileHover={{ scale: saving ? 1 : 1.03 }}
-          whileTap={{ scale: saving ? 1 : 0.97 }}
-          disabled={saving}
+          whileHover={{ scale: saving || !agreed ? 1 : 1.03 }}
+          whileTap={{ scale: saving || !agreed ? 1 : 0.97 }}
+          disabled={saving || !agreed}
           style={{
             padding: '14px 28px',
             borderRadius: 100,
-            border: 'none',
-            background: 'var(--accent)',
-            color: '#000',
+            border: !agreed ? '1px solid var(--border)' : 'none',
+            background: !agreed ? 'var(--surface-hi)' : 'var(--accent)',
+            color: !agreed ? 'var(--muted)' : '#000',
             fontSize: 14,
             fontWeight: 700,
-            cursor: saving ? 'wait' : 'pointer',
+            cursor: saving || !agreed ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit',
             display: 'flex',
             alignItems: 'center',

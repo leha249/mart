@@ -13,6 +13,8 @@ import {
   Store,
   Trash2,
   Loader2,
+  Check,
+  Clock,
 } from 'lucide-react';
 import type { UISeller, SellerStatus } from '../../types/database';
 
@@ -26,10 +28,13 @@ interface Props {
   onEdit: (seller: UISeller) => void;
   onChangeStatus: (seller: UISeller, status: SellerStatus) => void;
   onDelete?: (seller: UISeller) => Promise<void>;
+  onActivate?: (seller: UISeller) => void;
+  actioningId?: number | null;
   search: string;
 }
 
 const STATUS_LABELS: Record<SellerStatus, string> = {
+  pending: 'На модерации',
   active: 'Активен',
   paused: 'На паузе',
   blocked: 'Заблокирован',
@@ -39,6 +44,11 @@ const STATUS_COLORS: Record<
   SellerStatus,
   { bg: string; text: string; border: string }
 > = {
+  pending: {
+    bg: 'rgba(232,255,90,0.12)',
+    text: '#c8e03d',
+    border: 'rgba(232,255,90,0.3)',
+  },
   active: {
     bg: 'rgba(74,222,128,0.12)',
     text: 'var(--success)',
@@ -63,6 +73,8 @@ const SellersTable = ({
   onEdit,
   onChangeStatus,
   onDelete,
+  onActivate,
+  actioningId,
   search,
 }: Props) => {
   const [sortKey, setSortKey] = useState<SortKey>('created');
@@ -197,8 +209,7 @@ const SellersTable = ({
             Пока нет продавцов.
             <br />
             <span style={{ fontSize: 13 }}>
-              Создайте пользователя в Supabase Authentication — он автоматически
-              станет продавцом
+              Продавцы регистрируются самостоятельно через страницу регистрации
             </span>
           </>
         )}
@@ -244,95 +255,26 @@ const SellersTable = ({
                   userSelect: 'none',
                 }}
               >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   Магазин <SortIcon col="name" />
                 </div>
               </th>
-
-              <th
-                style={{
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  fontSize: 11,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontWeight: 600,
-                }}
-              >
-                Slug
-              </th>
-
-              <th
-                style={{
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  fontSize: 11,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontWeight: 600,
-                }}
-              >
-                Контакты
-              </th>
-
-              <th
-                style={{
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  fontSize: 11,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  Товаров
-                </div>
-              </th>
-
+              <th style={thStyle}>Slug</th>
+              <th style={thStyle}>Контакты</th>
+              <th style={thStyle}>Товаров</th>
               <th
                 onClick={() => toggleSort('status')}
                 style={{
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  fontSize: 11,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontWeight: 600,
+                  ...thStyle,
                   cursor: 'pointer',
                   userSelect: 'none',
-                  whiteSpace: 'nowrap',
                 }}
               >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   Статус <SortIcon col="status" />
                 </div>
               </th>
-
-              <th style={{ width: 200 }} />
+              <th style={{ width: 220 }} />
             </tr>
           </thead>
 
@@ -340,6 +282,7 @@ const SellersTable = ({
             {sorted.map((s, i) => {
               const count = productsCount[s.id] || 0;
               const sc = STATUS_COLORS[s.status];
+              const isActioning = actioningId === s.id;
 
               return (
                 <tr
@@ -353,9 +296,7 @@ const SellersTable = ({
                   }}
                 >
                   <td style={{ padding: 12, maxWidth: 240 }}>
-                    <div
-                      style={{ display: 'flex', gap: 12, alignItems: 'center' }}
-                    >
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       {s.logo ? (
                         <img
                           src={s.logo}
@@ -481,10 +422,14 @@ const SellersTable = ({
                         border: `1px solid ${sc.border}`,
                         fontWeight: 700,
                         letterSpacing: '0.5px',
-                        display: 'inline-block',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
                         whiteSpace: 'nowrap',
                       }}
                     >
+                      {s.status === 'pending' && <Clock size={10} />}
+                      {s.status === 'active' && <Check size={10} />}
                       {STATUS_LABELS[s.status]}
                     </span>
                   </td>
@@ -495,73 +440,124 @@ const SellersTable = ({
                         display: 'flex',
                         gap: 6,
                         justifyContent: 'flex-end',
+                        alignItems: 'center',
                       }}
                     >
-                      {s.status === 'active' && (
-                        <ActionBtn
-                          onClick={() =>
-                            setConfirmChange({
-                              seller: s,
-                              newStatus: 'paused',
-                            })
-                          }
-                          label="Поставить на паузу"
-                          icon={<Ban size={14} />}
+                      {isActioning ? (
+                        <Loader2
+                          size={16}
+                          style={{ animation: 'spin 1s linear infinite' }}
                         />
-                      )}
-                      {s.status === 'paused' && (
-                        <ActionBtn
-                          onClick={() =>
-                            setConfirmChange({
-                              seller: s,
-                              newStatus: 'active',
-                            })
-                          }
-                          label="Активировать"
-                          icon={<Play size={14} />}
-                        />
-                      )}
-                      {s.status === 'blocked' && (
-                        <ActionBtn
-                          onClick={() =>
-                            setConfirmChange({
-                              seller: s,
-                              newStatus: 'active',
-                            })
-                          }
-                          label="Разблокировать"
-                          icon={<Play size={14} />}
-                        />
-                      )}
+                      ) : (
+                        <>
+                          {/* PENDING — активировать или удалить */}
+                          {s.status === 'pending' && onActivate && (
+                            <>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => onActivate(s)}
+                                aria-label="Активировать"
+                                title="Активировать"
+                                style={{
+                                  padding: '8px 14px',
+                                  borderRadius: 8,
+                                  border: 'none',
+                                  background: 'var(--success)',
+                                  color: '#000',
+                                  cursor: 'pointer',
+                                  fontFamily: 'inherit',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <Check size={12} /> Активировать
+                              </motion.button>
+                              {onDelete && (
+                                <ActionBtn
+                                  onClick={() => openDelete(s)}
+                                  label="Удалить"
+                                  icon={<Trash2 size={14} />}
+                                  danger
+                                />
+                              )}
+                            </>
+                          )}
 
-                      <ActionBtn
-                        onClick={() => onEdit(s)}
-                        label="Редактировать"
-                        icon={<Pencil size={14} />}
-                      />
+                          {/* ACTIVE/PAUSED/BLOCKED — как раньше */}
+                          {s.status !== 'pending' && (
+                            <>
+                              {s.status === 'active' && (
+                                <ActionBtn
+                                  onClick={() =>
+                                    setConfirmChange({
+                                      seller: s,
+                                      newStatus: 'paused',
+                                    })
+                                  }
+                                  label="Поставить на паузу"
+                                  icon={<Ban size={14} />}
+                                />
+                              )}
+                              {s.status === 'paused' && (
+                                <ActionBtn
+                                  onClick={() =>
+                                    setConfirmChange({
+                                      seller: s,
+                                      newStatus: 'active',
+                                    })
+                                  }
+                                  label="Активировать"
+                                  icon={<Play size={14} />}
+                                />
+                              )}
+                              {s.status === 'blocked' && (
+                                <ActionBtn
+                                  onClick={() =>
+                                    setConfirmChange({
+                                      seller: s,
+                                      newStatus: 'active',
+                                    })
+                                  }
+                                  label="Разблокировать"
+                                  icon={<Play size={14} />}
+                                />
+                              )}
 
-                      {s.status !== 'blocked' && (
-                        <ActionBtn
-                          onClick={() =>
-                            setConfirmChange({
-                              seller: s,
-                              newStatus: 'blocked',
-                            })
-                          }
-                          label="Заблокировать"
-                          icon={<Ban size={14} />}
-                          danger
-                        />
-                      )}
+                              <ActionBtn
+                                onClick={() => onEdit(s)}
+                                label="Редактировать"
+                                icon={<Pencil size={14} />}
+                              />
 
-                      {/* 🗑 Кнопка удаления — только если передан onDelete */}
-                      {onDelete && (
-                        <ActionBtn
-                          onClick={() => openDelete(s)}
-                          label="Удалить продавца навсегда"
-                          icon={<Trash2 size={14} />}
-                          danger
-                        />
+                              {s.status !== 'blocked' && (
+                                <ActionBtn
+                                  onClick={() =>
+                                    setConfirmChange({
+                                      seller: s,
+                                      newStatus: 'blocked',
+                                    })
+                                  }
+                                  label="Заблокировать"
+                                  icon={<Ban size={14} />}
+                                  danger
+                                />
+                              )}
+
+                              {onDelete && (
+                                <ActionBtn
+                                  onClick={() => openDelete(s)}
+                                  label="Удалить продавца навсегда"
+                                  icon={<Trash2 size={14} />}
+                                  danger
+                                />
+                              )}
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
@@ -572,7 +568,7 @@ const SellersTable = ({
         </table>
       </div>
 
-      {/* Модалка: смена статуса */}
+      {/* Модалка смены статуса */}
       <AnimatePresence>
         {confirmChange && (
           <motion.div
@@ -702,7 +698,7 @@ const SellersTable = ({
         )}
       </AnimatePresence>
 
-      {/* Модалка: удаление */}
+      {/* Модалка удаления */}
       <AnimatePresence>
         {deleteTarget && onDelete && (
           <motion.div
@@ -775,7 +771,13 @@ const SellersTable = ({
                   color: 'var(--text-dim)',
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--danger)' }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 6,
+                    color: 'var(--danger)',
+                  }}
+                >
                   ⚠️ Это действие необратимо
                 </div>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -893,6 +895,16 @@ const SellersTable = ({
   );
 };
 
+const thStyle: React.CSSProperties = {
+  padding: '12px 16px',
+  textAlign: 'left',
+  fontSize: 11,
+  color: 'var(--muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '1px',
+  fontWeight: 600,
+};
+
 const ActionBtn = ({
   onClick,
   label,
@@ -923,7 +935,7 @@ const ActionBtn = ({
     }}
   >
     {icon}
-  </motion.button>
+  </button>
 );
 
 export default SellersTable;

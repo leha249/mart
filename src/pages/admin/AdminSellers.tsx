@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X } from 'lucide-react';
+import { Search, X, Check, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { useSellers } from '../../context/SellersContext';
 import { useProducts } from '../../context/ProductsContext';
 import { sellersService } from '../../services/sellers';
@@ -30,13 +30,13 @@ const AdminSellers = () => {
     useState<SellerFormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchInput, setSearchInput] = useState('');
+  const [actioningId, setActioningId] = useState<number | null>(null);
 
   const searchDebounced = useDebounce(searchInput, 250);
 
   useBodyLock(formOpen);
   useUnsavedChanges(formOpen && !saving);
 
-  // === КОЛИЧЕСТВО ТОВАРОВ ===
   const productsCountBySeller = useMemo(() => {
     const map: Record<number, number> = {};
     products.forEach((p) => {
@@ -47,7 +47,6 @@ const AdminSellers = () => {
     return map;
   }, [products]);
 
-  // === ФИЛЬТРАЦИЯ ===
   const filteredSellers = useMemo(() => {
     if (!searchDebounced.trim()) return sellers;
     const q = searchDebounced.toLowerCase();
@@ -59,10 +58,10 @@ const AdminSellers = () => {
     );
   }, [sellers, searchDebounced]);
 
-  // === СТАТИСТИКА ===
   const stats = useMemo(
     () => ({
       total: sellers.length,
+      pending: sellers.filter((s) => s.status === 'pending').length,
       active: sellers.filter((s) => s.status === 'active').length,
       paused: sellers.filter((s) => s.status === 'paused').length,
       blocked: sellers.filter((s) => s.status === 'blocked').length,
@@ -70,14 +69,12 @@ const AdminSellers = () => {
     [sellers]
   );
 
-  // === РЕДАКТИРОВАНИЕ ===
   const openEdit = (seller: UISeller) => {
     setEditingSeller(seller);
     setInitialForm(sellerFormFrom(seller));
     setFormOpen(true);
   };
 
-  // === СОХРАНЕНИЕ ===
   const handleSubmit = async (form: SellerFormState) => {
     if (!editingSeller || saving) return;
     setSaving(true);
@@ -100,8 +97,6 @@ const AdminSellers = () => {
         about_badge: form.about_badge.trim() || null,
         footer_text: form.footer_text.trim() || null,
         accent_color: form.accent_color.trim() || null,
-
-        // 🐛 ИСПРАВЛЕНИЕ: передаём Lookbook-фото
         lookbook_images: form.lookbook_images,
       });
 
@@ -127,7 +122,6 @@ const AdminSellers = () => {
     }
   };
 
-  // === СМЕНА СТАТУСА ===
   const handleStatusChange = async (
     seller: UISeller,
     status: SellerStatus
@@ -139,6 +133,8 @@ const AdminSellers = () => {
           ? 'Продавец активирован'
           : status === 'paused'
           ? 'Продавец поставлен на паузу'
+          : status === 'pending'
+          ? 'Продавец на модерации'
           : 'Продавец заблокирован',
         'success'
       );
@@ -148,8 +144,9 @@ const AdminSellers = () => {
     }
   };
 
-  // === УДАЛЕНИЕ ===
   const handleDelete = async (seller: UISeller) => {
+    if (actioningId !== null) return;
+    setActioningId(seller.id);
     try {
       await sellersService.remove(seller.id);
       addToast(`Продавец «${seller.name}» удалён`, 'success');
@@ -158,7 +155,8 @@ const AdminSellers = () => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка удаления';
       addToast(msg, 'error');
-      throw e;
+    } finally {
+      setActioningId(null);
     }
   };
 
@@ -179,8 +177,7 @@ const AdminSellers = () => {
             Продавцы
           </h2>
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>
-            Новые продавцы создаются через Supabase Authentication — они
-            появляются здесь автоматически
+            Новые продавцы создаются через страницу регистрации
           </p>
         </div>
       </div>
@@ -194,8 +191,9 @@ const AdminSellers = () => {
         }}
       >
         {[
-          { label: 'Всего продавцов', value: stats.total },
-          { label: 'Активных', value: stats.active, accent: true },
+          { label: 'Всего', value: stats.total },
+          { label: 'На модерации', value: stats.pending, accent: true },
+          { label: 'Активных', value: stats.active },
           { label: 'На паузе', value: stats.paused },
           { label: 'Заблокировано', value: stats.blocked },
         ].map((s) => (
@@ -314,6 +312,8 @@ const AdminSellers = () => {
           onEdit={openEdit}
           onChangeStatus={handleStatusChange}
           onDelete={handleDelete}
+          onActivate={(s) => handleStatusChange(s, 'active')}
+          actioningId={actioningId}
           search={searchDebounced}
         />
       </div>
