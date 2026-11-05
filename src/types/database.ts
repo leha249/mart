@@ -1,6 +1,10 @@
+import { generateSlug } from '../utils/slug';
+
 export interface Product {
   id: number;
   name: string;
+  /** ЧПУ-адрес для /product/:slug. Пока колонки нет в БД — считается из имени. */
+  slug?: string | null;
   description: string | null;
   price: number;
   old_price: number | null;
@@ -98,7 +102,21 @@ export interface UIProduct {
   purchases: number;
   inStock: boolean;
   sellerId: number | null;
+  /** Готовый ЧПУ-адрес товара: /product/<slug>. */
+  slug: string;
 }
+
+/**
+ * Слаг товара: из БД, если колонка products.slug заполнена,
+ * иначе собираем сами — «id-транслит-названия».
+ * Второй вариант гарантирует уникальность и работает без миграции.
+ */
+export const productSlug = (p: Pick<Product, 'id' | 'name' | 'slug'>): string => {
+  const stored = (p.slug ?? '').trim();
+  if (stored) return stored;
+  const translit = generateSlug(p.name);
+  return translit ? `${p.id}-${translit}` : String(p.id);
+};
 
 export const mapProductToUI = (p: Product): UIProduct => {
   const imagesSet = new Set<string>();
@@ -111,6 +129,7 @@ export const mapProductToUI = (p: Product): UIProduct => {
   return {
     id: p.id,
     name: p.name,
+    slug: productSlug(p),
     description: p.description ?? undefined,
     price: p.price,
     oldPrice: p.old_price ?? undefined,

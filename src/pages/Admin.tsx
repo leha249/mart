@@ -5,6 +5,7 @@ import { useOrders } from '../context/OrdersContext';
 import { useReviews } from '../context/ReviewsContext';
 import AdminLayout from './admin/AdminLayout';
 import type { AdminTab } from '../components/admin/AdminTabs';
+import { navigate } from '../utils/navigate';
 
 // Lazy-load вкладок — каждая грузится при первом открытии
 const AdminDashboard = lazy(() => import('./admin/AdminDashboard'));
@@ -59,8 +60,7 @@ const Admin = () => {
   // === РЕДИРЕКТ НА /login если не авторизован ===
   useEffect(() => {
     if (!authLoading && !user) {
-      window.history.pushState({}, '', '/login');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/login');
     }
   }, [user, authLoading]);
 

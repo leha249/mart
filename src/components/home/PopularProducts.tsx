@@ -11,6 +11,7 @@ import { formatPrice } from '../../utils/format';
 import { optimizeImageUrl } from '../../utils/imageLoader';
 import type { UIProduct } from '../../types/database';
 import { mapProductToUI } from '../../types/database';
+import { navigate } from '../../utils/navigate';
 
 interface SellerInfo {
   id: number;
@@ -138,16 +139,14 @@ const PopularProducts = ({
 
   const handleGoToSeller = (slug: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    window.history.pushState({}, '', `/seller/${slug}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${slug}`);
   };
 
   const handleGoToCatalog = () => {
     if (onGoToCatalog) {
       onGoToCatalog();
     } else {
-      window.history.pushState({}, '', '/catalog');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/catalog');
     }
   };
 

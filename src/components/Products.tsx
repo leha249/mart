@@ -13,6 +13,7 @@ import { ProductsGridSkeleton } from './Skeleton';
 import CategoryFilter from './CategoryFilter';
 import type { PriceRange } from './CategoryFilter';
 import { optimizeImageUrl } from '../utils/imageLoader';
+import { navigate } from '../utils/navigate';
 
 const FILTER_KEY = 'mora-filter-v1';
 
@@ -462,8 +463,7 @@ const Products = ({ onProductClick }: ProductsProps) => {
   }, [sellers]);
 
   const goToSeller = (slug: string) => {
-    window.history.pushState({}, '', `/seller/${slug}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${slug}`);
   };
 
   const absolutePriceRange = useMemo(() => {

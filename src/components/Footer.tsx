@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Send, Play, Mail, Camera, ArrowUpRight } from 'lucide-react';
 import Logo from './Logo';
 import { useCustomer } from '../context/CustomerContext';
+import { navigate } from '../utils/navigate';
 
 const noop = (e: React.MouseEvent) => e.preventDefault();
 
@@ -10,8 +11,7 @@ const Footer = () => {
 
   const go = (path: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(path);
   };
 
   const navLinks = [
@@ -177,7 +177,9 @@ const Footer = () => {
             color: 'var(--muted)',
           }}
         >
-          <div>© 2025 MØRA MART. Все права защищены.</div>
+          <div>
+            © {new Date().getFullYear()} MØRA MART. Все права защищены.
+          </div>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <a
               href="/seller-agreement"

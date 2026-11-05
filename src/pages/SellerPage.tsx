@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Store } from 'lucide-react';
 import { sellersService } from '../services/sellers';
 import { productsService } from '../services/products';
-import { categoriesService } from '../services/categories';
 import { supabase } from '../lib/supabase';
-import { useUI } from '../context/UIContext';
 import type { UISeller, UIProduct } from '../types/database';
 import { mapProductToUI } from '../types/database';
 import Navbar from '../components/Navbar';
@@ -13,29 +11,25 @@ import SellerCatalog from '../components/seller/SellerCatalog';
 import SellerLookbook from '../components/seller/SellerLookbook';
 import SellerAbout from '../components/seller/SellerAbout';
 import SellerFooter from '../components/seller/SellerFooter';
-import ProductModal from '../components/ProductModal';
-import ToastContainer from '../components/ToastContainer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface Props {
   slug: string;
 }
 
 const SellerPage = ({ slug }: Props) => {
-  const { selectedProduct, openProduct, closeProduct } = useUI();
-
   const [seller, setSeller] = useState<UISeller | null>(null);
   const [products, setProducts] = useState<UIProduct[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const accent = seller?.accentColor || '#e8ff5a';
 
   const goHome = useCallback(() => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   }, []);
 
   const loadData = useCallback(async () => {
@@ -61,11 +55,6 @@ const SellerPage = ({ slug }: Props) => {
 
       const rawProducts = await productsService.getAll(foundSeller.id);
       setProducts(rawProducts.map(mapProductToUI));
-
-      const sellerCategories = await categoriesService.getAll(foundSeller.id);
-      setCategories(sellerCategories.map((c) => c.name));
-
-      document.title = `${foundSeller.name} — MØRA MART`;
     } catch (e) {
       console.error('[SellerPage] load error:', e);
       setError(
@@ -78,10 +67,17 @@ const SellerPage = ({ slug }: Props) => {
 
   useEffect(() => {
     loadData();
-    return () => {
-      document.title = 'MØRA MART';
-    };
   }, [loadData]);
+
+  usePageMeta({
+    title: seller ? `${seller.name} — магазин` : 'Магазин',
+    description: seller
+      ? seller.description?.slice(0, 160) ||
+        `${seller.name} на MØRA MART — одежда, обувь и аксессуары от независимого продавца.`
+      : 'Магазин продавца на MØRA MART.',
+    image: seller?.cover || seller?.logo || undefined,
+    noindex: !seller,
+  });
 
   useEffect(() => {
     if (!seller) return;
@@ -125,12 +121,6 @@ const SellerPage = ({ slug }: Props) => {
     };
   }, [seller]);
 
-  const displayCategories = useMemo(() => {
-    const set = new Set<string>(categories);
-    products.forEach((p) => set.add(p.category));
-    return Array.from(set).sort();
-  }, [categories, products]);
-
   if (loading) {
     return (
       <>
@@ -156,7 +146,6 @@ const SellerPage = ({ slug }: Props) => {
           <div style={{ fontSize: 14 }}>Загружаем магазин...</div>
           <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
-        <ToastContainer />
       </>
     );
   }
@@ -240,7 +229,6 @@ const SellerPage = ({ slug }: Props) => {
             <ArrowLeft size={16} /> На главную MØRA MART
           </button>
         </div>
-        <ToastContainer />
       </>
     );
   }
@@ -261,9 +249,14 @@ const SellerPage = ({ slug }: Props) => {
         <SellerHero seller={seller} />
         <SellerCatalog
           products={products}
-          categories={displayCategories}
           accent={accent}
-          onProductClick={openProduct}
+          onProductClick={(product) =>
+            navigate(
+              product.slug
+                ? `/product/${product.slug}`
+                : `/product/${product.id}`
+            )
+          }
         />
         {seller.lookbookImages && seller.lookbookImages.length > 0 && (
           <SellerLookbook
@@ -275,9 +268,6 @@ const SellerPage = ({ slug }: Props) => {
       </main>
 
       <SellerFooter seller={seller} onGoHome={goHome} />
-
-      <ProductModal product={selectedProduct} onClose={closeProduct} />
-      <ToastContainer />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cookie, X } from 'lucide-react';
+import { navigate } from '../utils/navigate';
 
 const STORAGE_KEY = 'mora-cookie-consent-v1';
 
@@ -34,8 +35,7 @@ const CookieBanner = () => {
 
   const goToPolicy = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.history.pushState({}, '', '/privacy');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/privacy');
   };
 
   return (

@@ -20,13 +20,14 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { useCustomer } from '../context/CustomerContext';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../lib/supabase';
 import { formatPrice, formatDate } from '../utils/format';
 import type { OrderStatus, OrderItem } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface OrderRow {
   id: number;
@@ -90,17 +91,11 @@ const CustomerAccountPage = () => {
   // Редирект, если не вошёл
   useEffect(() => {
     if (!session) {
-      window.history.pushState({}, '', '/login-customer');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/login-customer');
     }
   }, [session]);
 
-  useEffect(() => {
-    document.title = 'Личный кабинет — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Личный кабинет — MØRA MART' });
 
   // Загружаем заказы
   useEffect(() => {
@@ -139,21 +134,18 @@ const CustomerAccountPage = () => {
   }, [session]);
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToCatalog = () => {
-    window.history.pushState({}, '', '/catalog');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/catalog');
   };
 
   const handleSignOut = () => {
     if (!window.confirm('Выйти из кабинета?')) return;
     signOut();
     addToast('Вы вышли из кабинета', 'info');
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const handleSaveName = () => {
@@ -822,7 +814,6 @@ const CustomerAccountPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         @keyframes spin {

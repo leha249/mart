@@ -7,6 +7,7 @@ import { useReviews } from '../../context/ReviewsContext';
 import AdminTabs from '../../components/admin/AdminTabs';
 import type { AdminTab } from '../../components/admin/AdminTabs';
 import { useToast } from '../../context/ToastContext';
+import { navigate } from '../../utils/navigate';
 
 interface Props {
   activeTab: AdminTab;
@@ -46,8 +47,7 @@ const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
 
       await signOut();
       addToast('Вы вышли из аккаунта', 'info');
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/');
     } catch (e) {
       addToast('Ошибка выхода', 'error');
     }

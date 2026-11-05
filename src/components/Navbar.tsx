@@ -20,6 +20,7 @@ import { useBodyLock } from '../hooks/useBodyLock';
 import { useThrottle } from '../hooks/useDebounce';
 import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
+import { navigate } from '../utils/navigate';
 
 const navLinks = [
   { label: 'Магазины', kind: 'sellers' as const },
@@ -52,8 +53,7 @@ const Navbar = () => {
   }, [handleScroll]);
 
   const go = (path: string) => {
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(path);
   };
 
   const goHome = () => go('/');

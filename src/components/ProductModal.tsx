@@ -28,6 +28,7 @@ import SizeChartModal from './SizeChartModal';
 import ReviewsSection from './ReviewsSection';
 import ReviewModal from './ReviewModal';
 import Lightbox from './Lightbox';
+import { navigate } from '../utils/navigate';
 
 interface Props {
   product: UIProduct | null;
@@ -145,16 +146,14 @@ const ProductModal = ({ product, onClose }: Props) => {
   const handleGoToSeller = () => {
     if (!seller) return;
     onClose();
-    window.history.pushState({}, '', `/seller/${seller.slug}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${seller.slug}`);
   };
 
   const handleGoToSellerLegal = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!seller) return;
     onClose();
-    window.history.pushState({}, '', `/seller/${seller.slug}#footer`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${seller.slug}#footer`);
     // После навигации прокрутим к футеру
     setTimeout(() => {
       document.getElementById('footer')?.scrollIntoView({

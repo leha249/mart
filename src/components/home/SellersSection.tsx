@@ -4,6 +4,7 @@ import { Store, ArrowRight, Package, ArrowUpRight } from 'lucide-react';
 import { sellersService } from '../../services/sellers';
 import { productsService } from '../../services/products';
 import type { UISeller } from '../../types/database';
+import { navigate } from '../../utils/navigate';
 
 interface SellerWithCount extends UISeller {
   productsCount: number;
@@ -61,8 +62,7 @@ const SellersSection = ({
     if (onGoToSeller) {
       onGoToSeller(slug);
     } else {
-      window.history.pushState({}, '', `/seller/${slug}`);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate(`/seller/${slug}`);
     }
   };
 
@@ -70,8 +70,7 @@ const SellersSection = ({
     if (onGoToSellers) {
       onGoToSellers();
     } else {
-      window.history.pushState({}, '', '/sellers');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/sellers');
     }
   };
 

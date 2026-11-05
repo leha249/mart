@@ -1,11 +1,17 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
 import CookieBanner from './components/CookieBanner';
 import CartPanel from './components/CartPanel';
 import FavoritesPanel from './components/FavoritesPanel';
 import SearchOverlay from './components/SearchOverlay';
-import ProductModal from './components/ProductModal';
 import ToastContainer from './components/ToastContainer';
 import { CartProvider, useCart } from './context/CartContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
@@ -21,13 +27,15 @@ import { AuthProvider } from './context/AuthContext';
 import { CustomerProvider } from './context/CustomerContext';
 import { UIProvider, useUI } from './context/UIContext';
 import { SellersProvider } from './context/SellersContext';
-import { useRoute } from './utils/navigate';
+import { NavigationBridge, navigate } from './utils/navigate';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const SellersPage = lazy(() => import('./pages/SellersPage'));
 const SellerPage = lazy(() => import('./pages/SellerPage'));
+const ProductPage = lazy(() => import('./pages/ProductPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
@@ -79,18 +87,42 @@ function PageLoader() {
   );
 }
 
+/** Прокрутка вверх при смене страницы (кроме перехода на якорь #...). */
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const el = document.querySelector(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [pathname, hash]);
+
+  return null;
+}
+
 /**
  * Глобальные панели — рендерятся на уровне App, чтобы корзина,
- * поиск, избранное и карточка товара работали с любой страницы.
+ * поиск и избранное работали с любой страницы.
+ *
+ * Карточка товара больше не открывается модалкой: у каждого товара
+ * теперь своя страница /product/:slug, поэтому выбор в поиске ведёт на неё.
  */
 function GlobalPanels() {
-  const {
-    activePanel,
-    closePanels,
-    selectedProduct,
-    openProduct,
-    closeProduct,
-  } = useUI();
+  const { activePanel, closePanels } = useUI();
+
+  const openProductPage = (product: { id: number; slug?: string | null }) => {
+    closePanels();
+    navigate(
+      product.slug
+        ? `/product/${product.slug}`
+        : `/product/${product.id}`
+    );
+  };
 
   return (
     <>
@@ -102,164 +134,49 @@ function GlobalPanels() {
       <SearchOverlay
         open={activePanel === 'search'}
         onClose={closePanels}
-        onProductSelect={openProduct}
+        onProductSelect={openProductPage}
       />
-      <ProductModal product={selectedProduct} onClose={closeProduct} />
       <ToastContainer />
     </>
   );
 }
 
-function Router() {
-  const route = useRoute();
+function SellerPageRoute() {
+  const { slug } = useParams<{ slug: string }>();
+  return <SellerPage slug={slug ?? ''} />;
+}
 
-  if (route.path === '/admin') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Admin />
-      </Suspense>
-    );
-  }
+function ProductPageRoute() {
+  const { slug } = useParams<{ slug: string }>();
+  return <ProductPage slug={slug ?? ''} />;
+}
 
-  if (route.path === '/login') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Login />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/register-seller') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <RegisterSellerPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/favorites') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <FavoritesPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/order-success') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <OrderSuccess />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/my-orders') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <MyOrdersPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/login-customer') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <CustomerLoginPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/account') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <CustomerAccountPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/catalog') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <CatalogPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/sellers') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <SellersPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/about') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <AboutPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/contacts') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <ContactsPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/privacy') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <PrivacyPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/terms') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <TermsPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/seller-agreement') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <SellerAgreementPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/data-request') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <DataRequestPage />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/seller' && route.param === 'dashboard') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Admin />
-      </Suspense>
-    );
-  }
-
-  if (route.path === '/seller' && route.param) {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <SellerPage slug={route.param} />
-      </Suspense>
-    );
-  }
-
+function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
-      <HomePage />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/catalog" element={<CatalogPage />} />
+        <Route path="/sellers" element={<SellersPage />} />
+        <Route path="/seller/dashboard" element={<Admin />} />
+        <Route path="/seller/:slug" element={<SellerPageRoute />} />
+        <Route path="/product/:slug" element={<ProductPageRoute />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register-seller" element={<RegisterSellerPage />} />
+        <Route path="/login-customer" element={<CustomerLoginPage />} />
+        <Route path="/account" element={<CustomerAccountPage />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contacts" element={<ContactsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/seller-agreement" element={<SellerAgreementPage />} />
+        <Route path="/data-request" element={<DataRequestPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </Suspense>
   );
 }
@@ -269,43 +186,47 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <CustomerProvider>
-              <ProductsProvider>
-                <CategoriesProvider>
-                  <SellersProvider>
-                    <OrdersProvider>
-                      <ReviewsProvider>
-                        <PromocodesAdminProvider>
-                          <CartProvider>
-                            <PromoProvider>
-                              <FavoritesProvider>
-                                <UIProvider>
-                                  <DataSync />
-                                  {!preloaded && (
-                                    <Preloader
-                                      onDone={() => setPreloaded(true)}
-                                    />
-                                  )}
-                                  <Router />
-                                  <GlobalPanels />
-                                  <CookieBanner />
-                                </UIProvider>
-                              </FavoritesProvider>
-                            </PromoProvider>
-                          </CartProvider>
-                        </PromocodesAdminProvider>
-                      </ReviewsProvider>
-                    </OrdersProvider>
-                  </SellersProvider>
-                </CategoriesProvider>
-              </ProductsProvider>
-            </CustomerProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </ThemeProvider>
+      <BrowserRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <CustomerProvider>
+                <ProductsProvider>
+                  <CategoriesProvider>
+                    <SellersProvider>
+                      <OrdersProvider>
+                        <ReviewsProvider>
+                          <PromocodesAdminProvider>
+                            <CartProvider>
+                              <PromoProvider>
+                                <FavoritesProvider>
+                                  <UIProvider>
+                                    <NavigationBridge />
+                                    <ScrollManager />
+                                    <DataSync />
+                                    {!preloaded && (
+                                      <Preloader
+                                        onDone={() => setPreloaded(true)}
+                                      />
+                                    )}
+                                    <AppRoutes />
+                                    <GlobalPanels />
+                                    <CookieBanner />
+                                  </UIProvider>
+                                </FavoritesProvider>
+                              </PromoProvider>
+                            </CartProvider>
+                          </PromocodesAdminProvider>
+                        </ReviewsProvider>
+                      </OrdersProvider>
+                    </SellersProvider>
+                  </CategoriesProvider>
+                </ProductsProvider>
+              </CustomerProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

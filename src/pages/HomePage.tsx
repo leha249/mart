@@ -1,35 +1,34 @@
-import { useEffect } from 'react';
 import SellersSection from '../components/home/SellersSection';
 import PopularProducts from '../components/home/PopularProducts';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import { useUI } from '../context/UIContext';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
+import type { UIProduct } from '../types/database';
 
 const HomePage = () => {
-  const { openProduct } = useUI();
-
-  useEffect(() => {
-    document.title = 'MØRA MART — маркетплейс одежды';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({
+    title: 'MØRA MART — маркетплейс одежды',
+    description:
+      'MØRA MART — маркетплейс одежды, обуви и аксессуаров. Независимые продавцы, каждый со своим магазином. Доставка по России.',
+  });
 
   const goToSellers = () => {
-    window.history.pushState({}, '', '/sellers');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/sellers');
   };
 
   const goToSeller = (slug: string) => {
-    window.history.pushState({}, '', `/seller/${slug}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${slug}`);
   };
 
   const goToCatalog = () => {
-    window.history.pushState({}, '', '/catalog');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/catalog');
+  };
+
+  const openProductPage = (product: UIProduct) => {
+    navigate(product.slug ? `/product/${product.slug}` : `/product/${product.id}`);
   };
 
   return (
@@ -46,7 +45,7 @@ const HomePage = () => {
         />
         <PopularProducts
           limit={8}
-          onProductClick={openProduct}
+          onProductClick={openProductPage}
           onGoToCatalog={goToCatalog}
         />
       </main>

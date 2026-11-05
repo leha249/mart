@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -15,9 +15,10 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../context/ToastContext';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const RegisterSellerPage = () => {
   const { addToast } = useToast();
@@ -31,21 +32,14 @@ const RegisterSellerPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Стать продавцом — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Стать продавцом — MØRA MART' });
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToLogin = () => {
-    window.history.pushState({}, '', '/login');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/login');
   };
 
   const validate = (): string | null => {
@@ -230,7 +224,6 @@ const RegisterSellerPage = () => {
         </main>
 
         <Footer />
-        <ToastContainer />
       </div>
     );
   }
@@ -533,7 +526,6 @@ const RegisterSellerPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         @keyframes spin {

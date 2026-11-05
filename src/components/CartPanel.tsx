@@ -19,6 +19,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import { formatPrice, pluralize } from '../utils/format';
 import { ordersService } from '../services/orders';
 import { incrementPromocodeUsage } from '../utils/promocodes';
+import { navigate } from '../utils/navigate';
 
 interface Props {
   open: boolean;
@@ -233,8 +234,7 @@ const CartPanel = ({ open, onClose }: Props) => {
         setShowCheckout(false);
         onClose();
 
-        window.history.pushState({}, '', '/order-success');
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        navigate('/order-success');
       }, 1200);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка оформления';

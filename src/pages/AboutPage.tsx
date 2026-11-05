@@ -1,23 +1,17 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const AboutPage = () => {
-  useEffect(() => {
-    document.title = 'О платформе — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'О платформе — MØRA MART' });
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   return (
@@ -204,7 +198,6 @@ const AboutPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
     </div>
   );
 };

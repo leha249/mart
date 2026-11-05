@@ -1,37 +1,28 @@
-import { useEffect } from 'react';
 import Products from '../components/Products';
 import RecentlyViewed from '../components/RecentlyViewed';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import CartPanel from '../components/CartPanel';
-import FavoritesPanel from '../components/FavoritesPanel';
-import SearchOverlay from '../components/SearchOverlay';
-import ProductModal from '../components/ProductModal';
-import ToastContainer from '../components/ToastContainer';
-import { useUI } from '../context/UIContext';
 import { ArrowLeft } from 'lucide-react';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
+import type { UIProduct } from '../types/database';
 
 const CatalogPage = () => {
-  const {
-    activePanel,
-    closePanels,
-    selectedProduct,
-    openProduct,
-    closeProduct,
-  } = useUI();
-
-  useEffect(() => {
-    document.title = 'Каталог — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({
+    title: 'Каталог',
+    description:
+      'Полный каталог MØRA MART: одежда, обувь и аксессуары от независимых продавцов. Фильтры по категориям и цене.',
+  });
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
+  };
+
+  /** Клик по карточке ведёт на страницу товара, а не в модалку. */
+  const openProductPage = (product: UIProduct) => {
+    navigate(product.slug ? `/product/${product.slug}` : `/product/${product.id}`);
   };
 
   return (
@@ -62,24 +53,11 @@ const CatalogPage = () => {
           </button>
         </div>
 
-        <Products onProductClick={openProduct} />
-        <RecentlyViewed onProductClick={openProduct} />
+        <Products onProductClick={openProductPage} />
+        <RecentlyViewed onProductClick={openProductPage} />
       </main>
 
       <Footer />
-
-      <CartPanel open={activePanel === 'cart'} onClose={closePanels} />
-      <FavoritesPanel
-        open={activePanel === 'favorites'}
-        onClose={closePanels}
-      />
-      <SearchOverlay
-        open={activePanel === 'search'}
-        onClose={closePanels}
-        onProductSelect={openProduct}
-      />
-      <ProductModal product={selectedProduct} onClose={closeProduct} />
-      <ToastContainer />
     </div>
   );
 };

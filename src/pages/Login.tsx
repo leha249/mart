@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,12 +22,7 @@ const Login = () => {
   const { signIn, user, loading } = useAuth();
   const { addToast } = useToast();
 
-  useEffect(() => {
-    document.title = 'Вход — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Вход — MØRA MART' });
 
   // Показ сообщения о блокировке / удалении аккаунта
   useEffect(() => {
@@ -44,8 +41,7 @@ const Login = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      window.history.pushState({}, '', '/admin');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/admin');
     }
   }, [user, loading]);
 
@@ -65,8 +61,7 @@ const Login = () => {
     try {
       await signIn(trimmedEmail, password);
       addToast('Добро пожаловать!', 'success');
-      window.history.pushState({}, '', '/admin');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/admin');
     } catch (e) {
       const msg =
         e instanceof Error
@@ -82,8 +77,7 @@ const Login = () => {
   };
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   return (

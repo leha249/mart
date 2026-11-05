@@ -5,8 +5,9 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { formatPrice } from '../utils/format';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface OrderInfo {
   id: number;
@@ -25,9 +26,13 @@ const OrderSuccess = () => {
   const [data, setData] = useState<LastOrdersData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    document.title = 'Заказ оформлен — MØRA MART';
+  usePageMeta({
+    title: 'Заказ оформлен',
+    description: 'Спасибо за заказ на MØRA MART.',
+    noindex: true,
+  });
 
+  useEffect(() => {
     try {
       const raw = sessionStorage.getItem('mora-last-orders');
       if (raw) {
@@ -38,21 +43,15 @@ const OrderSuccess = () => {
     } finally {
       setLoading(false);
     }
-
-    return () => {
-      document.title = 'MØRA MART';
-    };
   }, []);
 
   const goHome = () => {
     sessionStorage.removeItem('mora-last-orders');
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToMyOrders = () => {
-    window.history.pushState({}, '', '/my-orders');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/my-orders');
   };
 
   if (loading) {
@@ -167,7 +166,6 @@ const OrderSuccess = () => {
           </div>
         </div>
         <Footer />
-        <ToastContainer />
       </>
     );
   }
@@ -486,7 +484,6 @@ const OrderSuccess = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
     </div>
   );
 };

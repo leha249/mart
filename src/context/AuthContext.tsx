@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { normalizeError } from '../utils/errors';
+import { navigate } from '../utils/navigate';
 
 export type UserRole = 'admin' | 'seller' | 'pending' | 'guest';
 
@@ -147,8 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSellerName(null);
 
         if (window.location.pathname === '/admin') {
-          window.history.pushState({}, '', '/login');
-          window.dispatchEvent(new PopStateEvent('popstate'));
+          navigate('/login');
         }
         return;
       }

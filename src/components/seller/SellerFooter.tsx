@@ -302,7 +302,7 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
           }}
         >
           <div>
-            © 2025 {seller.name}. Магазин на платформе{' '}
+            © {new Date().getFullYear()} {seller.name}. Магазин на платформе{' '}
             <a
               href="/"
               onClick={(e) => {

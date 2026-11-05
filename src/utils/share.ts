@@ -10,7 +10,7 @@ interface ShareResult {
 export const shareProduct = async (
   product: UIProduct
 ): Promise<ShareResult> => {
-  const url = `${window.location.origin}${window.location.pathname}#product-${product.id}`;
+  const url = `${window.location.origin}/product/${product.slug}`;
   const title = product.name;
   const text = `${product.name} — ${formatPrice(product.price)} в MØRA MART`;
 

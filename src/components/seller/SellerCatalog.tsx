@@ -336,7 +336,8 @@ ProductCard.displayName = 'SellerProductCard';
 
 interface Props {
   products: UIProduct[];
-  categories: string[];
+  /** Не используется: категории выводятся из самих товаров. */
+  categories?: string[];
   accent: string;
   onProductClick: (p: UIProduct) => void;
   loading?: boolean;

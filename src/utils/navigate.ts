@@ -1,134 +1,94 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-const navigate = (path: string) => {
-  if (window.location.pathname === path) return;
-  window.history.pushState({}, '', path);
+/**
+ * Слой навигации поверх React Router.
+ *
+ * Раньше в проекте был самописный роутер: чтобы перейти на другой адрес,
+ * вызывали window.history.pushState(...) + вручную дёргали событие popstate.
+ * Теперь маршрутами занимается React Router, но такие вызовы остались
+ * в ~30 файлах. Чтобы не переписывать каждый компонент на useNavigate(),
+ * здесь стоит «мост»: NavigationBridge подписывает navigate() на реальный
+ * роутер.
+ */
+
+type NavigateFn = (to: string) => void;
+
+let navigatorRef: NavigateFn | null = null;
+
+export const setNavigator = (fn: NavigateFn | null) => {
+  navigatorRef = fn;
+};
+
+/**
+ * Переход на внутренний адрес без перезагрузки страницы.
+ * Работает и до монтирования роутера (тогда — через history + popstate,
+ * это событие React Router тоже слушает).
+ */
+export const navigate = (to: string) => {
+  if (!to) return;
+
+  // Внешние адреса и mailto/tel отдаём браузеру
+  if (/^(https?:|mailto:|tel:)/i.test(to)) {
+    window.location.href = to;
+    return;
+  }
+
+  if (navigatorRef) {
+    navigatorRef(to);
+    return;
+  }
+
+  if (window.location.pathname + window.location.hash === to) return;
+  window.history.pushState({}, '', to);
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
-const openProduct = (product: unknown) => {
-  window.dispatchEvent(new CustomEvent('open-product', { detail: product }));
+/**
+ * Мост к React Router. Рендерится один раз внутри <BrowserRouter>.
+ * Подписка в useEffect: дочерние компоненты вызывают navigate() максимум
+ * в своих эффектах, а если раньше — сработает резервный путь выше.
+ */
+export const NavigationBridge = () => {
+  const nav = useNavigate();
+
+  useEffect(() => {
+    setNavigator((to) => nav(to));
+    return () => setNavigator(null);
+  }, [nav]);
+
+  return null;
 };
 
-// === Разбор пути: /seller/ivan → { path: '/seller', param: 'ivan' } ===
-interface ParsedRoute {
-  /** Чистый путь без динамического параметра, например '/seller' или '/admin' */
-  path: string;
-  /** Первый динамический сегмент, например 'ivan' для '/seller/ivan' */
-  param: string | null;
-  /** Полный путь, как в адресной строке, например '/seller/ivan' */
-  fullPath: string;
-  /** Все сегменты после базового пути: для '/seller/ivan/orders' → ['orders'] */
-  rest: string[];
-}
-
-const KNOWN_BASE_ROUTES = [
-  '/admin',
-  '/login',
-  '/favorites',
-  '/seller',
-  '/sellers',
-] as const;
-
-const parseRoute = (fullPath: string): ParsedRoute => {
-  const clean = fullPath.replace(/\/+$/, '') || '/';
-
-  // Ищем самое длинное совпадение из известных базовых маршрутов
-  let matchedBase: string | null = null;
-  for (const base of KNOWN_BASE_ROUTES) {
-    if (clean === base || clean.startsWith(base + '/')) {
-      if (!matchedBase || base.length > matchedBase.length) {
-        matchedBase = base;
-      }
-    }
-  }
-
-  if (!matchedBase) {
-    return {
-      path: clean,
-      param: null,
-      fullPath: clean,
-      rest: [],
-    };
-  }
-
-  const remainder = clean.slice(matchedBase.length).replace(/^\/+/, '');
-  if (!remainder) {
-    return {
-      path: matchedBase,
-      param: null,
-      fullPath: clean,
-      rest: [],
-    };
-  }
-
-  const segments = remainder.split('/').filter(Boolean);
-  const [param, ...rest] = segments;
-
-  return {
-    path: matchedBase,
-    param: param ?? null,
-    fullPath: clean,
-    rest,
-  };
-};
-
+/** Удобные именованные переходы. */
 export const routes = {
   navigate,
   home: () => navigate('/'),
-  admin: () => navigate('/admin'),
-  login: () => navigate('/login'),
-  favorites: () => navigate('/favorites'),
-  /** Публичная страница продавца */
-  seller: (slug: string) => navigate(`/seller/${slug.trim()}`),
-  /** Кабинет продавца (его профиль, товары, заказы) */
-  sellerDashboard: () => navigate('/seller/dashboard'),
-  /** Список всех продавцов */
+  catalog: () => navigate('/catalog'),
   sellers: () => navigate('/sellers'),
-  openProduct,
+  seller: (slug: string) => navigate(`/seller/${slug.trim()}`),
+  product: (slug: string) => navigate(`/product/${slug.trim()}`),
+  favorites: () => navigate('/favorites'),
+  admin: () => navigate('/admin'),
+  sellerDashboard: () => navigate('/seller/dashboard'),
+  login: () => navigate('/login'),
+  myOrders: () => navigate('/my-orders'),
+  account: () => navigate('/account'),
 };
 
-/**
- * Возвращает объект с разобранным путём.
- * Пример:
- *   useRoute() для '/seller/ivan' → { path: '/seller', param: 'ivan', fullPath: '/seller/ivan', rest: [] }
- *   useRoute() для '/admin'       → { path: '/admin', param: null, fullPath: '/admin', rest: [] }
- */
-export const useRoute = (): ParsedRoute => {
-  const [route, setRoute] = useState<ParsedRoute>(() =>
-    parseRoute(window.location.pathname)
-  );
+/** Текущий разобранный адрес (обёртка над React Router). */
+export const useRoute = () => {
+  const location = useLocation();
+  const segments = location.pathname.split('/').filter(Boolean);
 
-  useEffect(() => {
-    const onPop = () => setRoute(parseRoute(window.location.pathname));
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-
-  return route;
+  return {
+    path: segments.length ? `/${segments[0]}` : '/',
+    param: segments[1] ?? null,
+    rest: segments.slice(2),
+    fullPath: location.pathname,
+    hash: location.hash,
+    location,
+  };
 };
 
-/**
- * Хелпер для случаев, когда нужен только путь (строка).
- * Аналог старого поведения useRoute.
- */
-export const usePath = (): string => {
-  const route = useRoute();
-  return route.path;
-};
-
-export const useProductOpenEvent = (
-  handler: (product: unknown) => void
-) => {
-  useEffect(() => {
-    const listener = (e: Event) => {
-      handler((e as CustomEvent).detail);
-    };
-    window.addEventListener('open-product', listener);
-    return () => window.removeEventListener('open-product', listener);
-  }, [handler]);
-};
-
-// === Экспорт для удобства ===
-export { parseRoute };
-export type { ParsedRoute };
+export const usePath = () => useLocation().pathname;

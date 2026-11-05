@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
@@ -7,6 +7,8 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { formatPrice } from '../utils/format';
 import { optimizeImageUrl } from '../utils/imageLoader';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const FavoritesPage = () => {
   const { favorites, toggleFavorite, clearFavorites } = useFavorites();
@@ -14,12 +16,7 @@ const FavoritesPage = () => {
   const { addItem } = useCart();
   const { addToast } = useToast();
 
-  useEffect(() => {
-    document.title = 'Избранное — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Избранное — MØRA MART' });
 
   const favoriteProducts = useMemo(
     () => products.filter((p) => favorites.includes(p.id)),
@@ -48,8 +45,7 @@ const FavoritesPage = () => {
   };
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   return (
@@ -343,8 +339,7 @@ const FavoritesPage = () => {
                     <button
                       onClick={() => {
                         if (p.sizes.length > 0) {
-                          window.history.pushState({}, '', '/');
-                          window.dispatchEvent(new PopStateEvent('popstate'));
+                          navigate('/');
                           setTimeout(() => {
                             const event = new CustomEvent('open-product', {
                               detail: p,

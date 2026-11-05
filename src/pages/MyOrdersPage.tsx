@@ -17,12 +17,13 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { supabase } from '../lib/supabase';
 import { formatPrice, formatDate } from '../utils/format';
 import { useToast } from '../context/ToastContext';
 import type { OrderStatus, OrderItem } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface OrderRow {
   id: number;
@@ -81,10 +82,14 @@ const MyOrdersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  usePageMeta({
+    title: 'Мои заказы',
+    description:
+      'Найдите свои заказы на MØRA MART по номеру телефона — статусы и состав заказов.',
+  });
+
   // Загружаем сохранённый телефон
   useEffect(() => {
-    document.title = 'Мои заказы — MØRA MART';
-
     try {
       const savedPhone = localStorage.getItem('mora-my-orders-phone');
       if (savedPhone) setPhone(savedPhone);
@@ -99,10 +104,6 @@ const MyOrdersPage = () => {
     } catch (e) {
       console.warn('Failed to load saved phone:', e);
     }
-
-    return () => {
-      document.title = 'MØRA MART';
-    };
   }, []);
 
   const handleSearch = async () => {
@@ -163,13 +164,11 @@ const MyOrdersPage = () => {
   };
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToCatalog = () => {
-    window.history.pushState({}, '', '/catalog');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/catalog');
   };
 
   return (
@@ -693,7 +692,6 @@ const MyOrdersPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         @keyframes spin {

@@ -14,8 +14,9 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { useCustomer } from '../context/CustomerContext';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 type Step = 'phone' | 'code';
 
@@ -31,23 +32,16 @@ const CustomerLoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    document.title = 'Вход — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Вход — MØRA MART' });
 
   useEffect(() => {
     if (isAuthenticated) {
-      window.history.pushState({}, '', '/account');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/account');
     }
   }, [isAuthenticated]);
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const handleRequestCode = async (e: React.FormEvent) => {
@@ -97,8 +91,7 @@ const CustomerLoginPage = () => {
     const result = await verifyCode(phone, trimmed);
 
     if (result.success) {
-      window.history.pushState({}, '', '/account');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigate('/account');
     } else {
       setError(result.error || 'Неверный код');
     }
@@ -590,7 +583,6 @@ const CustomerLoginPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         @keyframes spin {

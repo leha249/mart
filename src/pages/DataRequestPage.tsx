@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -11,8 +11,9 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
 import { useToast } from '../context/ToastContext';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const DataRequestPage = () => {
   const { addToast } = useToast();
@@ -26,16 +27,10 @@ const DataRequestPage = () => {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.title = 'Запрос данных — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Запрос данных — MØRA MART' });
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -450,7 +445,6 @@ const DataRequestPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         @keyframes spin {

@@ -9,7 +9,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface SellerWithCount extends UISeller {
   productsCount: number;
@@ -24,18 +25,20 @@ const SellersPage = () => {
   const searchDebounced = useDebounce(searchInput, 250);
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToSeller = (slug: string) => {
-    window.history.pushState({}, '', `/seller/${slug}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(`/seller/${slug}`);
   };
 
-  useEffect(() => {
-    document.title = 'Магазины — MØRA MART';
+  usePageMeta({
+    title: 'Магазины',
+    description:
+      'Все магазины на MØRA MART: независимые продавцы одежды, обуви и аксессуаров.',
+  });
 
+  useEffect(() => {
     let mounted = true;
 
     (async () => {
@@ -70,7 +73,6 @@ const SellersPage = () => {
 
     return () => {
       mounted = false;
-      document.title = 'MØRA MART';
     };
   }, []);
 
@@ -500,7 +502,6 @@ const SellersPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
 
       <style>{`
         .seller-card:hover {

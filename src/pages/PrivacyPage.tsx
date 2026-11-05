@@ -1,29 +1,22 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import ToastContainer from '../components/ToastContainer';
+import { navigate } from '../utils/navigate';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const PrivacyPage = () => {
-  useEffect(() => {
-    document.title = 'Политика конфиденциальности — MØRA MART';
-    return () => {
-      document.title = 'MØRA MART';
-    };
-  }, []);
+  usePageMeta({ title: 'Политика конфиденциальности — MØRA MART' });
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/');
   };
 
   const goToDataRequest = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.history.pushState({}, '', '/data-request');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate('/data-request');
   };
 
   return (
@@ -401,7 +394,6 @@ const PrivacyPage = () => {
       </main>
 
       <Footer />
-      <ToastContainer />
     </div>
   );
 };
