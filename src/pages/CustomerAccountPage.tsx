@@ -119,9 +119,8 @@ const CustomerAccountPage = () => {
       } catch (e) {
         console.error('[CustomerAccountPage] load orders:', e);
         if (mounted) {
-          setError(
-            e instanceof Error ? e.message : 'Не удалось загрузить заказы'
-          );
+          // Пользователю — понятный текст, детали остаются в консоли
+          setError('Не удалось загрузить заказы. Попробуйте обновить страницу.');
         }
       } finally {
         if (mounted) setLoading(false);

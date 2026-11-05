@@ -138,8 +138,7 @@ const MyOrdersPage = () => {
       }
     } catch (e) {
       console.error('[MyOrdersPage] search error:', e);
-      const msg =
-        e instanceof Error ? e.message : 'Ошибка поиска заказов';
+      const msg = 'Не удалось найти заказы. Попробуйте ещё раз.';
       setError(msg);
       addToast(msg, 'error');
     } finally {
