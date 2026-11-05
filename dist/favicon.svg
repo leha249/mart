@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="MØRA MART">
+  <rect width="64" height="64" rx="14" fill="#0a0a0a"/>
+  <text x="30" y="41" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900" fill="#f5f5f5" text-anchor="middle" letter-spacing="-1">MØ</text>
+  <circle cx="50" cy="44" r="4" fill="#e8ff5a"/>
+</svg>

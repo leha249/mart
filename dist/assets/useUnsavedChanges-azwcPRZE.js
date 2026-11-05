@@ -1,0 +1,1 @@
+import{s as e}from"./errors-Ce4JUa_S.js";import{s as t}from"./motion--VBRg54a.js";var n=e(t(),1),r=e=>{(0,n.useEffect)(()=>{if(!e)return;let t=e=>{e.preventDefault(),e.returnValue=``};return window.addEventListener(`beforeunload`,t),()=>window.removeEventListener(`beforeunload`,t)},[e])};export{r as t};

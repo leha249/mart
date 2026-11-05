@@ -1,0 +1,24 @@
+import{i as e,o as t}from"./motion--VBRg54a.js";import{D as n,L as r,Tt as i,jt as a,q as o}from"./react-vendor-Cp5qCPFh.js";import{A as s,F as c}from"./index-C83MSyId.js";import{n as l}from"./Navbar-DFT52jMG.js";var u=t(),d=e=>e.preventDefault(),f=()=>{let{isAuthenticated:t}=s(),f=e=>t=>{t.preventDefault(),c(e)},p=[{label:`О платформе`,path:`/about`},{label:`Магазины`,path:`/sellers`},{label:`Каталог`,path:`/catalog`},{label:`Тарифы для продавцов`,path:`/pricing`},{label:`Контакты`,path:`/contacts`},{label:t?`Мой кабинет`:`Войти`,path:t?`/account`:`/login-customer`}];return(0,u.jsxs)(`footer`,{id:`footer`,style:{borderTop:`1px solid var(--border)`,padding:`80px 0 40px`,background:`var(--bg-soft)`},children:[(0,u.jsxs)(`div`,{className:`container`,children:[(0,u.jsxs)(`div`,{className:`footer-top`,style:{display:`grid`,gridTemplateColumns:`1.5fr 1fr 1.5fr`,gap:60,marginBottom:60},children:[(0,u.jsxs)(`div`,{style:{maxWidth:360},children:[(0,u.jsx)(`div`,{style:{marginBottom:24},children:(0,u.jsx)(l,{size:`lg`,withSuffix:!0})}),(0,u.jsx)(`p`,{style:{color:`var(--muted)`,fontSize:15,lineHeight:1.7,marginBottom:32},children:`Осознанная мода для тех, кто ценит качество, стиль и природу. Платформа независимых магазинов.`}),(0,u.jsx)(`div`,{style:{display:`flex`,gap:12},children:[i,n,r,o].map((t,n)=>(0,u.jsx)(e.a,{href:`#`,onClick:d,whileHover:{scale:1.1,y:-3},"aria-label":[`Instagram`,`Telegram`,`YouTube`,`Email`][n],style:{width:44,height:44,borderRadius:`50%`,border:`1px solid var(--border)`,display:`flex`,alignItems:`center`,justifyContent:`center`,color:`var(--text)`,transition:`border-color 0.2s`},className:`social-btn`,children:(0,u.jsx)(t,{size:18})},n))})]}),(0,u.jsxs)(`div`,{children:[(0,u.jsx)(`div`,{style:{fontSize:12,letterSpacing:`1.5px`,textTransform:`uppercase`,color:`var(--muted)`,marginBottom:20},children:`Платформа`}),(0,u.jsx)(`ul`,{style:{listStyle:`none`,display:`flex`,flexDirection:`column`,gap:14},children:p.map(t=>(0,u.jsx)(`li`,{children:(0,u.jsxs)(e.a,{href:t.path,onClick:f(t.path),whileHover:{x:4},style:{color:`var(--text)`,textDecoration:`none`,fontSize:14,display:`inline-flex`,alignItems:`center`,gap:6,transition:`color 0.2s`},className:`footer-nav-link`,children:[t.label,(0,u.jsx)(a,{size:12,style:{opacity:.4}})]})},t.path+t.label))})]}),(0,u.jsxs)(`div`,{children:[(0,u.jsx)(`div`,{style:{fontSize:12,letterSpacing:`1.5px`,textTransform:`uppercase`,color:`var(--muted)`,marginBottom:20},children:`Связаться с нами`}),(0,u.jsx)(`a`,{href:`mailto:hello@moramart.ru`,style:{color:`var(--text)`,textDecoration:`none`,fontSize:16,fontWeight:600,display:`block`,marginBottom:8},children:`hello@moramart.ru`}),(0,u.jsxs)(`div`,{style:{color:`var(--muted)`,fontSize:14,lineHeight:1.6},children:[`Пн–Пт, 10:00–19:00`,(0,u.jsx)(`br`,{}),`Отвечаем в течение 1 рабочего дня`]})]})]}),(0,u.jsxs)(`div`,{style:{paddingTop:40,borderTop:`1px solid var(--border)`,display:`flex`,justifyContent:`space-between`,alignItems:`center`,flexWrap:`wrap`,gap:20,fontSize:13,color:`var(--muted)`},children:[(0,u.jsxs)(`div`,{children:[`© `,new Date().getFullYear(),` MØRA MART. Все права защищены.`]}),(0,u.jsxs)(`div`,{style:{display:`flex`,gap:24,flexWrap:`wrap`},children:[(0,u.jsx)(`a`,{href:`/seller-agreement`,onClick:f(`/seller-agreement`),style:{color:`var(--muted)`,textDecoration:`none`,transition:`color 0.2s`},className:`footer-bottom-link`,children:`Оферта для продавцов`}),(0,u.jsx)(`a`,{href:`/data-request`,onClick:f(`/data-request`),style:{color:`var(--muted)`,textDecoration:`none`,transition:`color 0.2s`},className:`footer-bottom-link`,children:`Управление данными`}),(0,u.jsx)(`a`,{href:`/privacy`,onClick:f(`/privacy`),style:{color:`var(--muted)`,textDecoration:`none`,transition:`color 0.2s`},className:`footer-bottom-link`,children:`Политика`}),(0,u.jsx)(`a`,{href:`/terms`,onClick:f(`/terms`),style:{color:`var(--muted)`,textDecoration:`none`,transition:`color 0.2s`},className:`footer-bottom-link`,children:`Условия`})]})]})]}),(0,u.jsx)(`style`,{children:`
+        .social-btn:hover {
+          border-color: var(--accent) !important;
+          color: var(--accent) !important;
+        }
+        .footer-nav-link:hover {
+          color: var(--accent) !important;
+        }
+        .footer-bottom-link:hover {
+          color: var(--text) !important;
+        }
+        @media (max-width: 900px) {
+          .footer-top {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 40px !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .footer-top {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+          }
+        }
+      `})]})};export{f as t};

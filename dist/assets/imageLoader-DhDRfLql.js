@@ -1,0 +1,1 @@
+var e=(e,t)=>{if(!e)return e;if(e.includes(`images.pexels.com`))try{let n=new URL(e);return n.searchParams.set(`w`,String(t)),n.searchParams.set(`auto`,`compress`),n.searchParams.set(`cs`,`tinysrgb`),n.searchParams.set(`dpr`,`1`),n.toString()}catch{return e}return e.includes(`picsum.photos`)?e.replace(/\/\d+\/\d+$/,`/${t}/auto`):e};export{e as t};

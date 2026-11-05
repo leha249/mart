@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /seller/dashboard
+Disallow: /account
+Disallow: /my-orders
+Disallow: /favorites
+Disallow: /order-success
+Disallow: /login
+Disallow: /login-customer
+
+Sitemap: https://moramart.ru/sitemap.xml
