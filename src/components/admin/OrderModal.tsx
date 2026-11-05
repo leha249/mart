@@ -16,6 +16,8 @@ import { ORDER_STATUS_LABELS } from '../../types/database';
 import { useBodyLock } from '../../hooks/useBodyLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { formatPrice } from '../../utils/format';
+import { CARRIERS } from '../../utils/tracking';
+import { ordersService } from '../../services/orders';
 import StatusSelect from './StatusSelect';
 
 interface Props {
@@ -40,7 +42,30 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [carrier, setCarrier] = useState<string>('cdek');
+  const [tracking, setTracking] = useState<string>('');
+  const [savingTracking, setSavingTracking] = useState(false);
+  const [trackingSaved, setTrackingSaved] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Подставляем сохранённый трек при открытии заказа
+  useEffect(() => {
+    if (!order) return;
+    setCarrier(order.carrier || 'cdek');
+    setTracking(order.tracking_number || '');
+    setTrackingSaved(false);
+  }, [order]);
+
+  const handleSaveTracking = async () => {
+    if (!order || savingTracking) return;
+    setSavingTracking(true);
+    try {
+      await ordersService.updateTracking(order.id, carrier, tracking);
+      setTrackingSaved(true);
+    } finally {
+      setSavingTracking(false);
+    }
+  };
 
   useBodyLock(!!order);
   useFocusTrap(!!order, modalRef);
@@ -241,6 +266,66 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
                   onChange={handleStatusChange}
                   disabled={updating}
                 />
+                {/* Трек-номер: продавец оформляет доставку сам и вписывает номер */}
+                <select
+                  value={carrier}
+                  onChange={(e) => setCarrier(e.target.value)}
+                  style={{
+                    height: 38,
+                    padding: '0 12px',
+                    borderRadius: 100,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    fontSize: 12.5,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {CARRIERS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={tracking}
+                  onChange={(e) => {
+                    setTracking(e.target.value);
+                    setTrackingSaved(false);
+                  }}
+                  placeholder="Трек-номер"
+                  style={{
+                    height: 38,
+                    width: 180,
+                    padding: '0 14px',
+                    borderRadius: 100,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    fontSize: 12.5,
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={handleSaveTracking}
+                  disabled={savingTracking}
+                  style={{
+                    height: 38,
+                    padding: '0 18px',
+                    borderRadius: 100,
+                    border: 'none',
+                    background: 'var(--accent)',
+                    color: 'var(--accent-contrast)',
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    cursor: savingTracking ? 'wait' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {trackingSaved ? 'Сохранено' : 'Сохранить трек'}
+                </button>
                 <button
                   onClick={handlePrint}
                   aria-label="Печать"

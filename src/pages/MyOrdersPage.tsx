@@ -23,6 +23,7 @@ import { useToast } from '../context/ToastContext';
 import type { OrderStatus, OrderItem } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
 import { navigate } from '../utils/navigate';
+import { trackingUrl, carrierLabel } from '../utils/tracking';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 interface OrderRow {
@@ -32,6 +33,8 @@ interface OrderRow {
   total: number;
   items: OrderItem[];
   seller_id: number | null;
+  tracking_number: string | null;
+  carrier: string | null;
 }
 
 const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
@@ -533,6 +536,43 @@ const MyOrdersPage = () => {
                             >
                               {formatPrice(order.total)}
                             </span>
+
+                            {order.tracking_number && (
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: 'var(--muted)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {trackingUrl(
+                                  order.carrier,
+                                  order.tracking_number
+                                ) ? (
+                                  <a
+                                    href={
+                                      trackingUrl(
+                                        order.carrier,
+                                        order.tracking_number
+                                      )!
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: 'var(--accent)',
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    {carrierLabel(order.carrier)}:{' '}
+                                    {order.tracking_number}
+                                  </a>
+                                ) : (
+                                  <>
+                                    Трек: {order.tracking_number}
+                                  </>
+                                )}
+                              </span>
+                            )}
 
                             <div
                               style={{

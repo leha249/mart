@@ -62,35 +62,26 @@ export const ordersService = {
     validateOrder(order);
 
     try {
-      const payload: Record<string, unknown> = {
-        customer_name: order.customer_name.trim(),
-        customer_phone: order.customer_phone.trim(),
-        customer_email: order.customer_email?.trim() || null,
-        items: order.items,
-        total: order.total,
-        marketing_consent: order.marketing_consent ?? false,
-        // Фиксируем момент согласия на рекламу — иначе доказать нечем
-        marketing_consent_at: order.marketing_consent
-          ? new Date().toISOString()
+      // Заказ создаём через security definer RPC: аноним не может читать
+      // таблицу orders, поэтому прямой insert с возвратом строки не проходит.
+      const { data: created, error } = await supabase.rpc('create_order', {
+        p_customer_name: order.customer_name.trim(),
+        p_customer_phone: order.customer_phone.trim(),
+        p_customer_email: order.customer_email?.trim() || null,
+        p_items: order.items,
+        p_total: order.total,
+        p_seller_id: order.seller_id ?? null,
+        p_promo_code: order.promo_code ?? null,
+        p_promo_discount: order.promo_code
+          ? order.promo_discount ?? 0
           : null,
-      };
-
-      if (order.promo_code) {
-        payload.promo_code = order.promo_code;
-        payload.promo_discount = order.promo_discount ?? 0;
-      }
-
-      if (order.seller_id !== undefined && order.seller_id !== null) {
-        payload.seller_id = order.seller_id;
-      }
-
-      const { data, error } = await supabase
-        .from('orders')
-        .insert(payload)
-        .select()
-        .single();
+        p_marketing_consent: order.marketing_consent ?? false,
+      });
 
       if (error) throw error;
+
+      const data = created as Order | null;
+      if (!data?.id) throw new Error('Заказ не создан');
 
       // ✅ После успешного создания заказа — увеличиваем purchases у товаров
       // Не блокируем: если упадёт — заказ уже создан, не страшно
@@ -179,6 +170,26 @@ export const ordersService = {
 
       if (error) throw error;
       return data;
+    } catch (e) {
+      throw normalizeError(e);
+    }
+  },
+
+  /** Продавец вписывает трек-номер вручную (без API перевозчика). */
+  async updateTracking(
+    id: number,
+    carrier: string | null,
+    trackingNumber: string | null
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          carrier,
+          tracking_number: trackingNumber?.trim() || null,
+        })
+        .eq('id', id);
+      if (error) throw error;
     } catch (e) {
       throw normalizeError(e);
     }

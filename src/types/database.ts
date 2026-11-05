@@ -62,6 +62,10 @@ export interface Order {
   promo_discount: number | null;
   seller_id: number | null;
   marketing_consent: boolean;
+  /** Трек-номер, введённый продавцом вручную. */
+  tracking_number: string | null;
+  /** cdek | post | boxberry | yandex | other */
+  carrier: string | null;
   created_at: string;
 }
 

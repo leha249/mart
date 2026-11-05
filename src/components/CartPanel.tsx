@@ -18,6 +18,7 @@ import { useBodyLock } from '../hooks/useBodyLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { formatPrice, pluralize } from '../utils/format';
 import { ordersService } from '../services/orders';
+import { chatService } from '../services/chat';
 import { incrementPromocodeUsage } from '../utils/promocodes';
 import { navigate } from '../utils/navigate';
 
@@ -187,6 +188,22 @@ const CartPanel = ({ open, onClose }: Props) => {
         });
       }
 
+      // Сразу открываем чат с продавцом и пишем номер заказа,
+      // чтобы он понимал контекст и мог ответить по оплате и доставке.
+      for (const o of createdOrders) {
+        if (!o.sellerId) continue;
+        chatService
+          .openForCustomer(o.sellerId, phone.trim(), name.trim())
+          .then(({ threadId, token }) =>
+            chatService.customerSend(
+              threadId,
+              token,
+              `Оформил заказ №${o.id} на ${o.total} ₽. Подскажите, как удобнее оплатить и когда сможете отправить?`
+            )
+          )
+          .catch(() => {});
+      }
+
       if (promo.applied) {
         incrementPromocodeUsage(promo.applied.id);
       }
@@ -194,6 +211,7 @@ const CartPanel = ({ open, onClose }: Props) => {
       try {
         const orderInfo = createdOrders.map((o) => ({
           id: o.id,
+          sellerId: o.sellerId,
           total: o.total,
           itemsCount: o.itemsCount,
         }));
