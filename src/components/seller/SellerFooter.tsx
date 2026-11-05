@@ -33,7 +33,7 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
 
   // Реквизиты продавца (если заполнены)
   const hasLegalInfo =
-    seller.legalName || seller.ogrnip || seller.legalAddress;
+    seller.legalName || seller.ogrnip || seller.inn || seller.legalAddress;
 
   // Тип продавца
   const legalTypeLabel =
@@ -276,6 +276,12 @@ const SellerFooter = ({ seller, onGoHome }: Props) => {
                   {seller.legalType === 'ooo' ? 'ОГРН' : 'ОГРНИП'}:
                 </strong>{' '}
                 {seller.ogrnip}
+              </div>
+            )}
+            {seller.inn && (
+              <div>
+                <strong style={{ color: 'var(--text)' }}>ИНН:</strong>{' '}
+                {seller.inn}
               </div>
             )}
             {seller.legalAddress && (

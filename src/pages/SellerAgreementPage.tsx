@@ -6,6 +6,7 @@ import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { OPERATOR } from '../data/operator';
 
 const SellerAgreementPage = () => {
   usePageMeta({ title: 'Оферта для продавцов — MØRA MART' });
@@ -433,23 +434,23 @@ const SellerAgreementPage = () => {
                 </div>
                 <div style={{ marginBottom: 6 }}>
                   <strong style={{ color: 'var(--text)' }}>ФИО:</strong>{' '}
-                  [УКАЖИТЕ ФИО ОПЕРАТОРА]
+                  {OPERATOR.legalName}
                 </div>
                 <div style={{ marginBottom: 6 }}>
                   <strong style={{ color: 'var(--text)' }}>Статус:</strong>{' '}
-                  самозанятый (плательщик НПД)
+                  {OPERATOR.status}
                 </div>
                 <div style={{ marginBottom: 6 }}>
                   <strong style={{ color: 'var(--text)' }}>ИНН:</strong>{' '}
-                  [УКАЖИТЕ ИНН]
+                  {OPERATOR.inn}
                 </div>
                 <div style={{ marginBottom: 6 }}>
                   <strong style={{ color: 'var(--text)' }}>Адрес:</strong>{' '}
-                  [УКАЖИТЕ АДРЕС]
+                  {OPERATOR.address}
                 </div>
                 <div>
                   <strong style={{ color: 'var(--text)' }}>Email:</strong>{' '}
-                  hello@moramart.ru
+                  {OPERATOR.email}
                 </div>
               </div>
             </div>

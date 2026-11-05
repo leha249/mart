@@ -103,6 +103,7 @@ const AdminSellers = () => {
         legal_name: form.legal_name.trim() || null,
         legal_type: form.legal_type,
         ogrnip: form.ogrnip.trim() || null,
+        inn: form.inn.trim() || null,
         legal_address: form.legal_address.trim() || null,
       });
 

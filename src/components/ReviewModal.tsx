@@ -21,6 +21,8 @@ const ReviewModal = ({ productId, open, onClose, onSubmitted }: Props) => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  /** Согласие на обработку ПД: имя автора сохраняется в базу. */
+  const [agreed, setAgreed] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const { addToast } = useToast();
 
@@ -54,6 +56,7 @@ const ReviewModal = ({ productId, open, onClose, onSubmitted }: Props) => {
     if (!text.trim()) return 'Напишите отзыв';
     if (text.trim().length < 10) return 'Минимум 10 символов';
     if (text.trim().length > 1000) return 'Максимум 1000 символов';
+    if (!agreed) return 'Необходимо согласие на обработку персональных данных';
     return null;
   };
 
@@ -334,6 +337,65 @@ const ReviewModal = ({ productId, open, onClose, onSubmitted }: Props) => {
                       </div>
                     </div>
 
+                    {/* Согласие на обработку ПД: имя автора пишется в базу */}
+                    <label
+                      style={{
+                        display: 'flex',
+                        gap: 10,
+                        alignItems: 'flex-start',
+                        cursor: sending ? 'not-allowed' : 'pointer',
+                        padding: '10px 12px',
+                        borderRadius: 10,
+                        background: agreed
+                          ? 'rgba(74,222,128,0.06)'
+                          : 'rgba(255,77,77,0.04)',
+                        border: agreed
+                          ? '1px solid rgba(74,222,128,0.3)'
+                          : '1px solid rgba(255,77,77,0.2)',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={agreed}
+                        onChange={(e) => {
+                          setAgreed(e.target.checked);
+                          if (error) setError('');
+                        }}
+                        disabled={sending}
+                        style={{
+                          marginTop: 2,
+                          width: 16,
+                          height: 16,
+                          accentColor: 'var(--accent)',
+                          cursor: sending ? 'not-allowed' : 'pointer',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                          color: 'var(--text-dim)',
+                        }}
+                      >
+                        Я даю согласие на{' '}
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            color: 'var(--accent)',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          обработку персональных данных
+                        </a>{' '}
+                        в соответствии с 152-ФЗ — имя будет опубликовано вместе с
+                        отзывом.
+                      </span>
+                    </label>
+
                     {error && (
                       <div
                         style={{
@@ -381,18 +443,24 @@ const ReviewModal = ({ productId, open, onClose, onSubmitted }: Props) => {
                       </button>
                       <motion.button
                         type="submit"
-                        whileHover={{ scale: sending ? 1 : 1.03 }}
-                        whileTap={{ scale: sending ? 1 : 0.97 }}
-                        disabled={sending}
+                        whileHover={{ scale: sending || !agreed ? 1 : 1.03 }}
+                        whileTap={{ scale: sending || !agreed ? 1 : 0.97 }}
+                        disabled={sending || !agreed}
                         style={{
                           padding: '12px 24px',
                           borderRadius: 100,
                           border: 'none',
-                          background: 'var(--accent)',
-                          color: '#000',
+                          background: !agreed
+                            ? 'var(--surface-hi)'
+                            : 'var(--accent)',
+                          color: !agreed ? 'var(--muted)' : '#000',
                           fontSize: 14,
                           fontWeight: 700,
-                          cursor: sending ? 'wait' : 'pointer',
+                          cursor: sending
+                            ? 'wait'
+                            : !agreed
+                            ? 'not-allowed'
+                            : 'pointer',
                           fontFamily: 'inherit',
                           display: 'flex',
                           alignItems: 'center',

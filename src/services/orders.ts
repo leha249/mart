@@ -69,6 +69,10 @@ export const ordersService = {
         items: order.items,
         total: order.total,
         marketing_consent: order.marketing_consent ?? false,
+        // Фиксируем момент согласия на рекламу — иначе доказать нечем
+        marketing_consent_at: order.marketing_consent
+          ? new Date().toISOString()
+          : null,
       };
 
       if (order.promo_code) {

@@ -32,6 +32,7 @@ export interface UpdateSellerInput {
   legal_name?: string | null;
   legal_type?: SellerLegalType | null;
   ogrnip?: string | null;
+  inn?: string | null;
   legal_address?: string | null;
 }
 

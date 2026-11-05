@@ -181,6 +181,7 @@ export interface Seller {
   legal_name: string | null;
   legal_type: SellerLegalType | null;
   ogrnip: string | null;
+  inn: string | null;
   legal_address: string | null;
 
   created_at: string;
@@ -214,6 +215,7 @@ export interface UISeller {
   legalName?: string;
   legalType?: SellerLegalType;
   ogrnip?: string;
+  inn?: string;
   legalAddress?: string;
 
   createdAt: string;
@@ -246,6 +248,7 @@ export const mapSellerToUI = (s: Seller): UISeller => ({
   legalName: s.legal_name ?? undefined,
   legalType: s.legal_type ?? undefined,
   ogrnip: s.ogrnip ?? undefined,
+  inn: s.inn ?? undefined,
   legalAddress: s.legal_address ?? undefined,
 
   createdAt: s.created_at,

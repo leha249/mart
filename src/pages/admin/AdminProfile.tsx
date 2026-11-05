@@ -21,6 +21,13 @@ const AdminProfile = () => {
 
   const isSeller = role === 'seller';
 
+  /** Заполнены ли юридические реквизиты продавца */
+  const legalFilled = Boolean(
+    profileForm &&
+      profileForm.legal_name.trim() &&
+      profileForm.inn.trim()
+  );
+
   // === ЗАГРУЗКА ===
   const loadProfile = useCallback(async () => {
     if (!isSeller) return;
@@ -77,6 +84,7 @@ const AdminProfile = () => {
         legal_name: form.legal_name.trim() || null,
         legal_type: form.legal_type,
         ogrnip: form.ogrnip.trim() || null,
+        inn: form.inn.trim() || null,
         legal_address: form.legal_address.trim() || null,
       });
 
@@ -168,6 +176,39 @@ const AdminProfile = () => {
             }}
           />
           <div style={{ marginTop: 12 }}>Загрузка профиля...</div>
+        </div>
+      )}
+
+      {/* Предупреждение: без реквизитов покупатель не видит, кто продаёт товар */}
+      {!loading && profileForm && !legalFilled && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+            padding: '14px 18px',
+            marginBottom: 20,
+            borderRadius: 14,
+            background: 'rgba(255,77,77,0.06)',
+            border: '1px solid rgba(255,77,77,0.25)',
+            fontSize: 13,
+            lineHeight: 1.55,
+            color: 'var(--text-dim)',
+          }}
+        >
+          <AlertTriangle
+            size={16}
+            style={{ color: 'var(--danger)', flexShrink: 0, marginTop: 2 }}
+          />
+          <span>
+            <strong style={{ color: 'var(--text)' }}>
+              Реквизиты не заполнены.
+            </strong>{' '}
+            Покупатель должен видеть, кто продаёт товар: заполните вкладку
+            «Реквизиты» — ФИО (или название), ИНН, а для ИП/ООО ещё ОГРНИП/ОГРН и
+            адрес. Пока поля пустые, блок реквизитов на витрине магазина
+            скрыт.
+          </span>
         </div>
       )}
 

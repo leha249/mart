@@ -6,9 +6,14 @@ import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { OPERATOR, hasRknRegistry } from '../data/operator';
 
 const PrivacyPage = () => {
-  usePageMeta({ title: 'Политика конфиденциальности — MØRA MART' });
+  usePageMeta({
+    title: 'Политика в отношении обработки персональных данных — MØRA MART',
+    description:
+      'Как MØRA MART обрабатывает персональные данные: состав данных, цели, сроки хранения, права субъекта и действия при утечке.',
+  });
 
   const goHome = () => {
     navigate('/');
@@ -73,8 +78,9 @@ const PrivacyPage = () => {
             >
               Политика{' '}
               <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
-                конфиденциальности
-              </span>
+                в отношении обработки
+              </span>{' '}
+              персональных данных
             </h1>
             <p
               style={{
@@ -83,7 +89,7 @@ const PrivacyPage = () => {
                 marginBottom: 40,
               }}
             >
-              Редакция от 17 октября 2026 г.
+              Редакция от {OPERATOR.documentsDate}
             </p>
 
             <div
@@ -122,28 +128,36 @@ const PrivacyPage = () => {
               >
                 <div style={{ marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text)' }}>ФИО:</strong>{' '}
-                  [УКАЖИТЕ ФИО ОПЕРАТОРА]
+                  {OPERATOR.legalName}
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text)' }}>Статус:</strong>{' '}
-                  самозанятый (плательщик налога на профессиональный доход)
+                  {OPERATOR.status}
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text)' }}>ИНН:</strong>{' '}
-                  [УКАЖИТЕ ИНН]
+                  {OPERATOR.inn}
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text)' }}>Адрес:</strong>{' '}
-                  [УКАЖИТЕ АДРЕС ДЛЯ ОБРАЩЕНИЙ]
+                  {OPERATOR.address}
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text)' }}>Email:</strong>{' '}
-                  privacy@moramart.ru
+                  {OPERATOR.email}
                 </div>
                 <div>
                   <strong style={{ color: 'var(--text)' }}>Телефон:</strong>{' '}
-                  [УКАЖИТЕ ТЕЛЕФОН]
+                  {OPERATOR.phone}
                 </div>
+                {hasRknRegistry && (
+                  <div style={{ marginTop: 12 }}>
+                    Оператор включён в реестр операторов, осуществляющих
+                    обработку персональных данных: реестровый номер{' '}
+                    {OPERATOR.rknRegistryNumber}, уведомление подано{' '}
+                    {OPERATOR.rknNotificationDate}.
+                  </div>
+                )}
               </div>
 
               <h2

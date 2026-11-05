@@ -12,6 +12,7 @@ import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../lib/supabase';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
 
@@ -47,7 +48,18 @@ const DataRequestPage = () => {
     setSubmitting(true);
 
     try {
-      // Отправляем через mailto — откроется почтовый клиент
+      // 1. Сначала фиксируем заявку в базе: если человек закроет почтовый
+      //    клиент — обращение всё равно не потеряется и попадёт в срок.
+      const { error: dbError } = await supabase.from('data_requests').insert({
+        contact: trimmed.slice(0, 200),
+        request_type:
+          requestType === 'revoke' ? 'revoke_consent' : requestType,
+        comment: comment.trim() ? comment.trim().slice(0, 2000) : null,
+      });
+
+      if (dbError) throw dbError;
+
+      // 2. И только потом открываем почту с готовым письмом
       const subject = encodeURIComponent(
         `Запрос данных — ${requestType === 'delete' ? 'удаление' : requestType === 'access' ? 'доступ' : 'отзыв согласия'}`
       );
@@ -58,7 +70,7 @@ const DataRequestPage = () => {
             : requestType === 'access'
             ? 'Получение копии данных'
             : 'Отзыв согласия на обработку'
-        }\n\n${comment ? `Комментарий:\n${comment}\n\n` : ''}Отправлено со страницы /data-request`
+        }\n\n${comment ? `Комментарий:\n${comment}\n\n` : ''}Заявка зарегистрирована на сайте MØRA MART.`
       );
 
       window.location.href = `mailto:privacy@moramart.ru?subject=${subject}&body=${body}`;

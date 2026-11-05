@@ -36,6 +36,7 @@ export interface SellerFormState {
   legal_name: string;
   legal_type: SellerLegalType;
   ogrnip: string;
+  inn: string;
   legal_address: string;
 }
 
@@ -65,6 +66,7 @@ export const sellerFormFrom = (s: UISeller): SellerFormState => ({
   legal_name: s.legalName ?? '',
   legal_type: s.legalType ?? 'self_employed',
   ogrnip: s.ogrnip ?? '',
+  inn: s.inn ?? '',
   legal_address: s.legalAddress ?? '',
 });
 
@@ -151,6 +153,15 @@ const SellerForm = ({
       } else if (form.legal_type === 'ip') {
         if (digits.length !== 15)
           errs.ogrnip = 'ОГРНИП должен содержать 15 цифр';
+      }
+    }
+
+    // ИНН — 12 цифр для самозанятого и ИП, 10 для ООО
+    if (form.inn.trim()) {
+      const innDigits = form.inn.replace(/\D/g, '');
+      const expected = form.legal_type === 'ooo' ? 10 : 12;
+      if (innDigits.length !== expected) {
+        errs.inn = `ИНН должен содержать ${expected} цифр`;
       }
     }
 
@@ -717,11 +728,20 @@ const SellerForm = ({
 
             <Field
               label="ИНН"
-              value={''}
-              onChange={() => {}}
-              placeholder="необязательно"
-              disabled
-              hint="Поле ИНН появится в следующем обновлении"
+              value={form.inn}
+              onChange={(v) =>
+                setField('inn', v.replace(/\D/g, '').slice(0, 12))
+              }
+              placeholder={
+                form.legal_type === 'ooo' ? '10 цифр' : '12 цифр'
+              }
+              error={errors.inn}
+              disabled={saving}
+              hint={
+                form.legal_type === 'self_employed'
+                  ? 'ИНН самозанятого обязателен: без него покупатель не видит, кто продаёт товар'
+                  : 'Указывается в реквизитах продавца на витрине'
+              }
             />
           </Row>
 
@@ -804,7 +824,21 @@ const SellerForm = ({
             публичную оферту для продавцов
           </a>
           . Понимаю, что несу полную ответственность за качество товаров,
-          доставку, возврат и законность продаж.
+          доставку, возврат и законность продаж. Данные профиля обрабатываются
+          согласно{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              color: 'var(--accent)',
+              textDecoration: 'underline',
+            }}
+          >
+            политике обработки персональных данных
+          </a>
+          .
         </span>
       </label>
 
