@@ -29,11 +29,6 @@ export const productsService = {
     }
   },
 
-  /**
-   * Топ товаров по популярности.
-   * Сортировка: purchases DESC, потом rating DESC, потом reviews DESC.
-   * Только товары в наличии, от активных продавцов (RLS).
-   */
   async getPopular(limit: number = 12): Promise<Product[]> {
     try {
       const { data, error } = await supabase
@@ -79,7 +74,9 @@ export const productsService = {
 
       if (filters?.search?.trim()) {
         const q = filters.search.trim();
-        query = query.or(`name.ilike.%${q}%,category.ilike.%${q}%`);
+        query = query.or(
+          `name.ilike.%${q}%,category.ilike.%${q}%,subcategory.ilike.%${q}%`
+        );
       }
 
       const { data, error, count } = await query;
@@ -108,7 +105,6 @@ export const productsService = {
       if (error) throw error;
       return data;
     } catch (e) {
-      console.error('[productsService.getById]', e);
       throw normalizeError(e);
     }
   },
@@ -158,11 +154,6 @@ export const productsService = {
     }
   },
 
-  /**
-   * Увеличить счётчик purchases для товаров из заказа.
-   * Вызывается при создании заказа.
-   * Использует RPC-функцию на стороне БД (см. SQL).
-   */
   async incrementPurchases(
     items: { id: number; quantity: number }[]
   ): Promise<void> {
@@ -175,7 +166,6 @@ export const productsService = {
 
       if (error) throw error;
     } catch (e) {
-      // Не критично — заказ уже создан. Логируем, но не падаем.
       console.warn('[productsService.incrementPurchases]', e);
     }
   },

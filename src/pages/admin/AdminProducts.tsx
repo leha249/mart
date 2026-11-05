@@ -44,18 +44,17 @@ const AdminProducts = () => {
   useBodyLock(formOpen || deleteIds.length > 0);
   useUnsavedChanges(formOpen && !saving);
 
-  // === ФИЛЬТРАЦИЯ ===
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
     return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q) ||
+        (p.subcategory ?? '').toLowerCase().includes(q)
     );
   }, [products, search]);
 
-  // === СТАТИСТИКА ===
   const productStats = useMemo(
     () => ({
       total: products.length,
@@ -66,7 +65,6 @@ const AdminProducts = () => {
     [products]
   );
 
-  // === СОЗДАНИЕ ===
   const openCreate = () => {
     setEditingProduct(null);
     setInitialForm(emptyForm);
@@ -74,7 +72,6 @@ const AdminProducts = () => {
     setFormOpen(true);
   };
 
-  // === РЕДАКТИРОВАНИЕ ===
   const openEdit = useCallback(
     async (product: UIProduct) => {
       if (openingForm) return;
@@ -99,7 +96,6 @@ const AdminProducts = () => {
     [openingForm, addToast]
   );
 
-  // === СОХРАНЕНИЕ ===
   const handleSubmit = async (form: FormState) => {
     if (saving) return;
     setSaving(true);
@@ -111,6 +107,7 @@ const AdminProducts = () => {
         price: Number(form.price),
         old_price: form.old_price ? Number(form.old_price) : null,
         category: form.category.trim(),
+        subcategory: form.subcategory.trim() || null,
         image: firstImage,
         images: form.images,
         tag: form.tag || null,
@@ -167,7 +164,6 @@ const AdminProducts = () => {
     }
   };
 
-  // === УДАЛЕНИЕ ===
   const handleDelete = async () => {
     if (deleteIds.length === 0) return;
     const count = deleteIds.length;
@@ -200,7 +196,6 @@ const AdminProducts = () => {
     }
   };
 
-  // === ДУБЛИРОВАНИЕ ===
   const handleDuplicate = async (product: UIProduct) => {
     try {
       const full = await productsService.getById(product.id);
@@ -218,7 +213,6 @@ const AdminProducts = () => {
     }
   };
 
-  // === НАЛИЧИЕ ===
   const handleToggleStock = async (product: UIProduct) => {
     try {
       await productsService.update(product.id, { in_stock: !product.inStock });
@@ -232,7 +226,6 @@ const AdminProducts = () => {
     }
   };
 
-  // === ВЫДЕЛЕНИЕ ===
   const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -250,7 +243,6 @@ const AdminProducts = () => {
     }
   };
 
-  // === ПРИ СМЕНЕ ФИЛЬТРА СБРАСЫВАЕМ ВЫДЕЛЕНИЕ ===
   useEffect(() => {
     setSelected(new Set());
   }, [search]);
@@ -259,7 +251,6 @@ const AdminProducts = () => {
 
   return (
     <>
-      {/* ЗАГОЛОВОК + КНОПКА ДОБАВИТЬ */}
       <div
         style={{
           display: 'flex',
@@ -296,7 +287,6 @@ const AdminProducts = () => {
         </motion.button>
       </div>
 
-      {/* СТАТИСТИКА */}
       <div
         style={{
           display: 'grid',
@@ -336,7 +326,6 @@ const AdminProducts = () => {
         ))}
       </div>
 
-      {/* ПОИСК + ВЫДЕЛЕНИЕ */}
       <div
         style={{
           display: 'flex',
@@ -367,7 +356,7 @@ const AdminProducts = () => {
           />
           <input
             type="text"
-            placeholder="Поиск по названию или категории..."
+            placeholder="Поиск по названию, категории или подкатегории..."
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
             style={{
@@ -464,7 +453,6 @@ const AdminProducts = () => {
         </AnimatePresence>
       </div>
 
-      {/* ТАБЛИЦА */}
       <div
         style={{
           background: 'var(--surface)',
@@ -487,7 +475,6 @@ const AdminProducts = () => {
         />
       </div>
 
-      {/* МОДАЛКА: PRODUCT FORM */}
       <AnimatePresence>
         {formOpen && (
           <motion.div
@@ -565,7 +552,6 @@ const AdminProducts = () => {
         )}
       </AnimatePresence>
 
-      {/* МОДАЛКА: DELETE PRODUCTS */}
       <AnimatePresence>
         {deleteIds.length > 0 && (
           <motion.div
@@ -691,7 +677,6 @@ const AdminProducts = () => {
         )}
       </AnimatePresence>
 
-      {/* ПЛАШКА «ЗАГРУЗКА ТОВАРА» (при открытии формы редактирования) */}
       {openingForm && (
         <div
           style={{

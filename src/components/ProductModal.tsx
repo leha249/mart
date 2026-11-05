@@ -12,6 +12,7 @@ import {
   ZoomIn,
   Store,
   ArrowRight,
+  Building2,
 } from 'lucide-react';
 import type { UIProduct } from '../types/database';
 import { useCart } from '../context/CartContext';
@@ -59,6 +60,12 @@ const ProductModal = ({ product, onClose }: Props) => {
   const seller = product?.sellerId
     ? sellers.find((s) => s.id === product.sellerId)
     : null;
+
+  // Есть ли у продавца реквизиты для отображения
+  const hasSellerLegal = !!(
+    seller &&
+    (seller.legalName || seller.ogrnip || seller.legalAddress)
+  );
 
   useEffect(() => {
     if (!product) {
@@ -140,6 +147,21 @@ const ProductModal = ({ product, onClose }: Props) => {
     onClose();
     window.history.pushState({}, '', `/seller/${seller.slug}`);
     window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  const handleGoToSellerLegal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!seller) return;
+    onClose();
+    window.history.pushState({}, '', `/seller/${seller.slug}#footer`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    // После навигации прокрутим к футеру
+    setTimeout(() => {
+      document.getElementById('footer')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 150);
   };
 
   const needsSize = !!product && product.sizes.length > 0 && !selectedSize;
@@ -516,6 +538,14 @@ const ProductModal = ({ product, onClose }: Props) => {
                     }}
                   >
                     {product.category}
+                    {product.subcategory && (
+                      <>
+                        {' · '}
+                        <span style={{ color: 'var(--text-dim)' }}>
+                          {product.subcategory}
+                        </span>
+                      </>
+                    )}
                   </span>
                   {product.rating > 0 && (
                     <span
@@ -585,86 +615,126 @@ const ProductModal = ({ product, onClose }: Props) => {
 
                 {/* ✅ БЛОК ПРОДАВЦА */}
                 {seller && (
-                  <button
-                    onClick={handleGoToSeller}
+                  <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: '12px 16px',
                       background: 'var(--surface)',
                       border: '1px solid var(--border)',
                       borderRadius: 12,
                       marginBottom: 20,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      textAlign: 'left',
-                      width: '100%',
-                      transition: 'border-color 0.2s',
+                      overflow: 'hidden',
                     }}
                     className="seller-card"
                   >
-                    {seller.logo ? (
-                      <img
-                        src={seller.logo}
-                        alt={seller.name}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          flexShrink: 0,
-                        }}
+                    <button
+                      onClick={handleGoToSeller}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        textAlign: 'left',
+                        width: '100%',
+                      }}
+                    >
+                      {seller.logo ? (
+                        <img
+                          src={seller.logo}
+                          alt={seller.name}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: seller.accentColor || 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#000',
+                            fontSize: 14,
+                            fontWeight: 900,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {seller.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: 'var(--muted)',
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase',
+                            marginBottom: 2,
+                          }}
+                        >
+                          Продавец
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {seller.name}
+                        </div>
+                      </div>
+                      <ArrowRight
+                        size={16}
+                        color="var(--muted)"
+                        style={{ flexShrink: 0 }}
                       />
-                    ) : (
-                      <div
+                    </button>
+
+                    {hasSellerLegal && (
+                      <button
+                        onClick={handleGoToSellerLegal}
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: '50%',
-                          background: seller.accentColor || 'var(--accent)',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#000',
-                          fontSize: 14,
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {seller.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 10,
+                          gap: 8,
+                          width: '100%',
+                          padding: '10px 16px',
+                          background: 'rgba(232,255,90,0.04)',
+                          border: 'none',
+                          borderTop: '1px solid var(--border)',
                           color: 'var(--muted)',
-                          letterSpacing: '1px',
-                          textTransform: 'uppercase',
-                          marginBottom: 2,
+                          fontSize: 11,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          textAlign: 'left',
+                          transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background =
+                            'rgba(232,255,90,0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background =
+                            'rgba(232,255,90,0.04)';
                         }}
                       >
-                        Продавец
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {seller.name}
-                      </div>
-                    </div>
-                    <ArrowRight
-                      size={16}
-                      color="var(--muted)"
-                      style={{ flexShrink: 0 }}
-                    />
-                  </button>
+                        <Building2 size={12} />
+                        Реквизиты продавца
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {product.description && (

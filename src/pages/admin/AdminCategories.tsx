@@ -24,8 +24,10 @@ const AdminCategories = () => {
     refetch: refetchCategories,
   } = useCategories();
   const { products, refetch: refetchProducts } = useProducts();
-  const { sellerId } = useAuth();
+  const { role, sellerId } = useAuth();
   const { addToast } = useToast();
+
+  const isAdmin = role === 'admin';
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -40,7 +42,9 @@ const AdminCategories = () => {
   useBodyLock(formOpen || deleteId !== null);
   useUnsavedChanges(formOpen && !saving);
 
-  // === КОЛИЧЕСТВО ТОВАРОВ ПО КАТЕГОРИЯМ ===
+  // Скоуп: у админа — общие (null), у продавца — свои (sellerId)
+  const scopeSellerId = isAdmin ? null : sellerId;
+
   const productsCountByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     products.forEach((p) => {
@@ -49,7 +53,6 @@ const AdminCategories = () => {
     return map;
   }, [products]);
 
-  // === ФИЛЬТРАЦИЯ ===
   const filteredCategories = useMemo(() => {
     if (!searchDebounced.trim()) return categories;
     const q = searchDebounced.toLowerCase();
@@ -59,7 +62,6 @@ const AdminCategories = () => {
     );
   }, [categories, searchDebounced]);
 
-  // === СТАТИСТИКА ===
   const stats = useMemo(
     () => ({
       total: categories.length,
@@ -74,31 +76,30 @@ const AdminCategories = () => {
     [categories, productsCountByCategory, products.length]
   );
 
-  // === СОЗДАНИЕ ===
   const openCreate = () => {
     setEditingCategory(null);
     setInitialForm(emptyCategoryForm);
     setFormOpen(true);
   };
 
-  // === РЕДАКТИРОВАНИЕ ===
   const openEdit = (category: Category) => {
     setEditingCategory(category);
     setInitialForm(categoryFormFrom(category));
     setFormOpen(true);
   };
 
-  // === СОХРАНЕНИЕ ===
   const handleSubmit = async (form: CategoryFormState) => {
     if (saving) return;
     setSaving(true);
     try {
+      const targetSellerId = isAdmin ? null : sellerId;
+
       const payload = {
         name: form.name.trim(),
         slug: form.slug.trim(),
         description: form.description.trim() || null,
         sort_order: Number(form.sort_order) || 0,
-        seller_id: sellerId,
+        seller_id: targetSellerId,
       };
 
       if (editingCategory) {
@@ -114,7 +115,7 @@ const AdminCategories = () => {
             await categoriesService.renameInProducts(
               oldName,
               payload.name,
-              sellerId
+              targetSellerId
             );
             await refetchProducts();
           } catch (e) {
@@ -144,7 +145,6 @@ const AdminCategories = () => {
     }
   };
 
-  // === УДАЛЕНИЕ ===
   const handleDelete = async () => {
     if (deleteId === null) return;
     setSaving(true);
@@ -173,7 +173,6 @@ const AdminCategories = () => {
 
   return (
     <>
-      {/* ЗАГОЛОВОК + КНОПКА */}
       <div
         style={{
           display: 'flex',
@@ -184,7 +183,16 @@ const AdminCategories = () => {
           gap: 12,
         }}
       >
-        <h2 style={{ fontSize: 24, fontWeight: 700 }}>Категории</h2>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+            Категории
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--muted)' }}>
+            {isAdmin
+              ? 'Общие категории, которые видят все продавцы и покупатели'
+              : 'Ваши личные категории. Они появятся в форме товара в селекте «Подкатегория».'}
+          </p>
+        </div>
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
@@ -204,11 +212,11 @@ const AdminCategories = () => {
             gap: 8,
           }}
         >
-          <Plus size={16} /> Добавить категорию
+          <Plus size={16} />
+          {isAdmin ? 'Добавить общую категорию' : 'Добавить мою категорию'}
         </motion.button>
       </div>
 
-      {/* СТАТИСТИКА */}
       <div
         style={{
           display: 'grid',
@@ -248,7 +256,6 @@ const AdminCategories = () => {
         ))}
       </div>
 
-      {/* ПОИСК */}
       <div
         style={{
           display: 'flex',
@@ -317,7 +324,6 @@ const AdminCategories = () => {
         </div>
       </div>
 
-      {/* ТАБЛИЦА */}
       <div
         style={{
           background: 'var(--surface)',
@@ -336,7 +342,6 @@ const AdminCategories = () => {
         />
       </div>
 
-      {/* МОДАЛКА: CATEGORY FORM */}
       <AnimatePresence>
         {formOpen && (
           <motion.div
@@ -383,7 +388,9 @@ const AdminCategories = () => {
                 <h2 style={{ fontSize: 22, fontWeight: 700 }}>
                   {formMode === 'edit'
                     ? 'Редактировать категорию'
-                    : 'Новая категория'}
+                    : isAdmin
+                    ? 'Новая общая категория'
+                    : 'Новая моя категория'}
                 </h2>
                 <button
                   type="button"
@@ -408,6 +415,7 @@ const AdminCategories = () => {
                 initialForm={initialForm}
                 editingId={editingCategory?.id}
                 saving={saving}
+                scopeSellerId={scopeSellerId}
                 onSubmit={handleSubmit}
                 onCancel={() => setFormOpen(false)}
               />
@@ -416,7 +424,6 @@ const AdminCategories = () => {
         )}
       </AnimatePresence>
 
-      {/* МОДАЛКА: DELETE CATEGORY */}
       <AnimatePresence>
         {deletingCategory && (
           <motion.div

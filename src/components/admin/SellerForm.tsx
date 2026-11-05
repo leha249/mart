@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-import type { UISeller, SellerStatus } from '../../types/database';
+import type {
+  UISeller,
+  SellerStatus,
+  SellerLegalType,
+} from '../../types/database';
 import ImageUploader from '../ImageUploader';
 
 export interface SellerFormState {
@@ -27,6 +31,12 @@ export interface SellerFormState {
   accent_color: string;
 
   lookbook_images: string[];
+
+  // Юридические реквизиты
+  legal_name: string;
+  legal_type: SellerLegalType;
+  ogrnip: string;
+  legal_address: string;
 }
 
 export const sellerFormFrom = (s: UISeller): SellerFormState => ({
@@ -51,6 +61,11 @@ export const sellerFormFrom = (s: UISeller): SellerFormState => ({
   accent_color: s.accentColor ?? '#e8ff5a',
 
   lookbook_images: s.lookbookImages ?? [],
+
+  legal_name: s.legalName ?? '',
+  legal_type: s.legalType ?? 'self_employed',
+  ogrnip: s.ogrnip ?? '',
+  legal_address: s.legalAddress ?? '',
 });
 
 interface Props {
@@ -62,6 +77,14 @@ interface Props {
   onCancel: () => void;
 }
 
+type SectionKey =
+  | 'main'
+  | 'hero'
+  | 'lookbook'
+  | 'about'
+  | 'footer'
+  | 'legal';
+
 const SellerForm = ({
   initialForm,
   saving,
@@ -72,9 +95,8 @@ const SellerForm = ({
 }: Props) => {
   const [form, setForm] = useState<SellerFormState>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [activeSection, setActiveSection] = useState<
-    'main' | 'hero' | 'about' | 'lookbook' | 'footer'
-  >('main');
+  const [activeSection, setActiveSection] =
+    useState<SectionKey>('main');
   const [agreed, setAgreed] = useState(false);
   const firstRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
@@ -82,6 +104,7 @@ const SellerForm = ({
   useEffect(() => {
     setForm(initialForm);
     setErrors({});
+    setAgreed(false);
     setTimeout(() => firstRef.current?.focus(), 200);
   }, [initialForm]);
 
@@ -119,6 +142,18 @@ const SellerForm = ({
     if (form.accent_color && !/^#[0-9a-fA-F]{6}$/.test(form.accent_color))
       errs.accent_color = 'Формат: #RRGGBB';
 
+    // ОГРНИП/ОГРН — только цифры, 15 или 13 знаков (если заполнено)
+    if (form.ogrnip.trim()) {
+      const digits = form.ogrnip.replace(/\D/g, '');
+      if (form.legal_type === 'ooo') {
+        if (digits.length !== 13)
+          errs.ogrnip = 'ОГРН должен содержать 13 цифр';
+      } else if (form.legal_type === 'ip') {
+        if (digits.length !== 15)
+          errs.ogrnip = 'ОГРНИП должен содержать 15 цифр';
+      }
+    }
+
     return errs;
   };
 
@@ -134,12 +169,23 @@ const SellerForm = ({
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      if (errs.hero_title || errs.hero_subtitle || errs.hero_image || errs.hero_badge)
+      if (
+        errs.hero_title ||
+        errs.hero_subtitle ||
+        errs.hero_image ||
+        errs.hero_badge
+      )
         setActiveSection('hero');
-      else if (errs.about_title || errs.about_text || errs.about_image || errs.about_badge)
+      else if (
+        errs.about_title ||
+        errs.about_text ||
+        errs.about_image ||
+        errs.about_badge
+      )
         setActiveSection('about');
       else if (errs.lookbook_images) setActiveSection('lookbook');
       else if (errs.footer_text) setActiveSection('footer');
+      else if (errs.ogrnip) setActiveSection('legal');
       else setActiveSection('main');
       addToast('Проверьте поля формы', 'error');
       return;
@@ -166,13 +212,21 @@ const SellerForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saving, hasChanges, inline]);
 
-  const sections: { key: typeof activeSection; label: string }[] = [
+  const sections: { key: SectionKey; label: string }[] = [
     { key: 'main', label: 'Основное' },
     { key: 'hero', label: 'Hero' },
     { key: 'lookbook', label: 'Lookbook' },
     { key: 'about', label: 'About' },
     { key: 'footer', label: 'Footer' },
+    { key: 'legal', label: 'Реквизиты' },
   ];
+
+  const ogrnipLabel =
+    form.legal_type === 'ooo'
+      ? 'ОГРН'
+      : form.legal_type === 'ip'
+      ? 'ОГРНИП'
+      : 'ОГРНИП (если есть)';
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 24 }}>
@@ -596,6 +650,89 @@ const SellerForm = ({
           <div style={hintStyle}>
             Копирайт внизу страницы будет: © 2025 {form.name || 'MØRA MART'}
           </div>
+        </div>
+      )}
+
+      {/* === РЕКВИЗИТЫ === */}
+      {activeSection === 'legal' && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={hintStyle}>
+            Реквизиты показываются в футере вашего магазина и в карточке товара.
+            Если не заполнены — блок реквизитов на странице магазина скроется.
+            Эти данные обязательны для соблюдения прав потребителей.
+          </div>
+
+          <Row>
+            <SelectField
+              label="Правовая форма *"
+              value={form.legal_type}
+              onChange={(v) =>
+                setField('legal_type', v as SellerLegalType)
+              }
+              options={[
+                { value: 'self_employed', label: 'Самозанятый (НПД)' },
+                { value: 'ip', label: 'ИП' },
+                { value: 'ooo', label: 'ООО' },
+              ]}
+              disabled={saving}
+            />
+
+            <Field
+              label={
+                form.legal_type === 'self_employed'
+                  ? 'ФИО (как в паспорте)'
+                  : 'Наименование организации'
+              }
+              value={form.legal_name}
+              onChange={(v) => setField('legal_name', v)}
+              placeholder={
+                form.legal_type === 'self_employed'
+                  ? 'Иванов Иван Иванович'
+                  : form.legal_type === 'ip'
+                  ? 'ИП Иванов Иван Иванович'
+                  : 'ООО «Ромашка»'
+              }
+              disabled={saving}
+            />
+          </Row>
+
+          <Row>
+            <Field
+              label={ogrnipLabel}
+              value={form.ogrnip}
+              onChange={(v) =>
+                setField('ogrnip', v.replace(/\D/g, ''))
+              }
+              placeholder={
+                form.legal_type === 'ooo' ? '13 цифр' : '15 цифр'
+              }
+              error={errors.ogrnip}
+              disabled={saving}
+              hint={
+                form.legal_type === 'self_employed'
+                  ? 'У самозанятых ОГРНИП нет — оставьте пустым'
+                  : undefined
+              }
+            />
+
+            <Field
+              label="ИНН"
+              value={''}
+              onChange={() => {}}
+              placeholder="необязательно"
+              disabled
+              hint="Поле ИНН появится в следующем обновлении"
+            />
+          </Row>
+
+          <FieldArea
+            label="Юридический адрес"
+            value={form.legal_address}
+            onChange={(v) => setField('legal_address', v)}
+            placeholder="123456, г. Москва, ул. Примерная, д. 1"
+            disabled={saving}
+            rows={2}
+          />
         </div>
       )}
 

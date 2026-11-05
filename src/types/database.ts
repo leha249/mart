@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   old_price: number | null;
   category: string;
+  subcategory: string | null;
   image: string;
   images: string[];
   tag: 'NEW' | 'HOT' | 'SALE' | null;
@@ -56,6 +57,7 @@ export interface Order {
   promo_code: string | null;
   promo_discount: number | null;
   seller_id: number | null;
+  marketing_consent: boolean;
   created_at: string;
 }
 
@@ -85,6 +87,7 @@ export interface UIProduct {
   price: number;
   oldPrice?: number;
   category: string;
+  subcategory?: string;
   image: string;
   images: string[];
   tag?: string;
@@ -112,6 +115,7 @@ export const mapProductToUI = (p: Product): UIProduct => {
     price: p.price,
     oldPrice: p.old_price ?? undefined,
     category: p.category,
+    subcategory: p.subcategory ?? undefined,
     image: images[0] || p.image,
     images,
     tag: p.tag ?? undefined,
@@ -155,7 +159,6 @@ export interface Seller {
 
   lookbook_images: string[] | null;
 
-  // Юридические реквизиты
   legal_name: string | null;
   legal_type: SellerLegalType | null;
   ogrnip: string | null;

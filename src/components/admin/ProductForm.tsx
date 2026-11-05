@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import ImageUploader from '../ImageUploader';
 import { useToast } from '../../context/ToastContext';
+import { useCategories } from '../../context/CategoriesContext';
 import { useCmdS } from '../../hooks/useHotkey';
 import {
   isValidHex,
@@ -18,6 +19,7 @@ export interface FormState {
   price: string;
   old_price: string;
   category: string;
+  subcategory: string;
   images: string[];
   tag: '' | 'NEW' | 'HOT' | 'SALE';
   sizes: string;
@@ -33,6 +35,7 @@ export const emptyForm: FormState = {
   price: '',
   old_price: '',
   category: '',
+  subcategory: '',
   images: [],
   tag: '',
   sizes: '',
@@ -55,6 +58,7 @@ export const formFromProduct = (p: Product): FormState => {
     price: String(p.price),
     old_price: p.old_price ? String(p.old_price) : '',
     category: p.category,
+    subcategory: p.subcategory ?? '',
     images: Array.from(imagesSet),
     tag: p.tag ?? '',
     sizes: (p.sizes ?? []).join(', '),
@@ -86,6 +90,7 @@ const ProductForm = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
+  const { commonCategories, myCategories } = useCategories();
 
   useEffect(() => {
     setForm(initialForm);
@@ -98,7 +103,16 @@ const ProductForm = ({
     JSON.stringify(form.images) !== JSON.stringify(initialImages);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      // При смене категории — сбрасываем подкатегорию,
+      // если текущая не относится к своим категориям
+      if (key === 'category') {
+        // Оставляем выбранную подкатегорию, если она из списка своих
+        // (иначе пользователь потеряет выбор). Проверка ниже.
+      }
+      return next;
+    });
     setErrors((e) => {
       if (!e[key]) return e;
       const next = { ...e };
@@ -125,7 +139,7 @@ const ProductForm = ({
         errs.old_price = 'Старая цена должна быть больше новой';
     }
 
-    if (!form.category.trim()) errs.category = 'Введите категорию';
+    if (!form.category.trim()) errs.category = 'Выберите категорию';
     if (form.images.length === 0) errs.images = 'Загрузите хотя бы одно фото';
 
     if (form.rating && !isValidRating(form.rating))
@@ -169,15 +183,28 @@ const ProductForm = ({
     onCancel();
   };
 
-  // ❌ Убрано: useEscape(handleCancel, !saving);
-  // Причина: useEscape вешает глобальный keydown на window,
-  // а при открытии нативного диалога выбора файла (ImageUploader)
-  // система отправляет Escape в window — форма закрывалась.
-  //
-  // Закрытие через Escape доступно только по кнопке «Отмена» и клику вне формы.
-
-  // Ctrl/Cmd+S — сохранение (оставляем)
   useCmdS(() => handleSubmit(), !saving);
+
+  // Общие категории — для селекта «Категория»
+  const categoryOptions = commonCategories
+    .slice()
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order || a.name.localeCompare(b.name)
+    )
+    .map((c) => c.name);
+
+  // Свои категории — для селекта «Подкатегория»
+  const subcategoryOptions = myCategories
+    .slice()
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order || a.name.localeCompare(b.name)
+    )
+    .map((c) => c.name);
+
+  const noCategories = categoryOptions.length === 0;
+  const hasMyCategories = subcategoryOptions.length > 0;
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
@@ -249,15 +276,114 @@ const ProductForm = ({
       </Row>
 
       <Row>
-        <Field
-          label="Категория *"
-          value={form.category}
-          onChange={(v) => setField('category', v)}
-          placeholder="Outerwear"
-          error={errors.category}
-          disabled={saving}
-          maxLength={50}
-        />
+        {/* Категория — селект из общих */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={labelStyle}>Категория *</label>
+          {noCategories ? (
+            <div
+              style={{
+                padding: '14px 16px',
+                background: 'rgba(255,77,77,0.06)',
+                border: '1px solid rgba(255,77,77,0.25)',
+                borderRadius: 12,
+                fontSize: 12,
+                color: 'var(--danger)',
+                lineHeight: 1.5,
+              }}
+            >
+              Нет доступных категорий. Обратитесь к администратору, чтобы он
+              создал общие категории.
+            </div>
+          ) : (
+            <select
+              value={form.category}
+              onChange={(e) => setField('category', e.target.value)}
+              disabled={saving}
+              style={{
+                ...inputStyle,
+                borderColor: errors.category
+                  ? 'var(--danger)'
+                  : 'var(--border)',
+                opacity: saving ? 0.5 : 1,
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <option value="">— Выберите категорию —</option>
+              {categoryOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              {form.category &&
+                !categoryOptions.includes(form.category) && (
+                  <option value={form.category}>
+                    {form.category} (устаревшая)
+                  </option>
+                )}
+            </select>
+          )}
+          {errors.category && (
+            <div
+              style={{
+                fontSize: 12,
+                color: 'var(--danger)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <AlertTriangle size={12} /> {errors.category}
+            </div>
+          )}
+        </div>
+
+        {/* Подкатегория — селект из своих */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={labelStyle}>Подкатегория</label>
+          {hasMyCategories ? (
+            <select
+              value={form.subcategory}
+              onChange={(e) => setField('subcategory', e.target.value)}
+              disabled={saving}
+              style={{
+                ...inputStyle,
+                opacity: saving ? 0.5 : 1,
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <option value="">— Без подкатегории —</option>
+              {subcategoryOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              {form.subcategory &&
+                !subcategoryOptions.includes(form.subcategory) && (
+                  <option value={form.subcategory}>
+                    {form.subcategory} (устаревшая)
+                  </option>
+                )}
+            </select>
+          ) : (
+            <div
+              style={{
+                padding: '14px 16px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                fontSize: 12,
+                color: 'var(--muted)',
+                lineHeight: 1.5,
+              }}
+            >
+              У вас пока нет своих категорий. Создайте их во вкладке
+              «Категории», чтобы выбирать здесь.
+            </div>
+          )}
+        </div>
+      </Row>
+
+      <Row>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={labelStyle}>Тег</label>
           <select
@@ -274,6 +400,7 @@ const ProductForm = ({
             <option value="SALE">SALE</option>
           </select>
         </div>
+        <div />
       </Row>
 
       <Field
@@ -406,21 +533,21 @@ const ProductForm = ({
           type="submit"
           whileHover={{ scale: saving ? 1 : 1.03 }}
           whileTap={{ scale: saving ? 1 : 0.97 }}
-          disabled={saving}
+          disabled={saving || noCategories}
           style={{
             padding: '14px 28px',
             borderRadius: 100,
             border: 'none',
-            background: 'var(--accent)',
-            color: '#000',
+            background: noCategories ? 'var(--surface-hi)' : 'var(--accent)',
+            color: noCategories ? 'var(--muted)' : '#000',
             fontSize: 14,
             fontWeight: 700,
-            cursor: saving ? 'wait' : 'pointer',
+            cursor: saving || noCategories ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            opacity: saving ? 0.7 : 1,
+            opacity: saving || noCategories ? 0.7 : 1,
           }}
         >
           {saving ? (
@@ -483,7 +610,6 @@ const FieldError = ({ message }: { message: string }) => (
       display: 'flex',
       alignItems: 'center',
       gap: 6,
-      marginTop: -12,
     }}
   >
     <AlertTriangle size={12} /> {message}

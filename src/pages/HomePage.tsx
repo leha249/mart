@@ -5,21 +5,10 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import CartPanel from '../components/CartPanel';
-import FavoritesPanel from '../components/FavoritesPanel';
-import SearchOverlay from '../components/SearchOverlay';
-import ProductModal from '../components/ProductModal';
-import ToastContainer from '../components/ToastContainer';
 import { useUI } from '../context/UIContext';
 
 const HomePage = () => {
-  const {
-    activePanel,
-    closePanels,
-    selectedProduct,
-    openProduct,
-    closeProduct,
-  } = useUI();
+  const { openProduct } = useUI();
 
   useEffect(() => {
     document.title = 'MØRA MART — маркетплейс одежды';
@@ -63,19 +52,6 @@ const HomePage = () => {
       </main>
 
       <Footer />
-
-      <CartPanel open={activePanel === 'cart'} onClose={closePanels} />
-      <FavoritesPanel
-        open={activePanel === 'favorites'}
-        onClose={closePanels}
-      />
-      <SearchOverlay
-        open={activePanel === 'search'}
-        onClose={closePanels}
-        onProductSelect={openProduct}
-      />
-      <ProductModal product={selectedProduct} onClose={closeProduct} />
-      <ToastContainer />
     </div>
   );
 };

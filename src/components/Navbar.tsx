@@ -32,7 +32,7 @@ const Navbar = () => {
   const { totalItems } = useCart();
   const { favorites } = useFavorites();
   const { openCart, openSearch } = useUI();
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const { isAuthenticated: isCustomer } = useCustomer();
 
   useBodyLock(menuOpen);

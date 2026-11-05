@@ -13,7 +13,17 @@ import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface CategoriesContextType {
+  /**
+   * Категории для вкладки «Категории»:
+   * - продавец → только свои (seller_id = его id)
+   * - админ → только общие (seller_id IS NULL)
+   * - гость → общие
+   */
   categories: Category[];
+  /** Только общие (seller_id IS NULL) — для селекта «Категория» в товаре и табов на главной */
+  commonCategories: Category[];
+  /** Только свои (seller_id = текущий продавец) — для селекта «Подкатегория» */
+  myCategories: Category[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -27,6 +37,8 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
   const { user, role, sellerId } = useAuth();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [commonCategories, setCommonCategories] = useState<Category[]>([]);
+  const [myCategories, setMyCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -34,8 +46,8 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
   const pendingRefetchRef = useRef(false);
   const fetchingRef = useRef(false);
 
-  // Продавец видит только свои категории; админ и гость — все публичные
-  const effectiveSellerId = role === 'seller' ? sellerId : null;
+  const isSeller = role === 'seller' && sellerId !== null;
+  const isAdmin = role === 'admin';
 
   const fetchCategories = async () => {
     if (fetchingRef.current) {
@@ -46,8 +58,35 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setError(null);
-      const data = await categoriesService.getAll(effectiveSellerId);
-      if (mountedRef.current) setCategories(data);
+
+      if (isSeller) {
+        // Продавец:
+        // - categories (вкладка «Категории») = только свои
+        // - commonCategories (селект в товаре) = общие
+        // - myCategories (селект подкатегории) = свои
+        const [common, mine] = await Promise.all([
+          categoriesService.getCommon(),
+          categoriesService.getMine(sellerId),
+        ]);
+        if (!mountedRef.current) return;
+        setCommonCategories(common);
+        setMyCategories(mine);
+        setCategories(mine);
+      } else if (isAdmin) {
+        // Админ: и вкладка, и селект — только общие
+        const common = await categoriesService.getCommon();
+        if (!mountedRef.current) return;
+        setCommonCategories(common);
+        setMyCategories([]);
+        setCategories(common);
+      } else {
+        // Гость: только общие
+        const common = await categoriesService.getCommon();
+        if (!mountedRef.current) return;
+        setCommonCategories(common);
+        setMyCategories([]);
+        setCategories(common);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка загрузки категорий';
       if (mountedRef.current) setError(msg);
@@ -66,55 +105,22 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
     mountedRef.current = true;
     fetchCategories();
 
-    // Realtime-канал: для продавца — только его категории
-    const channelName =
-      role === 'seller' && sellerId !== null
-        ? `mora-categories-seller-${sellerId}-${Math.random().toString(36).slice(2)}`
-        : `mora-categories-${Math.random().toString(36).slice(2)}`;
+    const channelName = isSeller
+      ? `mora-categories-seller-${sellerId}-${Math.random()
+          .toString(36)
+          .slice(2)}`
+      : `mora-categories-${Math.random().toString(36).slice(2)}`;
 
-    const config =
-      role === 'seller' && sellerId !== null
-        ? {
-            event: '*' as const,
-            schema: 'public',
-            table: 'categories',
-            filter: `seller_id=eq.${sellerId}`,
-          }
-        : {
-            event: '*' as const,
-            schema: 'public',
-            table: 'categories',
-          };
+    // Продавцу нужны и общие, и свои — без filter, фильтруем на клиенте
+    const config = {
+      event: '*' as const,
+      schema: 'public',
+      table: 'categories',
+    };
 
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', config, (payload) => {
-        if (payload.eventType === 'INSERT' && payload.new) {
-          const newCat = payload.new as Category;
-          setCategories((prev) => {
-            if (prev.some((c) => c.id === newCat.id)) return prev;
-            return [...prev, newCat].sort(
-              (a, b) =>
-                a.sort_order - b.sort_order || a.name.localeCompare(b.name)
-            );
-          });
-          return;
-        }
-
-        if (payload.eventType === 'UPDATE' && payload.new) {
-          const updated = payload.new as Category;
-          setCategories((prev) =>
-            prev
-              .map((c) => (c.id === updated.id ? updated : c))
-              .sort(
-                (a, b) =>
-                  a.sort_order - b.sort_order ||
-                  a.name.localeCompare(b.name)
-              )
-          );
-          return;
-        }
-
+      .on('postgres_changes', config, () => {
         fetchCategories();
       })
       .subscribe();
@@ -129,11 +135,18 @@ export const CategoriesProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, role, sellerId, effectiveSellerId]);
+  }, [user, role, sellerId]);
 
   return (
     <CategoriesContext.Provider
-      value={{ categories, loading, error, refetch: fetchCategories }}
+      value={{
+        categories,
+        commonCategories,
+        myCategories,
+        loading,
+        error,
+        refetch: fetchCategories,
+      }}
     >
       {children}
     </CategoriesContext.Provider>

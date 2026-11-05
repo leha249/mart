@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Check,
-  Mail,
   Send,
   Loader2,
   AlertCircle,

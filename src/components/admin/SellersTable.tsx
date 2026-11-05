@@ -935,7 +935,7 @@ const ActionBtn = ({
     }}
   >
     {icon}
-  </button>
+  </motion.button>
 );
 
 export default SellersTable;

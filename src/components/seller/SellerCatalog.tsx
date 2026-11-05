@@ -344,7 +344,6 @@ interface Props {
 
 const SellerCatalog = ({
   products,
-  categories,
   accent,
   onProductClick,
   loading = false,

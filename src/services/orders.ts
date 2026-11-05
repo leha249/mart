@@ -37,6 +37,7 @@ export interface CreateOrderInput {
   promo_code?: string;
   promo_discount?: number;
   seller_id?: number | null;
+  marketing_consent?: boolean;
 }
 
 const validateOrder = (order: CreateOrderInput): void => {
@@ -67,6 +68,7 @@ export const ordersService = {
         customer_email: order.customer_email?.trim() || null,
         items: order.items,
         total: order.total,
+        marketing_consent: order.marketing_consent ?? false,
       };
 
       if (order.promo_code) {

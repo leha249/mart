@@ -32,6 +32,12 @@ interface Props {
   initialForm: CategoryFormState;
   editingId?: number;
   saving: boolean;
+  /**
+   * Скоуп для проверки уникальности:
+   * null — общие категории (админ),
+   * число — личные категории продавца.
+   */
+  scopeSellerId?: number | null;
   onSubmit: (form: CategoryFormState) => void;
   onCancel: () => void;
 }
@@ -41,6 +47,7 @@ const CategoryForm = ({
   initialForm,
   editingId,
   saving,
+  scopeSellerId = null,
   onSubmit,
   onCancel,
 }: Props) => {
@@ -66,9 +73,7 @@ const CategoryForm = ({
   ) => {
     setForm((f) => {
       const next = { ...f, [key]: value };
-      // Если меняем name и slug в авто-режиме
       if (key === 'name' && slugAutoMode) {
-        // Если name пустой — очищаем slug
         next.slug = String(value).trim()
           ? generateSlug(String(value))
           : '';
@@ -106,8 +111,16 @@ const CategoryForm = ({
       setChecking(true);
       try {
         const [nameTaken, slugTaken] = await Promise.all([
-          categoriesService.isNameTaken(form.name, editingId),
-          categoriesService.isSlugTaken(form.slug, editingId),
+          categoriesService.isNameTaken(
+            form.name,
+            editingId,
+            scopeSellerId
+          ),
+          categoriesService.isSlugTaken(
+            form.slug,
+            editingId,
+            scopeSellerId
+          ),
         ]);
         if (nameTaken) errs.name = 'Такое название уже есть';
         if (slugTaken) errs.slug = 'Такой slug уже используется';

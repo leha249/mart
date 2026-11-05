@@ -25,6 +25,8 @@ interface Props {
   onClose: () => void;
 }
 
+const MARKETING_CONSENT_KEY = 'mora-marketing-consent-v1';
+
 const CartPanel = ({ open, onClose }: Props) => {
   const { items, removeItem, updateQuantity, totalPrice, totalItems, clearCart } =
     useCart();
@@ -38,10 +40,20 @@ const CartPanel = ({ open, onClose }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedData, setAgreedData] = useState(false);
+  const [agreedMarketing, setAgreedMarketing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useBodyLock(open);
   useFocusTrap(open, panelRef);
+
+  // При открытии — подтягиваем сохранённое согласие на рассылки
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const saved = localStorage.getItem(MARKETING_CONSENT_KEY);
+      if (saved === 'true') setAgreedMarketing(true);
+    } catch {}
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -49,8 +61,19 @@ const CartPanel = ({ open, onClose }: Props) => {
       setOrderSent(false);
       setAgreedTerms(false);
       setAgreedData(false);
+      // agreedMarketing НЕ сбрасываем — это настройка пользователя
     }
   }, [open]);
+
+  // Запоминаем выбор по рассылкам
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        MARKETING_CONSENT_KEY,
+        agreedMarketing ? 'true' : 'false'
+      );
+    } catch {}
+  }, [agreedMarketing]);
 
   useEffect(() => {
     if (items.length === 0 && promo.applied) {
@@ -152,6 +175,7 @@ const CartPanel = ({ open, onClose }: Props) => {
           promo_code: promo.applied?.code,
           promo_discount: groupDiscount,
           seller_id: sellerId,
+          marketing_consent: agreedMarketing,
         });
 
         createdOrders.push({
@@ -204,6 +228,7 @@ const CartPanel = ({ open, onClose }: Props) => {
         setEmail('');
         setAgreedTerms(false);
         setAgreedData(false);
+        // agreedMarketing остаётся — запомнили выбор
         setOrderSent(false);
         setShowCheckout(false);
         onClose();
@@ -478,6 +503,24 @@ const CartPanel = ({ open, onClose }: Props) => {
                         , включая трансграничную передачу данных. Понимаю, что
                         платформа — посредник, а ответственность за товар,
                         доставку и возврат несёт продавец.
+                      </>
+                    }
+                  />
+
+                  {/* ✅ ЧЕКБОКС 3: РЕКЛАМНЫЕ РАССЫЛКИ (ОПЦИОНАЛЬНО) */}
+                  <CheckboxRow
+                    checked={agreedMarketing}
+                    onChange={setAgreedMarketing}
+                    disabled={submitting || orderSent}
+                    variant="optional"
+                    text={
+                      <>
+                        Согласен получать{' '}
+                        <strong style={{ color: 'var(--text)' }}>
+                          рекламные рассылки
+                        </strong>{' '}
+                        о новинках, скидках и акциях MØRA MART. Можно отписать
+                        в любой момент. <em>Необязательно.</em>
                       </>
                     }
                   />
@@ -993,45 +1036,59 @@ interface CheckboxRowProps {
   onChange: (v: boolean) => void;
   disabled?: boolean;
   text: React.ReactNode;
+  variant?: 'required' | 'optional';
 }
 
-const CheckboxRow = ({ checked, onChange, disabled, text }: CheckboxRowProps) => (
-  <label
-    style={{
-      display: 'flex',
-      gap: 12,
-      alignItems: 'flex-start',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      padding: '12px 14px',
-      background: checked
-        ? 'rgba(74,222,128,0.06)'
-        : 'rgba(255,77,77,0.04)',
-      border: checked
-        ? '1px solid rgba(74,222,128,0.3)'
-        : '1px solid rgba(255,77,77,0.2)',
-      borderRadius: 12,
-      fontSize: 12,
-      lineHeight: 1.5,
-      transition: 'all 0.2s',
-      opacity: disabled ? 0.5 : 1,
-    }}
-  >
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-      disabled={disabled}
+const CheckboxRow = ({
+  checked,
+  onChange,
+  disabled,
+  text,
+  variant = 'required',
+}: CheckboxRowProps) => {
+  const isOptional = variant === 'optional';
+  return (
+    <label
       style={{
-        marginTop: 2,
-        width: 16,
-        height: 16,
-        accentColor: 'var(--accent)',
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        flexShrink: 0,
+        padding: '12px 14px',
+        background: checked
+          ? 'rgba(74,222,128,0.06)'
+          : isOptional
+          ? 'transparent'
+          : 'rgba(255,77,77,0.04)',
+        border: checked
+          ? '1px solid rgba(74,222,128,0.3)'
+          : isOptional
+          ? '1px solid var(--border)'
+          : '1px solid rgba(255,77,77,0.2)',
+        borderRadius: 12,
+        fontSize: 12,
+        lineHeight: 1.5,
+        transition: 'all 0.2s',
+        opacity: disabled ? 0.5 : 1,
       }}
-    />
-    <span style={{ color: 'var(--text-dim)' }}>{text}</span>
-  </label>
-);
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        style={{
+          marginTop: 2,
+          width: 16,
+          height: 16,
+          accentColor: 'var(--accent)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ color: 'var(--text-dim)' }}>{text}</span>
+    </label>
+  );
+};
 
 export default CartPanel;

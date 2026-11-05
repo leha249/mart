@@ -2,6 +2,11 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import Preloader from './components/Preloader';
 import ErrorBoundary from './components/ErrorBoundary';
 import CookieBanner from './components/CookieBanner';
+import CartPanel from './components/CartPanel';
+import FavoritesPanel from './components/FavoritesPanel';
+import SearchOverlay from './components/SearchOverlay';
+import ProductModal from './components/ProductModal';
+import ToastContainer from './components/ToastContainer';
 import { CartProvider, useCart } from './context/CartContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
 import { ToastProvider } from './context/ToastContext';
@@ -14,7 +19,7 @@ import { PromoProvider } from './context/PromoContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { CustomerProvider } from './context/CustomerContext';
-import { UIProvider } from './context/UIContext';
+import { UIProvider, useUI } from './context/UIContext';
 import { SellersProvider } from './context/SellersContext';
 import { useRoute } from './utils/navigate';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
@@ -71,6 +76,37 @@ function PageLoader() {
     >
       Загрузка...
     </div>
+  );
+}
+
+/**
+ * Глобальные панели — рендерятся на уровне App, чтобы корзина,
+ * поиск, избранное и карточка товара работали с любой страницы.
+ */
+function GlobalPanels() {
+  const {
+    activePanel,
+    closePanels,
+    selectedProduct,
+    openProduct,
+    closeProduct,
+  } = useUI();
+
+  return (
+    <>
+      <CartPanel open={activePanel === 'cart'} onClose={closePanels} />
+      <FavoritesPanel
+        open={activePanel === 'favorites'}
+        onClose={closePanels}
+      />
+      <SearchOverlay
+        open={activePanel === 'search'}
+        onClose={closePanels}
+        onProductSelect={openProduct}
+      />
+      <ProductModal product={selectedProduct} onClose={closeProduct} />
+      <ToastContainer />
+    </>
   );
 }
 
@@ -254,6 +290,7 @@ function App() {
                                     />
                                   )}
                                   <Router />
+                                  <GlobalPanels />
                                   <CookieBanner />
                                 </UIProvider>
                               </FavoritesProvider>

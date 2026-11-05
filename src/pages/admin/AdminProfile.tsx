@@ -71,8 +71,13 @@ const AdminProfile = () => {
         footer_text: form.footer_text.trim() || null,
         accent_color: form.accent_color.trim() || null,
 
-        // 🐛 ИСПРАВЛЕНИЕ: передаём Lookbook-фото
         lookbook_images: form.lookbook_images,
+
+        // Юридические реквизиты
+        legal_name: form.legal_name.trim() || null,
+        legal_type: form.legal_type,
+        ogrnip: form.ogrnip.trim() || null,
+        legal_address: form.legal_address.trim() || null,
       });
 
       // Перезагружаем профиль — чтобы форма сохранила новое как "initial"
