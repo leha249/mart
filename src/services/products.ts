@@ -153,20 +153,4 @@ export const productsService = {
       throw normalizeError(e);
     }
   },
-
-  async incrementPurchases(
-    items: { id: number; quantity: number }[]
-  ): Promise<void> {
-    if (items.length === 0) return;
-
-    try {
-      const { error } = await supabase.rpc('increment_product_purchases', {
-        items: items,
-      });
-
-      if (error) throw error;
-    } catch (e) {
-      console.warn('[productsService.incrementPurchases]', e);
-    }
-  },
 };

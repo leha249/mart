@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ValidationError, normalizeError } from '../utils/errors';
 import type { Order, OrderItem, OrderStatus } from '../types/database';
-import { productsService } from './products';
 
 export interface OrderFilters {
   status?: OrderStatus | 'all';
@@ -40,15 +39,69 @@ export interface CreateOrderInput {
   marketing_consent?: boolean;
 }
 
+/** Ключ localStorage, где лежат токены доступа к заказам этого устройства. */
+const ORDER_TOKENS_KEY = 'mora-order-tokens-v1';
+/** Сколько последних заказов помним на устройстве. */
+const MAX_ORDER_TOKENS = 100;
+
+/**
+ * Токены заказов покупателя. Прямой доступ к таблице orders анониму закрыт,
+ * поэтому список своих заказов собираем по access_token, сохранённым локально.
+ */
+export const orderTokens = {
+  list(): string[] {
+    try {
+      const raw = localStorage.getItem(ORDER_TOKENS_KEY);
+      if (!raw) return [];
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (token): token is string =>
+          typeof token === 'string' && token.trim().length > 0
+      );
+    } catch {
+      // localStorage может быть недоступен (приватный режим, запрет cookies)
+      return [];
+    }
+  },
+
+  add(token: string): void {
+    const value = token?.trim();
+    if (!value) return;
+    try {
+      const tokens = orderTokens.list().filter((t) => t !== value);
+      tokens.push(value);
+      // Обрезаем с начала: храним только MAX_ORDER_TOKENS последних заказов
+      localStorage.setItem(
+        ORDER_TOKENS_KEY,
+        JSON.stringify(tokens.slice(-MAX_ORDER_TOKENS))
+      );
+    } catch {
+      // Молча: недоступное хранилище не должно ломать оформление заказа
+    }
+  },
+
+  clear(): void {
+    try {
+      localStorage.removeItem(ORDER_TOKENS_KEY);
+    } catch {
+      // Молча: недоступное хранилище не должно ломать интерфейс
+    }
+  },
+};
+
 const validateOrder = (order: CreateOrderInput): void => {
-  if (!order.customer_name?.trim()) throw new ValidationError('Имя обязательно');
-  if (!order.customer_phone?.trim())
-    throw new ValidationError('Телефон обязателен');
-  if (order.customer_phone.trim().length < 5)
-    throw new ValidationError('Некорректный телефон');
+  // Правила синхронизированы с серверной проверкой create_order:
+  // имя — минимум 2 символа, телефон — минимум 10 цифр.
+  if ((order.customer_name ?? '').trim().length < 2)
+    throw new ValidationError('Укажите имя');
+  if ((order.customer_phone ?? '').replace(/\D/g, '').length < 10)
+    throw new ValidationError('Укажите корректный телефон');
   if (!order.items || order.items.length === 0)
     throw new ValidationError('Корзина пуста');
-  if (order.total <= 0) throw new ValidationError('Некорректная сумма');
+  // 0 допустим (100% скидка), отрицательная сумма — нет.
+  if (!Number.isFinite(order.total) || order.total < 0)
+    throw new ValidationError('Некорректная сумма');
   if (
     order.customer_email &&
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.customer_email)
@@ -83,19 +136,34 @@ export const ordersService = {
       const data = created as Order | null;
       if (!data?.id) throw new Error('Заказ не создан');
 
-      // ✅ После успешного создания заказа — увеличиваем purchases у товаров
-      // Не блокируем: если упадёт — заказ уже создан, не страшно
-      const purchaseItems = order.items.map((item) => ({
-        id: item.id,
-        quantity: item.quantity,
-      }));
-      productsService.incrementPurchases(purchaseItems).catch((e) => {
-        console.warn('[ordersService.create] incrementPurchases failed:', e);
-      });
+      // Сервер сам увеличивает purchases/promo usage внутри create_order,
+      // а в ответе отдаёт access_token — сохраняем его на устройстве.
+      if (data.access_token) orderTokens.add(data.access_token);
 
       return data;
     } catch (e) {
       console.error('[ordersService.create]', e);
+      throw normalizeError(e);
+    }
+  },
+
+  /**
+   * Заказы по токенам доступа. Выборка заказов по номеру телефона
+   * анониму больше недоступна, поэтому покупатель видит только те заказы,
+   * чьи access_token сохранены на его устройстве.
+   */
+  async getByTokens(tokens: string[]): Promise<Order[]> {
+    if (!tokens || tokens.length === 0) return [];
+
+    try {
+      const { data, error } = await supabase.rpc('get_orders_by_tokens', {
+        p_tokens: tokens,
+      });
+
+      if (error) throw error;
+      return (data ?? []) as Order[];
+    } catch (e) {
+      console.error('[ordersService.getByTokens]', e);
       throw normalizeError(e);
     }
   },

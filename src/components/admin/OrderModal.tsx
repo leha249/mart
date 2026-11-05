@@ -15,6 +15,7 @@ import type { Order, OrderStatus } from '../../types/database';
 import { ORDER_STATUS_LABELS } from '../../types/database';
 import { useBodyLock } from '../../hooks/useBodyLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useToast } from '../../context/ToastContext';
 import { formatPrice } from '../../utils/format';
 import { CARRIERS } from '../../utils/tracking';
 import { ordersService } from '../../services/orders';
@@ -38,7 +39,17 @@ const formatDate = (iso: string): string => {
   });
 };
 
+/** Экранирование значений, подставляемых в HTML шаблона печати (защита от XSS). */
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
+  const { addToast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,6 +60,7 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
   const [payment, setPayment] = useState<'unpaid' | 'paid' | 'refunded'>(
     'unpaid'
   );
+  const [savingPayment, setSavingPayment] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Подставляем сохранённый трек при открытии заказа
@@ -66,8 +78,24 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
     try {
       await ordersService.updateTracking(order.id, carrier, tracking);
       setTrackingSaved(true);
+    } catch {
+      setTrackingSaved(false);
+      addToast('Не удалось сохранить трек', 'error');
     } finally {
       setSavingTracking(false);
+    }
+  };
+
+  const handlePayment = async (next: 'unpaid' | 'paid' | 'refunded') => {
+    if (!order || savingPayment) return;
+    setSavingPayment(true);
+    try {
+      await ordersService.updatePaymentStatus(order.id, next);
+      setPayment(next);
+    } catch {
+      addToast('Не удалось сохранить статус оплаты', 'error');
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -120,20 +148,23 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
     if (!order) return;
     const w = window.open('', '_blank');
     if (!w) return;
+    w.opener = null;
 
     const itemsHtml = order.items
       .map(
         (i) => `
         <tr>
-          <td>${i.name}${i.size ? ` (${i.size})` : ''}</td>
-          <td style="text-align:center">${i.quantity}</td>
-          <td style="text-align:right">${formatPrice(i.price)}</td>
-          <td style="text-align:right">${formatPrice(i.price * i.quantity)}</td>
+          <td>${escapeHtml(i.name)}${i.size ? ` (${escapeHtml(i.size)})` : ''}</td>
+          <td style="text-align:center">${escapeHtml(i.quantity)}</td>
+          <td style="text-align:right">${escapeHtml(formatPrice(i.price))}</td>
+          <td style="text-align:right">${escapeHtml(
+            formatPrice(i.price * i.quantity)
+          )}</td>
         </tr>`
       )
       .join('');
 
-    w.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Заказ №${order.id}</title><style>
+    w.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Заказ №${escapeHtml(order.id)}</title><style>
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family: system-ui, sans-serif; padding: 40px; color:#000; }
       h1 { font-size: 24px; margin-bottom: 8px; }
@@ -146,19 +177,19 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
       .total { text-align: right; font-size: 20px; font-weight: 900; margin-top: 24px; padding-top: 16px; border-top: 2px solid #000; }
       .footer { margin-top: 60px; text-align: center; color: #666; font-size: 12px; }
     </style></head><body>
-      <h1>MØRA MART — Заказ №${order.id}</h1>
-      <div class="meta">${formatDate(order.created_at)} · Статус: ${ORDER_STATUS_LABELS[order.status]}</div>
+      <h1>MØRA MART — Заказ №${escapeHtml(order.id)}</h1>
+      <div class="meta">${escapeHtml(formatDate(order.created_at))} · Статус: ${escapeHtml(ORDER_STATUS_LABELS[order.status])}</div>
       <div class="section">
         <h2>Покупатель</h2>
-        <div><strong>${order.customer_name}</strong></div>
-        <div>${order.customer_phone}</div>
-        ${order.customer_email ? `<div>${order.customer_email}</div>` : ''}
+        <div><strong>${escapeHtml(order.customer_name)}</strong></div>
+        <div>${escapeHtml(order.customer_phone)}</div>
+        ${order.customer_email ? `<div>${escapeHtml(order.customer_email)}</div>` : ''}
       </div>
       <div class="section">
         <h2>Товары</h2>
         <table><thead><tr><th>Наименование</th><th style="text-align:center">Кол-во</th><th style="text-align:right">Цена</th><th style="text-align:right">Сумма</th></tr></thead>
         <tbody>${itemsHtml}</tbody></table>
-        <div class="total">Итого: ${formatPrice(order.total)}</div>
+        <div class="total">Итого: ${escapeHtml(formatPrice(order.total))}</div>
       </div>
       <div class="footer">Спасибо за покупку в MØRA MART 🖤</div>
     </body></html>`);
@@ -334,14 +365,12 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
                 {/* Статус оплаты: деньги идут напрямую продавцу */}
                 <select
                   value={payment}
-                  onChange={async (e) => {
-                    const next = e.target.value as
-                      | 'unpaid'
-                      | 'paid'
-                      | 'refunded';
-                    setPayment(next);
-                    await ordersService.updatePaymentStatus(order.id, next);
+                  onChange={(e) => {
+                    void handlePayment(
+                      e.target.value as 'unpaid' | 'paid' | 'refunded'
+                    );
                   }}
+                  disabled={savingPayment}
                   aria-label="Статус оплаты"
                   style={{
                     height: 38,
@@ -359,7 +388,7 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
                         : 'var(--muted)',
                     fontSize: 12.5,
                     fontFamily: 'inherit',
-                    cursor: 'pointer',
+                    cursor: savingPayment ? 'wait' : 'pointer',
                   }}
                 >
                   <option value="unpaid">Не оплачен</option>

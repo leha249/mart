@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
       setSession(session);
@@ -153,7 +153,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      await resolveRole(session?.user ?? null);
+      // Колбэк onAuthStateChange должен оставаться синхронным: запросы к
+      // Supabase внутри него могут привести к дедлоку supabase-js.
+      setTimeout(() => {
+        if (!mounted) return;
+        void resolveRole(session?.user ?? null);
+      }, 0);
     });
 
     return () => {

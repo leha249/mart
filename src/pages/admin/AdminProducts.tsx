@@ -122,7 +122,9 @@ const AdminProducts = () => {
         rating: Number(form.rating) || 0,
         reviews: Number(form.reviews) || 0,
         in_stock: form.in_stock,
-        seller_id: sellerId,
+        // При редактировании сохраняем прежнего владельца: у админа sellerId
+        // равен null, и иначе товар продавца стал бы «товаром платформы».
+        seller_id: editingProduct ? editingProduct.seller_id : sellerId,
       };
 
       if (editingProduct) {
@@ -204,7 +206,7 @@ const AdminProducts = () => {
       await productsService.create({
         ...rest,
         name: `${rest.name} (копия)`,
-        seller_id: sellerId,
+        seller_id: sellerId ?? product.sellerId ?? null,
       } as Omit<Product, 'id' | 'created_at' | 'updated_at'>);
       addToast('Товар дублирован', 'success');
       await refetch();

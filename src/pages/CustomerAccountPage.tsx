@@ -22,12 +22,13 @@ import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { useCustomer } from '../context/CustomerContext';
 import { useToast } from '../context/ToastContext';
-import { supabase } from '../lib/supabase';
 import { formatPrice, formatDate } from '../utils/format';
 import type { OrderStatus, OrderItem } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
 import { navigate } from '../utils/navigate';
+import { trackingUrl, carrierLabel } from '../utils/tracking';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { ordersService, orderTokens } from '../services/orders';
 
 interface OrderRow {
   id: number;
@@ -36,7 +37,37 @@ interface OrderRow {
   total: number;
   items: OrderItem[];
   seller_id: number | null;
+  tracking_number: string | null;
+  carrier: string | null;
+  payment_status?: 'unpaid' | 'paid' | 'refunded';
 }
+
+const PAYMENT_LABELS: Record<'unpaid' | 'paid' | 'refunded', string> = {
+  unpaid: 'Не оплачен',
+  paid: 'Оплачен',
+  refunded: 'Возврат',
+};
+
+const PAYMENT_COLORS: Record<
+  'unpaid' | 'paid' | 'refunded',
+  { bg: string; text: string; border: string }
+> = {
+  unpaid: {
+    bg: 'rgba(255,255,255,0.06)',
+    text: 'var(--muted)',
+    border: 'var(--border)',
+  },
+  paid: {
+    bg: 'rgba(74,222,128,0.12)',
+    text: 'var(--success)',
+    border: 'rgba(74,222,128,0.35)',
+  },
+  refunded: {
+    bg: 'rgba(255,77,77,0.12)',
+    text: 'var(--danger)',
+    border: 'rgba(255,77,77,0.35)',
+  },
+};
 
 const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
   new: <Clock size={16} />,
@@ -97,25 +128,31 @@ const CustomerAccountPage = () => {
 
   usePageMeta({ title: 'Личный кабинет — MØRA MART' });
 
-  // Загружаем заказы
+  // Загружаем заказы по токенам, сохранённым на этом устройстве:
+  // выборка по телефону для анонима закрыта на стороне БД.
   useEffect(() => {
     if (!session) return;
 
     let mounted = true;
 
     (async () => {
+      const tokens = orderTokens.list();
+      if (tokens.length === 0) {
+        if (mounted) {
+          setOrders([]);
+          setError(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
-        const { data, error: rpcError } = await supabase.rpc(
-          'get_orders_by_phone',
-          { phone_input: session.phone }
-        );
+        const rows = await ordersService.getByTokens(tokens);
 
-        if (rpcError) throw rpcError;
-
-        if (mounted) setOrders((data ?? []) as OrderRow[]);
+        if (mounted) setOrders(rows as OrderRow[]);
       } catch (e) {
         console.error('[CustomerAccountPage] load orders:', e);
         if (mounted) {
@@ -553,7 +590,8 @@ const CustomerAccountPage = () => {
                     marginBottom: 24,
                   }}
                 >
-                  Как только оформите заказ — он появится здесь
+                  На этом устройстве пока нет заказов. Как только оформите
+                  заказ — он появится здесь.
                 </p>
                 <button
                   onClick={goToCatalog}
@@ -584,11 +622,16 @@ const CustomerAccountPage = () => {
               >
                 {orders.map((order) => {
                   const sc = STATUS_COLORS[order.status];
+                  const payment = order.payment_status ?? 'unpaid';
+                  const pc = PAYMENT_COLORS[payment];
                   const isExpanded = expanded.has(order.id);
                   const itemsCount = order.items.reduce(
                     (s, item) => s + item.quantity,
                     0
                   );
+                  const trackUrl = order.tracking_number
+                    ? trackingUrl(order.carrier, order.tracking_number)
+                    : null;
 
                   return (
                     <div
@@ -682,6 +725,8 @@ const CustomerAccountPage = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 16,
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
                           }}
                         >
                           <span
@@ -698,6 +743,47 @@ const CustomerAccountPage = () => {
                           >
                             {ORDER_STATUS_LABELS[order.status]}
                           </span>
+                          <span
+                            title="Статус оплаты"
+                            style={{
+                              fontSize: 11,
+                              padding: '4px 10px',
+                              borderRadius: 100,
+                              background: pc.bg,
+                              color: pc.text,
+                              border: `1px solid ${pc.border}`,
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {PAYMENT_LABELS[payment]}
+                          </span>
+                          {order.tracking_number && (
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: 'var(--muted)',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {trackUrl ? (
+                                <a
+                                  href={trackUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: 'var(--accent)',
+                                    textDecoration: 'none',
+                                  }}
+                                >
+                                  {carrierLabel(order.carrier)}:{' '}
+                                  {order.tracking_number}
+                                </a>
+                              ) : (
+                                <>Трек: {order.tracking_number}</>
+                              )}
+                            </span>
+                          )}
                           <span
                             className="price-num"
                             style={{

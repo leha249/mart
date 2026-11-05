@@ -15,8 +15,8 @@ export interface CartItem {
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeItem: (id: number, size?: string) => void;
+  updateQuantity: (id: number, size: string | undefined, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -56,16 +56,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     safeSet(STORAGE_KEY, items);
   }, [items]);
 
+  // Размер — часть идентичности позиции: у одного товара могут лежать M и L.
+  // Пустая строка и undefined означают «без размера», поэтому сравниваем их
+  // после нормализации, чтобы старые записи в localStorage продолжали работать.
+  const normalizeSize = (size?: string): string => size ?? '';
+
   const addItem = (product: Omit<CartItem, 'quantity'>) => {
     if (!product || product.id <= 0 || product.price <= 0) return;
 
+    const targetSize = normalizeSize(product.size);
     setItems((prev) => {
       const existing = prev.find(
-        (i) => i.id === product.id && i.size === product.size
+        (i) => i.id === product.id && normalizeSize(i.size) === targetSize
       );
       if (existing) {
         return prev.map((i) =>
-          i.id === product.id && i.size === product.size
+          i.id === product.id && normalizeSize(i.size) === targetSize
             ? { ...i, quantity: Math.min(i.quantity + 1, MAX_QUANTITY) }
             : i
         );
@@ -74,18 +80,30 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = (id: number, size?: string) => {
+    const targetSize = normalizeSize(size);
+    setItems((prev) =>
+      prev.filter(
+        (i) => !(i.id === id && normalizeSize(i.size) === targetSize)
+      )
+    );
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (
+    id: number,
+    size: string | undefined,
+    quantity: number
+  ) => {
     if (quantity <= 0) {
-      removeItem(id);
+      removeItem(id, size);
       return;
     }
+    const targetSize = normalizeSize(size);
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id ? { ...i, quantity: Math.min(quantity, MAX_QUANTITY) } : i
+        i.id === id && normalizeSize(i.size) === targetSize
+          ? { ...i, quantity: Math.min(quantity, MAX_QUANTITY) }
+          : i
       )
     );
   };

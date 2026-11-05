@@ -70,6 +70,8 @@ export interface Order {
   payment_status: 'unpaid' | 'paid' | 'refunded';
   paid_at: string | null;
   created_at: string;
+  /** Токен доступа к заказу. Хранится только на устройстве покупателя. */
+  access_token?: string;
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

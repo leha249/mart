@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingBag, Trash2 } from 'lucide-react';
+import Navbar from '../components/Navbar';
 import { useFavorites } from '../context/FavoritesContext';
 import { useProducts } from '../context/ProductsContext';
 import { useCart } from '../context/CartContext';
@@ -56,6 +57,7 @@ const FavoritesPage = () => {
         padding: '100px 0 60px',
       }}
     >
+      <Navbar />
       <div className="container">
         <button
           onClick={goHome}
@@ -339,13 +341,10 @@ const FavoritesPage = () => {
                     <button
                       onClick={() => {
                         if (p.sizes.length > 0) {
-                          navigate('/');
-                          setTimeout(() => {
-                            const event = new CustomEvent('open-product', {
-                              detail: p,
-                            });
-                            window.dispatchEvent(event);
-                          }, 100);
+                          // Открываем страницу товара: размер выбирается там.
+                          navigate(
+                            p.slug ? `/product/${p.slug}` : `/product/${p.id}`
+                          );
                         } else {
                           addItem({
                             id: p.id,

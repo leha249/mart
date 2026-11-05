@@ -8,7 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useToast } from '../context/ToastContext';
 import { formatPrice } from '../utils/format';
-import { safeSet } from '../utils/storage';
+import { safeGet, safeSet } from '../utils/storage';
 import { ProductsGridSkeleton } from './Skeleton';
 import CategoryFilter from './CategoryFilter';
 import type { PriceRange } from './CategoryFilter';
@@ -16,6 +16,38 @@ import { optimizeImageUrl } from '../utils/imageLoader';
 import { navigate } from '../utils/navigate';
 
 const FILTER_KEY = 'mora-filter-v1';
+
+/**
+ * Начальная категория: адрес → сохранённый фильтр → «Все».
+ * Адрес важнее localStorage, чтобы крошка «Пальто» с карточки товара
+ * открывала уже отфильтрованный каталог.
+ */
+const readInitialCategory = (): string => {
+  const fromUrl = new URLSearchParams(window.location.search).get('category');
+  if (fromUrl) return fromUrl;
+
+  const saved = safeGet<string>(FILTER_KEY, 'Все');
+  return typeof saved === 'string' && saved ? saved : 'Все';
+};
+
+/**
+ * Пишет выбранную категорию в query-параметры без перезагрузки.
+ * replaceState, а не pushState: переключение фильтра не плодит записи
+ * истории, поэтому «назад» возвращает на предыдущую страницу.
+ */
+const syncCategoryInUrl = (category: string): void => {
+  try {
+    const url = new URL(window.location.href);
+    if (category === 'Все') url.searchParams.delete('category');
+    else url.searchParams.set('category', category);
+
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    // Сохраняем state роутера (ключ и индекс записи), чтобы не сломать back/forward.
+    window.history.replaceState(window.history.state, '', next);
+  } catch (e) {
+    console.warn('Failed to update category in URL:', e);
+  }
+};
 
 interface CardProps {
   product: UIProduct;
@@ -436,7 +468,9 @@ interface ProductsProps {
 const Products = ({ onProductClick }: ProductsProps) => {
   const { products, loading, error } = useProducts();
   const { sellers } = useSellers();
-  const [activeCategory, setActiveCategory] = useState<string>('Все');
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    readInitialCategory
+  );
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>(
     'default'
   );
@@ -489,6 +523,16 @@ const Products = ({ onProductClick }: ProductsProps) => {
     return ['Все', ...unique];
   }, [products]);
 
+  // Неизвестную категорию (опечатка, старая ссылка) показываем как «Все».
+  // Состояние производное, поэтому не требуется setState внутри эффекта.
+  const activeCategory = useMemo(
+    () =>
+      loading || categories.includes(selectedCategory)
+        ? selectedCategory
+        : 'Все',
+    [loading, categories, selectedCategory]
+  );
+
   const counts = useMemo(() => {
     const map: Record<string, number> = { Все: products.length };
     products.forEach((p) => {
@@ -498,11 +542,18 @@ const Products = ({ onProductClick }: ProductsProps) => {
   }, [products]);
 
   useEffect(() => {
-    if (!categories.includes(activeCategory)) {
-      setActiveCategory('Все');
+    // Пока товары грузятся, список категорий пуст — не сбрасываем фильтр из URL.
+    if (loading) return;
+
+    // Категории нет в каталоге (опечатка, старая ссылка) — чистим адрес и память.
+    if (!categories.includes(selectedCategory)) {
+      syncCategoryInUrl('Все');
+      safeSet(FILTER_KEY, 'Все');
+      return;
     }
-    safeSet(FILTER_KEY, activeCategory);
-  }, [activeCategory, categories]);
+
+    safeSet(FILTER_KEY, selectedCategory);
+  }, [selectedCategory, categories, loading]);
 
   const filtered = useMemo(() => {
     let list =
@@ -525,7 +576,8 @@ const Products = ({ onProductClick }: ProductsProps) => {
   }, [products, activeCategory, sortBy, effectivePriceRange]);
 
   const handleCategoryChange = (cat: string) => {
-    setActiveCategory(cat);
+    setSelectedCategory(cat);
+    syncCategoryInUrl(cat);
     if (sectionRef.current) {
       const top = sectionRef.current.offsetTop - 100;
       if (window.scrollY > top + 200) {

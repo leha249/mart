@@ -1,8 +1,17 @@
 import type { Order, Review, Promocode } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
 
+/**
+ * Экранирование значения для CSV.
+ * Дополнительно нейтрализует формулы Excel: значения, начинающиеся с =, +, -, @,
+ * табуляции или CR, получают префикс-апостроф и не выполняются как формулы.
+ */
 const escapeCSV = (val: unknown): string => {
-  const s = String(val ?? '').replace(/"/g, '""');
+  let s = String(val ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
+  s = s.replace(/"/g, '""');
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
     return `"${s}"`;
   }

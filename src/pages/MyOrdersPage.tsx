@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search,
   Package,
   Clock,
   CheckCircle2,
@@ -9,34 +8,22 @@ import {
   Truck,
   Loader2,
   ArrowLeft,
-  Phone,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
+  MessageCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
-import { supabase } from '../lib/supabase';
 import { formatPrice, formatDate } from '../utils/format';
-import { useToast } from '../context/ToastContext';
-import type { OrderStatus, OrderItem } from '../types/database';
+import type { Order, OrderStatus } from '../types/database';
 import { ORDER_STATUS_LABELS } from '../types/database';
 import { navigate } from '../utils/navigate';
 import { trackingUrl, carrierLabel } from '../utils/tracking';
 import { usePageMeta } from '../hooks/usePageMeta';
-
-interface OrderRow {
-  id: number;
-  created_at: string;
-  status: OrderStatus;
-  total: number;
-  items: OrderItem[];
-  seller_id: number | null;
-  tracking_number: string | null;
-  carrier: string | null;
-  payment_status?: 'unpaid' | 'paid' | 'refunded';
-}
+import { ordersService, orderTokens } from '../services/orders';
 
 const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
   new: <Clock size={16} />,
@@ -78,84 +65,48 @@ const STATUS_COLORS: Record<
 };
 
 const MyOrdersPage = () => {
-  const { addToast } = useToast();
-
-  const [phone, setPhone] = useState('');
-  const [orders, setOrders] = useState<OrderRow[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   usePageMeta({
     title: 'Мои заказы',
     description:
-      'Найдите свои заказы на MØRA MART по номеру телефона — статусы и состав заказов.',
+      'Заказы, оформленные на этом устройстве: статусы, состав, трек-номер и оплата.',
   });
 
-  // Загружаем сохранённый телефон
-  useEffect(() => {
-    try {
-      const savedPhone = localStorage.getItem('mora-my-orders-phone');
-      if (savedPhone) setPhone(savedPhone);
-
-      const lastOrders = sessionStorage.getItem('mora-last-orders');
-      if (lastOrders) {
-        const parsed = JSON.parse(lastOrders);
-        if (parsed.phone && !savedPhone) {
-          setPhone(parsed.phone);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load saved phone:', e);
-    }
-  }, []);
-
-  const handleSearch = async () => {
-    const cleaned = phone.trim();
-    if (!cleaned) {
-      setError('Введите номер телефона');
+  // Заказы берём по токенам, сохранённым на этом устройстве:
+  // доступ к таблице заказов по телефону для анонима закрыт.
+  const loadOrders = useCallback(async () => {
+    const tokens = orderTokens.list();
+    if (tokens.length === 0) {
+      setOrders([]);
+      setError(null);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     setError(null);
-    setOrders(null);
 
     try {
-      const { data, error: rpcError } = await supabase.rpc(
-        'get_orders_by_phone',
-        { phone_input: cleaned }
-      );
-
-      if (rpcError) throw rpcError;
-
-      const rows = (data ?? []) as OrderRow[];
+      const rows = await ordersService.getByTokens(tokens);
       setOrders(rows);
-
-      // Сохраняем телефон для следующих визитов
-      try {
-        localStorage.setItem('mora-my-orders-phone', cleaned);
-      } catch {}
-
-      if (rows.length === 0) {
-        setError('По этому номеру заказы не найдены');
-      }
     } catch (e) {
-      console.error('[MyOrdersPage] search error:', e);
-      const msg = 'Не удалось найти заказы. Попробуйте ещё раз.';
-      setError(msg);
-      addToast(msg, 'error');
+      console.error('[MyOrdersPage] load orders error:', e);
+      setError('Не удалось загрузить заказы. Попробуйте ещё раз.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSearch();
-    }
-  };
+  useEffect(() => {
+    // Загружаем асинхронно, чтобы не блокировать первый рендер
+    (async () => {
+      await loadOrders();
+    })();
+  }, [loadOrders]);
 
   const toggleExpand = (id: number) => {
     setExpanded((prev) => {
@@ -241,12 +192,12 @@ const MyOrdersPage = () => {
                 lineHeight: 1.65,
               }}
             >
-              Введите номер телефона, который указывали при оформлении, чтобы
-              найти свои заказы.
+              Здесь собраны заказы, оформленные на этом устройстве: статусы,
+              состав, трек-номер и оплата.
             </p>
           </motion.div>
 
-          {/* Поиск */}
+          {/* Панель обновления */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -255,118 +206,206 @@ const MyOrdersPage = () => {
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               borderRadius: 20,
-              padding: 24,
+              padding: '16px 24px',
               marginBottom: 32,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
             }}
           >
             <div
+              style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}
+            >
+              Список хранится в этом браузере и подгружается автоматически.
+            </div>
+            <button
+              onClick={() => void loadOrders()}
+              disabled={loading}
               style={{
+                padding: '10px 20px',
+                borderRadius: 100,
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--text)',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: loading ? 'wait' : 'pointer',
+                fontFamily: 'inherit',
                 display: 'flex',
-                gap: 12,
-                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 8,
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              <RefreshCw
+                size={14}
+                style={
+                  loading
+                    ? { animation: 'spin 1s linear infinite' }
+                    : undefined
+                }
+              />
+              Обновить
+            </button>
+          </motion.div>
+
+          {/* Загрузка */}
+          {loading && (
+            <div
+              style={{
+                padding: 80,
+                textAlign: 'center',
+                color: 'var(--muted)',
+              }}
+            >
+              <Loader2
+                size={28}
+                style={{
+                  animation: 'spin 1s linear infinite',
+                  display: 'inline-block',
+                }}
+              />
+              <div style={{ marginTop: 12, fontSize: 14 }}>
+                Загрузка заказов...
+              </div>
+            </div>
+          )}
+
+          {/* Ошибка */}
+          {!loading && error && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                padding: 40,
+                textAlign: 'center',
+                background: 'rgba(255,77,77,0.06)',
+                border: '1px solid rgba(255,77,77,0.25)',
+                borderRadius: 16,
               }}
             >
               <div
                 style={{
-                  position: 'relative',
-                  flex: 1,
-                  minWidth: 200,
+                  color: 'var(--danger)',
+                  fontSize: 14,
+                  marginBottom: 20,
                 }}
               >
-                <Phone
-                  size={16}
-                  color="var(--muted)"
-                  style={{
-                    position: 'absolute',
-                    left: 16,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  onKeyDown={handleKeyPress}
-                  placeholder="+7 900 000-00-00"
-                  disabled={loading}
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px 14px 42px',
-                    background: 'var(--bg)',
-                    border: error
-                      ? '1px solid var(--danger)'
-                      : '1px solid var(--border)',
-                    borderRadius: 100,
-                    color: 'var(--text)',
-                    fontSize: 15,
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                  }}
-                />
+                {error}
               </div>
-
               <button
-                onClick={handleSearch}
-                disabled={loading || !phone.trim()}
+                onClick={() => void loadOrders()}
                 style={{
-                  padding: '14px 28px',
+                  padding: '12px 24px',
                   borderRadius: 100,
                   border: 'none',
                   background: 'var(--accent)',
                   color: '#000',
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor: loading ? 'wait' : 'pointer',
+                  cursor: 'pointer',
                   fontFamily: 'inherit',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  whiteSpace: 'nowrap',
-                  opacity: loading || !phone.trim() ? 0.6 : 1,
                 }}
               >
-                {loading ? (
-                  <>
-                    <Loader2
-                      size={16}
-                      style={{ animation: 'spin 1s linear infinite' }}
-                    />
-                    Поиск...
-                  </>
-                ) : (
-                  <>
-                    <Search size={16} /> Найти
-                  </>
-                )}
+                <RefreshCw size={14} /> Повторить
               </button>
-            </div>
+            </motion.div>
+          )}
 
-            {error && !loading && (
+          {/* Пусто: нет токенов или заказов */}
+          {!loading && !error && orders.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                padding: '60px 24px',
+                textAlign: 'center',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 20,
+              }}
+            >
+              <Package
+                size={56}
+                strokeWidth={1}
+                style={{ color: 'var(--muted)', marginBottom: 20 }}
+              />
+              <h2 style={{ fontSize: 20, marginBottom: 10, fontWeight: 700 }}>
+                Заказов пока нет
+              </h2>
+              <p
+                style={{
+                  color: 'var(--muted)',
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  maxWidth: 560,
+                  margin: '0 auto 24px',
+                }}
+              >
+                Заказы хранятся на этом устройстве. Если вы оформляли заказ с
+                другого устройства или очистили данные браузера — напишите нам,
+                поможем восстановить доступ
+              </p>
               <div
                 style={{
-                  marginTop: 12,
-                  padding: '10px 14px',
-                  background: 'rgba(255,77,77,0.08)',
-                  border: '1px solid rgba(255,77,77,0.25)',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  color: 'var(--danger)',
+                  display: 'flex',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
                 }}
               >
-                {error}
+                <a
+                  href="/contacts"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/contacts');
+                  }}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: 100,
+                    border: 'none',
+                    background: 'var(--accent)',
+                    color: '#000',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <MessageCircle size={16} /> Написать нам
+                </a>
+                <button
+                  onClick={goToCatalog}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: 100,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  В каталог
+                </button>
               </div>
-            )}
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Результаты */}
           <AnimatePresence mode="wait">
-            {orders !== null && orders.length > 0 && (
+            {!loading && !error && orders.length > 0 && (
               <motion.div
                 key="results"
                 initial={{ opacity: 0, y: 20 }}

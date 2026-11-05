@@ -71,6 +71,8 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const mountedRef = useRef(true);
   const fetchingRef = useRef(false);
+  /** Номер последнего запроса первой страницы: результаты старых игнорируем. */
+  const requestSeqRef = useRef(0);
 
   const effectiveSellerId = role === 'seller' ? sellerId : null;
 
@@ -92,7 +94,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
   }, [search]);
 
   const fetchFirstPage = useCallback(async () => {
-    if (fetchingRef.current) return;
+    const requestId = ++requestSeqRef.current;
     fetchingRef.current = true;
 
     try {
@@ -108,23 +110,29 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         ordersService.getStats(effectiveSellerId),
       ]);
 
-      if (!mountedRef.current) return;
+      // Пока шёл запрос, фильтр мог смениться — применяем только последний.
+      if (!mountedRef.current || requestId !== requestSeqRef.current) return;
       setOrders(page.orders);
       setStats(st);
       setHasMore(page.hasMore);
       setOffset(page.orders.length);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка загрузки заказов';
-      if (mountedRef.current) setError(msg);
+      if (!mountedRef.current || requestId !== requestSeqRef.current) return;
+      setError(msg);
       console.error('OrdersContext fetchFirstPage error:', e);
     } finally {
-      if (mountedRef.current) setLoading(false);
-      fetchingRef.current = false;
+      // Сбрасываем loading только если это всё ещё актуальный запрос.
+      if (requestId === requestSeqRef.current) {
+        fetchingRef.current = false;
+        if (mountedRef.current) setLoading(false);
+      }
     }
   }, [statusFilter, search, effectiveSellerId]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || fetchingRef.current) return;
+    const requestId = requestSeqRef.current;
     setLoadingMore(true);
     fetchingRef.current = true;
 
@@ -137,7 +145,8 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         sellerId: effectiveSellerId,
       });
 
-      if (!mountedRef.current) return;
+      // Если за это время загрузили другую первую страницу — догрузка устарела.
+      if (!mountedRef.current || requestId !== requestSeqRef.current) return;
       setOrders((prev) => {
         const existingIds = new Set(prev.map((o) => o.id));
         const newOnes = page.orders.filter((o) => !existingIds.has(o.id));
@@ -147,10 +156,11 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
       setOffset((prev) => prev + page.orders.length);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Ошибка загрузки';
-      if (mountedRef.current) setError(msg);
+      if (!mountedRef.current || requestId !== requestSeqRef.current) return;
+      setError(msg);
     } finally {
+      if (requestId === requestSeqRef.current) fetchingRef.current = false;
       if (mountedRef.current) setLoadingMore(false);
-      fetchingRef.current = false;
     }
   }, [loadingMore, hasMore, statusFilter, search, offset, effectiveSellerId]);
 

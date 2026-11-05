@@ -19,9 +19,7 @@ import { useBodyLock } from '../hooks/useBodyLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { formatPrice, pluralize, formatPhone } from '../utils/format';
 import { ordersService } from '../services/orders';
-import { supabase } from '../lib/supabase';
 import { chatService } from '../services/chat';
-import { incrementPromocodeUsage } from '../utils/promocodes';
 import { navigate } from '../utils/navigate';
 
 interface Props {
@@ -30,6 +28,16 @@ interface Props {
 }
 
 const MARKETING_CONSENT_KEY = 'mora-marketing-consent-v1';
+const LAST_ORDER_NAME_KEY = 'mora-last-order-name';
+
+/** Имя из прошлого заказа на этом устройстве (если сессии ещё нет). */
+const readLastOrderName = (): string => {
+  try {
+    return localStorage.getItem(LAST_ORDER_NAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+};
 
 const CartPanel = ({ open, onClose }: Props) => {
   const { items, removeItem, updateQuantity, totalPrice, totalItems, clearCart } =
@@ -39,8 +47,11 @@ const CartPanel = ({ open, onClose }: Props) => {
   const { session: customer, setCustomerName } = useCustomer();
   const [orderSent, setOrderSent] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  // Если покупатель уже вошёл по телефону — подставляем его данные
-  const [name, setName] = useState(customer?.name ?? '');
+  // Если покупатель уже вошёл по телефону — подставляем его данные,
+  // иначе берём имя из прошлого заказа на этом устройстве
+  const [name, setName] = useState(
+    () => customer?.name || readLastOrderName()
+  );
   const [phone, setPhone] = useState(
     customer?.phone ? formatPhone(customer.phone) : ''
   );
@@ -58,22 +69,6 @@ const CartPanel = ({ open, onClose }: Props) => {
     setName((prev) => prev || (customer.name ?? ''));
   }, [customer]);
 
-  // Имени нет в сессии — берём его из прошлого заказа этого телефона
-  useEffect(() => {
-    if (!showCheckout || !customer || name.trim()) return;
-    let cancelled = false;
-
-    supabase
-      .rpc('get_orders_by_phone', { phone_input: customer.phone })
-      .then(({ data }) => {
-        const last = (data as { customer_name?: string }[] | null)?.[0];
-        if (!cancelled && last?.customer_name) setName(last.customer_name);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showCheckout, customer, name]);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useBodyLock(open);
@@ -130,9 +125,10 @@ const CartPanel = ({ open, onClose }: Props) => {
   const canCheckout = agreedTerms && agreedData;
 
   const validateCheckout = (): string | null => {
-    if (!name.trim()) return 'Введите имя';
-    if (!phone.trim()) return 'Введите телефон';
-    if (phone.trim().length < 5) return 'Телефон слишком короткий';
+    if (name.trim().length < 2) return 'Укажите имя';
+    if (phone.replace(/\D/g, '').length < 10) {
+      return 'Укажите корректный телефон';
+    }
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return 'Некорректный email';
     }
@@ -214,7 +210,8 @@ const CartPanel = ({ open, onClose }: Props) => {
         createdOrders.push({
           id: order.id,
           sellerId,
-          total: groupFinalTotal,
+          // Сумма — из ответа сервера: create_order сам считает скидку
+          total: order.total,
           itemsCount: groupItems.reduce((s, it) => s + it.quantity, 0),
         });
       }
@@ -240,8 +237,11 @@ const CartPanel = ({ open, onClose }: Props) => {
           .catch(() => {});
       }
 
-      if (promo.applied) {
-        incrementPromocodeUsage(promo.applied.id);
+      // Запоминаем имя для следующих заказов на этом устройстве
+      try {
+        localStorage.setItem(LAST_ORDER_NAME_KEY, name.trim());
+      } catch {
+        // localStorage может быть недоступен — не мешаем оформлению
       }
 
       try {
@@ -260,9 +260,6 @@ const CartPanel = ({ open, onClose }: Props) => {
             createdAt: new Date().toISOString(),
           })
         );
-        try {
-          localStorage.setItem('mora-my-orders-phone', phone.trim());
-        } catch {}
       } catch (e) {
         console.warn('Не удалось сохранить данные заказа:', e);
       }
@@ -680,7 +677,11 @@ const CartPanel = ({ open, onClose }: Props) => {
                             >
                               <button
                                 onClick={() =>
-                                  updateQuantity(item.id, item.quantity - 1)
+                                  updateQuantity(
+                                    item.id,
+                                    item.size,
+                                    item.quantity - 1
+                                  )
                                 }
                                 aria-label="Уменьшить"
                                 style={{
@@ -706,7 +707,11 @@ const CartPanel = ({ open, onClose }: Props) => {
                               </span>
                               <button
                                 onClick={() =>
-                                  updateQuantity(item.id, item.quantity + 1)
+                                  updateQuantity(
+                                    item.id,
+                                    item.size,
+                                    item.quantity + 1
+                                  )
                                 }
                                 aria-label="Увеличить"
                                 style={{
@@ -723,7 +728,7 @@ const CartPanel = ({ open, onClose }: Props) => {
                             </div>
 
                             <button
-                              onClick={() => removeItem(item.id)}
+                              onClick={() => removeItem(item.id, item.size)}
                               aria-label={`Удалить ${item.name}`}
                               style={{
                                 background: 'none',

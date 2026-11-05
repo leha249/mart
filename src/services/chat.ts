@@ -59,6 +59,7 @@ export const chatService = {
         p_seller_id: sellerId,
         p_phone: phone,
         p_name: name ?? null,
+        p_token: getStoredToken(sellerId)?.token ?? null,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;

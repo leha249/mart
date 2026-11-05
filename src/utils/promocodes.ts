@@ -58,10 +58,3 @@ export const validatePromocode = async (
     promocode: data,
   };
 };
-
-export const incrementPromocodeUsage = async (id: number): Promise<void> => {
-  const { error } = await supabase.rpc('increment_promo_usage', {
-    promo_id: id,
-  });
-  if (error) console.warn('Не удалось увеличить счётчик промокода:', error);
-};

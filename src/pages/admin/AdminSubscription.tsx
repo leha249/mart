@@ -1,8 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CreditCard, Check, Clock, AlertTriangle, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CreditCard, Check, Clock, AlertTriangle, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSellers } from '../../context/SellersContext';
 import { useToast } from '../../context/ToastContext';
+import { supabase } from '../../lib/supabase';
 import {
   SUBSCRIPTION,
   subscriptionsService,
@@ -38,6 +39,16 @@ const stateColor = {
   none: 'var(--muted)',
 } as const;
 
+/**
+ * subscriptionState знает только дату окончания, а пробный период
+ * отличается от оплаченного по subscription_plan. Поэтому «trial»
+ * подставляем здесь — и для своего статуса, и для списка продавцов.
+ */
+const sellerState = (until?: string, plan?: string) => {
+  const state = subscriptionState(until);
+  return state === 'active' && plan === 'trial' ? 'trial' : state;
+};
+
 const AdminSubscription = () => {
   const { role, sellerId } = useAuth();
   const { sellers, refetch: refetchSellers } = useSellers();
@@ -53,6 +64,12 @@ const AdminSubscription = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState<number | null>(null);
+  const [rejecting, setRejecting] = useState<number | null>(null);
+
+  const pending = payments.filter((p) => p.status === 'pending');
+  // Пока заявка на проверке, повторно отправлять её нельзя: админ
+  // подтвердит обе и продлит подписку дважды.
+  const hasPendingRequest = pending.some((p) => p.seller_id === sellerId);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,7 +92,7 @@ const AdminSubscription = () => {
   }, [load]);
 
   const handleRequest = async () => {
-    if (!sellerId || sending) return;
+    if (!sellerId || sending || loading || hasPendingRequest) return;
     setSending(true);
     try {
       await subscriptionsService.requestPayment(sellerId, 1);
@@ -102,14 +119,30 @@ const AdminSubscription = () => {
     }
   };
 
-  const rawState = subscriptionState(me?.subscriptionUntil);
+  const handleReject = async (id: number) => {
+    if (rejecting) return;
+    setRejecting(id);
+    try {
+      const { data, error } = await supabase
+        .from('subscription_payments')
+        .update({ status: 'rejected' })
+        .eq('id', id)
+        .eq('status', 'pending')
+        .select('id');
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('payment not updated');
+      addToast('Заявка отклонена', 'success');
+      await load();
+    } catch {
+      addToast('Не удалось отклонить заявку', 'error');
+    } finally {
+      setRejecting(null);
+    }
+  };
+
   // Пробный период показываем как «Пробный», а не «Оплачена»
-  const state =
-    rawState === 'active' && me?.subscriptionPlan === 'trial'
-      ? 'trial'
-      : rawState;
+  const state = sellerState(me?.subscriptionUntil, me?.subscriptionPlan);
   const left = daysLeft(me?.subscriptionUntil);
-  const pending = payments.filter((p) => p.status === 'pending');
 
   return (
     <div style={{ display: 'grid', gap: 24 }}>
@@ -205,7 +238,7 @@ const AdminSubscription = () => {
 
           <button
             onClick={handleRequest}
-            disabled={sending}
+            disabled={sending || loading || hasPendingRequest}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -217,17 +250,23 @@ const AdminSubscription = () => {
               color: 'var(--accent-contrast)',
               fontSize: 14,
               fontWeight: 700,
-              cursor: sending ? 'wait' : 'pointer',
+              cursor: sending
+                ? 'wait'
+                : loading || hasPendingRequest
+                ? 'not-allowed'
+                : 'pointer',
               fontFamily: 'inherit',
-              opacity: sending ? 0.7 : 1,
+              opacity: sending || loading || hasPendingRequest ? 0.7 : 1,
             }}
           >
             {sending ? (
               <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : hasPendingRequest ? (
+              <Clock size={16} />
             ) : (
               <Check size={16} />
             )}
-            Я оплатил — сообщить
+            {hasPendingRequest ? 'Заявка на проверке' : 'Я оплатил — сообщить'}
           </button>
 
           {pending.length > 0 && (
@@ -299,26 +338,50 @@ const AdminSubscription = () => {
                       · {p.amount} ₽ · {p.months} мес · {formatDate(p.created_at)}
                     </span>
                   </div>
-                  <button
-                    onClick={() => handleConfirm(p.id)}
-                    disabled={confirming === p.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '9px 18px',
-                      borderRadius: 100,
-                      border: 'none',
-                      background: 'var(--accent)',
-                      color: 'var(--accent-contrast)',
-                      fontSize: 12.5,
-                      fontWeight: 700,
-                      cursor: confirming === p.id ? 'wait' : 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <Check size={14} /> Подтвердить
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => handleReject(p.id)}
+                      disabled={rejecting === p.id || confirming === p.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '9px 18px',
+                        borderRadius: 100,
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--danger)',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        cursor: rejecting === p.id ? 'wait' : 'pointer',
+                        fontFamily: 'inherit',
+                        opacity: confirming === p.id ? 0.5 : 1,
+                      }}
+                    >
+                      <X size={14} /> Отклонить
+                    </button>
+                    <button
+                      onClick={() => handleConfirm(p.id)}
+                      disabled={confirming === p.id || rejecting === p.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '9px 18px',
+                        borderRadius: 100,
+                        border: 'none',
+                        background: 'var(--accent)',
+                        color: 'var(--accent-contrast)',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        cursor: confirming === p.id ? 'wait' : 'pointer',
+                        fontFamily: 'inherit',
+                        opacity: rejecting === p.id ? 0.5 : 1,
+                      }}
+                    >
+                      <Check size={14} /> Подтвердить
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -341,7 +404,7 @@ const AdminSubscription = () => {
           </h2>
           <div style={{ display: 'grid', gap: 8 }}>
             {sellers.map((s) => {
-              const st = subscriptionState(s.subscriptionUntil);
+              const st = sellerState(s.subscriptionUntil, s.subscriptionPlan);
               return (
                 <div
                   key={s.id}
