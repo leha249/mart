@@ -596,7 +596,7 @@ const ProductPage = ({ slug }: Props) => {
             )}
 
             {/* Кнопки */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 26 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 26, flexWrap: 'wrap' }}>
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
@@ -688,6 +688,7 @@ const ProductPage = ({ slug }: Props) => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 12,
+                    flexWrap: 'wrap',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -885,6 +886,27 @@ const ProductPage = ({ slug }: Props) => {
       </main>
 
       <Footer />
+
+      {/* Адаптив: на узких экранах галерея и описание идут в одну колонку */}
+      <style>{`
+        #product-grid > * {
+          min-width: 0;
+        }
+        #product-grid img {
+          max-width: 100%;
+        }
+        @media (max-width: 900px) {
+          #product-grid {
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+        }
+        @media (max-width: 520px) {
+          #product-grid {
+            gap: 22px !important;
+          }
+        }
+      `}</style>
 
       <Lightbox
         images={images}
