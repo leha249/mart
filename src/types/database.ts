@@ -184,6 +184,9 @@ export interface Seller {
   inn: string | null;
   legal_address: string | null;
 
+  subscription_until: string | null;
+  subscription_plan: string | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -218,6 +221,10 @@ export interface UISeller {
   inn?: string;
   legalAddress?: string;
 
+  /** До какой даты оплачена подписка (включая trial). */
+  subscriptionUntil?: string;
+  subscriptionPlan?: string;
+
   createdAt: string;
 }
 
@@ -250,6 +257,9 @@ export const mapSellerToUI = (s: Seller): UISeller => ({
   ogrnip: s.ogrnip ?? undefined,
   inn: s.inn ?? undefined,
   legalAddress: s.legal_address ?? undefined,
+
+  subscriptionUntil: s.subscription_until ?? undefined,
+  subscriptionPlan: s.subscription_plan ?? undefined,
 
   createdAt: s.created_at,
 });

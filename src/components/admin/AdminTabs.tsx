@@ -7,6 +7,7 @@ import {
   BarChart3,
   Tag,
   Store,
+  CreditCard,
 } from 'lucide-react';
 import type { UserRole } from '../../context/AuthContext';
 
@@ -18,6 +19,7 @@ export type AdminTab =
   | 'reviews'
   | 'promocodes'
   | 'sellers'
+  | 'subscription'
   | 'profile';
 
 interface Props {
@@ -65,6 +67,11 @@ const AdminTabs = ({
       badge: isSeller ? undefined : reviewsBadge > 0 ? reviewsBadge : undefined,
     },
     { key: 'promocodes', label: 'Промокоды', icon: <Tag size={16} /> },
+    {
+      key: 'subscription',
+      label: 'Подписка',
+      icon: <CreditCard size={16} />,
+    },
     {
       key: 'profile',
       label: 'Профиль',

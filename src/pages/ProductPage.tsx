@@ -770,7 +770,7 @@ const ProductPage = ({ slug }: Props) => {
               {[
                 { icon: Truck, text: 'Доставка по России — от 3 дней' },
                 { icon: RotateCcw, text: 'Возврат в течение 14 дней' },
-                { icon: ShieldCheck, text: 'Безопасная оплата при получении' },
+                { icon: ShieldCheck, text: 'Оплата напрямую продавцу — СБП или при получении' },
               ].map(({ icon: Icon, text }) => (
                 <div
                   key={text}

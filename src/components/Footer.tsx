@@ -18,6 +18,7 @@ const Footer = () => {
     { label: 'О платформе', path: '/about' },
     { label: 'Магазины', path: '/sellers' },
     { label: 'Каталог', path: '/catalog' },
+    { label: 'Тарифы для продавцов', path: '/pricing' },
     { label: 'Контакты', path: '/contacts' },
     { label: isCustomer ? 'Мой кабинет' : 'Войти', path: isCustomer ? '/account' : '/login-customer' },
   ];

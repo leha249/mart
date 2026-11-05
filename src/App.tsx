@@ -52,6 +52,7 @@ const TermsPage = lazy(() => import('./pages/TermsPage'));
 const SellerAgreementPage = lazy(() => import('./pages/SellerAgreementPage'));
 const DataRequestPage = lazy(() => import('./pages/DataRequestPage'));
 const RegisterSellerPage = lazy(() => import('./pages/RegisterSellerPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
 
 function DataSync() {
   const { products } = useProducts();
@@ -207,6 +208,7 @@ function AppRoutes() {
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register-seller" element={<RegisterSellerPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/login-customer" element={<CustomerLoginPage />} />
         <Route path="/account" element={<CustomerAccountPage />} />
         <Route path="/admin" element={<Admin />} />
