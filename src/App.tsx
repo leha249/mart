@@ -106,6 +106,47 @@ function ScrollManager() {
 }
 
 /**
+ * Перехватывает клики по внутренним ссылкам (<a href="/privacy">), чтобы они
+ * переходили через роутер, а не перезагружали приложение целиком.
+ * Ссылки, которые уже сами обрабатывают клик (preventDefault + navigate),
+ * пропускаются. Внешние адреса, mailto, tel, target="_blank" и загрузки
+ * остаются браузеру.
+ */
+function LinkInterceptor() {
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest?.('a');
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href || !href.startsWith('/') || href.startsWith('//')) return;
+      if (anchor.target && anchor.target !== '_self') return;
+      if (anchor.hasAttribute('download')) return;
+
+      event.preventDefault();
+      navigate(href);
+    };
+
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, []);
+
+  return null;
+}
+
+/**
  * Глобальные панели — рендерятся на уровне App, чтобы корзина,
  * поиск и избранное работали с любой страницы.
  *
@@ -202,6 +243,7 @@ function App() {
                                 <FavoritesProvider>
                                   <UIProvider>
                                     <NavigationBridge />
+                                    <LinkInterceptor />
                                     <ScrollManager />
                                     <DataSync />
                                     {!preloaded && (
