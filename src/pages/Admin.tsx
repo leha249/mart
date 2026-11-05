@@ -17,6 +17,7 @@ const AdminPromocodes = lazy(() => import('./admin/AdminPromocodes'));
 const AdminSellers = lazy(() => import('./admin/AdminSellers'));
 const AdminProfile = lazy(() => import('./admin/AdminProfile'));
 const AdminSubscription = lazy(() => import('./admin/AdminSubscription'));
+const AdminMessages = lazy(() => import('./admin/AdminMessages'));
 
 function TabLoader() {
   return (
@@ -82,6 +83,7 @@ const Admin = () => {
       if (activeTab === 'promocodes') title = 'Промокоды — MØRA MART';
       if (activeTab === 'sellers') title = 'Продавцы — MØRA MART';
       if (activeTab === 'subscription') title = 'Подписки — MØRA MART';
+      if (activeTab === 'messages') title = 'Сообщения — MØRA MART';
     }
 
     document.title = title;
@@ -110,6 +112,8 @@ const Admin = () => {
         return isSeller ? <AdminDashboard /> : <AdminSellers />;
       case 'subscription':
         return <AdminSubscription />;
+      case 'messages':
+        return <AdminMessages />;
       case 'profile':
         return isSeller ? <AdminProfile /> : <AdminDashboard />;
       default:

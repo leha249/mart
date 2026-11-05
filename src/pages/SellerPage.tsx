@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, Store } from 'lucide-react';
+import { ArrowLeft, Loader2, Store, MessageCircle } from 'lucide-react';
 import { sellersService } from '../services/sellers';
 import { productsService } from '../services/products';
 import { supabase } from '../lib/supabase';
@@ -15,6 +15,7 @@ import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
+import ChatPanel from '../components/chat/ChatPanel';
 
 interface Props {
   slug: string;
@@ -25,6 +26,7 @@ const SellerPage = ({ slug }: Props) => {
   const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const accent = seller?.accentColor || '#e8ff5a';
 
@@ -268,6 +270,39 @@ const SellerPage = ({ slug }: Props) => {
       </main>
 
       <SellerFooter seller={seller} onGoHome={goHome} />
+
+      {/* Чат с продавцом */}
+      <button
+        onClick={() => setChatOpen(true)}
+        style={{
+          position: 'fixed',
+          left: 20,
+          bottom: 20,
+          zIndex: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '13px 20px',
+          borderRadius: 100,
+          border: 'none',
+          background: 'var(--accent)',
+          color: 'var(--accent-contrast)',
+          fontSize: 13.5,
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+        }}
+      >
+        <MessageCircle size={16} /> Написать продавцу
+      </button>
+
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        sellerId={seller.id}
+        sellerName={seller.name}
+      />
     </div>
   );
 };

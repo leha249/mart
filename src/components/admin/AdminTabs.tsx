@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   FolderOpen,
   MessageSquare,
+  MessageCircle,
   BarChart3,
   Tag,
   Store,
@@ -20,6 +21,7 @@ export type AdminTab =
   | 'promocodes'
   | 'sellers'
   | 'subscription'
+  | 'messages'
   | 'profile';
 
 interface Props {
@@ -71,6 +73,11 @@ const AdminTabs = ({
       key: 'subscription',
       label: 'Подписка',
       icon: <CreditCard size={16} />,
+    },
+    {
+      key: 'messages',
+      label: 'Сообщения',
+      icon: <MessageCircle size={16} />,
     },
     {
       key: 'profile',
