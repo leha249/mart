@@ -19,12 +19,17 @@ const AdminMessages = () => {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [unread, setUnread] = useState<Record<number, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadThreads = useCallback(async () => {
     try {
-      const list = await chatService.sellerThreads();
+      const [list, counts] = await Promise.all([
+        chatService.sellerThreads(),
+        chatService.unreadByThread(),
+      ]);
       setThreads(list);
+      setUnread(counts);
       setActive((prev) => {
         if (prev) return list.find((t) => t.id === prev.id) ?? null;
         return list[0] ?? null;
@@ -58,6 +63,11 @@ const AdminMessages = () => {
     };
 
     load();
+    // Открыли тред — помечаем сообщения покупателя прочитанными
+    chatService.markThreadRead(active.id).then(() => {
+      setUnread((prev) => ({ ...prev, [active.id]: 0 }));
+    });
+
     const timer = window.setInterval(load, 5000);
     return () => {
       cancelled = true;
@@ -151,6 +161,7 @@ const AdminMessages = () => {
                   style={{
                     width: '100%',
                     textAlign: 'left',
+                    position: 'relative',
                     padding: '12px 16px',
                     border: 'none',
                     borderBottom: '1px solid var(--border)',
@@ -166,6 +177,28 @@ const AdminMessages = () => {
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                     {time(t.last_message_at)}
                   </div>
+                  {(unread[t.id] ?? 0) > 0 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        right: 14,
+                        top: 14,
+                        minWidth: 18,
+                        height: 18,
+                        padding: '0 5px',
+                        borderRadius: 100,
+                        background: 'var(--accent)',
+                        color: 'var(--accent-contrast)',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {unread[t.id]}
+                    </div>
+                  )}
                 </button>
               );
             })}

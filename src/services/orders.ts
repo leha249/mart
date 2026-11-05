@@ -175,6 +175,25 @@ export const ordersService = {
     }
   },
 
+  /** Продавец отмечает оплату: деньги идут напрямую, платформа фиксирует факт. */
+  async updatePaymentStatus(
+    id: number,
+    status: 'unpaid' | 'paid' | 'refunded'
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          payment_status: status,
+          paid_at: status === 'paid' ? new Date().toISOString() : null,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    } catch (e) {
+      throw normalizeError(e);
+    }
+  },
+
   /** Продавец вписывает трек-номер вручную (без API перевозчика). */
   async updateTracking(
     id: number,

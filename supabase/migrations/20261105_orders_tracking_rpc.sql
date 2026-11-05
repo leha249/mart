@@ -10,7 +10,8 @@ returns table (
   items jsonb,
   seller_id bigint,
   tracking_number text,
-  carrier text
+  carrier text,
+  payment_status text
 )
 language sql
 security definer
@@ -24,7 +25,8 @@ as $fn$
     o.items             as items,
     o.seller_id::bigint as seller_id,
     o.tracking_number   as tracking_number,
-    o.carrier           as carrier
+    o.carrier           as carrier,
+    o.payment_status    as payment_status
   from public.orders o
   where length(regexp_replace(coalesce(phone_input, ''), '\D', '', 'g')) >= 10
     and regexp_replace(coalesce(o.customer_phone, ''), '\D', '', 'g')

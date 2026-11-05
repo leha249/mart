@@ -35,6 +35,7 @@ interface OrderRow {
   seller_id: number | null;
   tracking_number: string | null;
   carrier: string | null;
+  payment_status?: 'unpaid' | 'paid' | 'refunded';
 }
 
 const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
@@ -524,6 +525,39 @@ const MyOrdersPage = () => {
                             >
                               {ORDER_STATUS_LABELS[order.status]}
                             </span>
+
+                            {order.payment_status === 'paid' && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  padding: '4px 10px',
+                                  borderRadius: 100,
+                                  background: 'rgba(74,222,128,0.12)',
+                                  color: 'var(--success)',
+                                  border: '1px solid rgba(74,222,128,0.35)',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                Оплачен
+                              </span>
+                            )}
+                            {order.payment_status === 'refunded' && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  padding: '4px 10px',
+                                  borderRadius: 100,
+                                  background: 'rgba(255,77,77,0.12)',
+                                  color: 'var(--danger)',
+                                  border: '1px solid rgba(255,77,77,0.35)',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                Возврат
+                              </span>
+                            )}
 
                             <span
                               className="price-num"

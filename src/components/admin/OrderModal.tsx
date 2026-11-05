@@ -46,6 +46,9 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
   const [tracking, setTracking] = useState<string>('');
   const [savingTracking, setSavingTracking] = useState(false);
   const [trackingSaved, setTrackingSaved] = useState(false);
+  const [payment, setPayment] = useState<'unpaid' | 'paid' | 'refunded'>(
+    'unpaid'
+  );
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Подставляем сохранённый трек при открытии заказа
@@ -54,6 +57,7 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
     setCarrier(order.carrier || 'cdek');
     setTracking(order.tracking_number || '');
     setTrackingSaved(false);
+    setPayment(order.payment_status ?? 'unpaid');
   }, [order]);
 
   const handleSaveTracking = async () => {
@@ -326,6 +330,42 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
                 >
                   {trackingSaved ? 'Сохранено' : 'Сохранить трек'}
                 </button>
+
+                {/* Статус оплаты: деньги идут напрямую продавцу */}
+                <select
+                  value={payment}
+                  onChange={async (e) => {
+                    const next = e.target.value as
+                      | 'unpaid'
+                      | 'paid'
+                      | 'refunded';
+                    setPayment(next);
+                    await ordersService.updatePaymentStatus(order.id, next);
+                  }}
+                  aria-label="Статус оплаты"
+                  style={{
+                    height: 38,
+                    padding: '0 12px',
+                    borderRadius: 100,
+                    border: `1px solid ${
+                      payment === 'paid' ? 'var(--success)' : 'var(--border)'
+                    }`,
+                    background: 'var(--bg)',
+                    color:
+                      payment === 'paid'
+                        ? 'var(--success)'
+                        : payment === 'refunded'
+                        ? 'var(--danger)'
+                        : 'var(--muted)',
+                    fontSize: 12.5,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="unpaid">Не оплачен</option>
+                  <option value="paid">Оплачен</option>
+                  <option value="refunded">Возврат</option>
+                </select>
                 <button
                   onClick={handlePrint}
                   aria-label="Печать"

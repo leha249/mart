@@ -164,4 +164,51 @@ export const chatService = {
       throw normalizeError(e);
     }
   },
+
+  /** Пометить сообщения покупателя прочитанными (когда продавец открыл тред). */
+  async markThreadRead(threadId: number): Promise<void> {
+    try {
+      await supabase
+        .from('chat_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('thread_id', threadId)
+        .eq('sender', 'customer')
+        .is('read_at', null);
+    } catch {
+      /* не критично */
+    }
+  },
+
+  /** Сколько непрочитанных сообщений у продавца (для бейджа). */
+  async unreadCount(): Promise<number> {
+    try {
+      const { data, error } = await supabase.rpc('unread_chat_count');
+      if (error) throw error;
+      return Number(data) || 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  /** Непрочитанные по каждому треду — для списка диалогов. */
+  async unreadByThread(): Promise<Record<number, number>> {
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('thread_id')
+        .eq('sender', 'customer')
+        .is('read_at', null)
+        .limit(500);
+      if (error) throw error;
+
+      const map: Record<number, number> = {};
+      for (const row of data ?? []) {
+        const id = Number((row as { thread_id: number }).thread_id);
+        map[id] = (map[id] ?? 0) + 1;
+      }
+      return map;
+    } catch {
+      return {};
+    }
+  },
 };

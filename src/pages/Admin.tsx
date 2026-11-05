@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrdersContext';
 import { useReviews } from '../context/ReviewsContext';
 import AdminLayout from './admin/AdminLayout';
+import { chatService } from '../services/chat';
 import type { AdminTab } from '../components/admin/AdminTabs';
 import { navigate } from '../utils/navigate';
 
@@ -46,8 +47,28 @@ const Admin = () => {
   const { pendingCount: reviewsPendingCount } = useReviews();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const isSeller = role === 'seller';
+  const isSellerOrAdmin = role === 'seller' || role === 'admin';
+
+  // Бейдж непрочитанных сообщений от покупателей
+  useEffect(() => {
+    if (!isSellerOrAdmin) return;
+    let mounted = true;
+
+    const load = async () => {
+      const n = await chatService.unreadCount();
+      if (mounted) setUnreadMessages(n);
+    };
+
+    load();
+    const timer = window.setInterval(load, 15000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, [isSellerOrAdmin, activeTab]);
 
   // === ЗАЩИТА: если продавец попал на чужую вкладку — редиректим ===
   useEffect(() => {
@@ -122,7 +143,11 @@ const Admin = () => {
   };
 
   return (
-    <AdminLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <AdminLayout
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      messagesBadge={unreadMessages}
+    >
       <Suspense fallback={<TabLoader />}>{renderTab()}</Suspense>
     </AdminLayout>
   );

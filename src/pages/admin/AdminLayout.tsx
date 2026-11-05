@@ -13,9 +13,15 @@ interface Props {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
   children: ReactNode;
+  messagesBadge?: number;
 }
 
-const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
+const AdminLayout = ({
+  activeTab,
+  onTabChange,
+  children,
+  messagesBadge = 0,
+}: Props) => {
   const { user, loading: authLoading, signOut, role } = useAuth();
   const { newOrdersCount, markAllSeen } = useOrders();
   const { pendingCount: reviewsPendingCount } = useReviews();
@@ -273,6 +279,7 @@ const AdminLayout = ({ activeTab, onTabChange, children }: Props) => {
           onChange={handleTabChange}
           ordersBadge={newOrdersCount}
           reviewsBadge={reviewsPendingCount}
+          messagesBadge={messagesBadge}
           role={isPending ? 'seller' : role}
         />
 

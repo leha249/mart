@@ -66,6 +66,9 @@ export interface Order {
   tracking_number: string | null;
   /** cdek | post | boxberry | yandex | other */
   carrier: string | null;
+  /** unpaid | paid | refunded — отмечает продавец вручную */
+  payment_status: 'unpaid' | 'paid' | 'refunded';
+  paid_at: string | null;
   created_at: string;
 }
 

@@ -29,6 +29,7 @@ interface Props {
   onChange: (tab: AdminTab) => void;
   ordersBadge?: number;
   reviewsBadge?: number;
+  messagesBadge?: number;
   role?: UserRole;
 }
 
@@ -37,6 +38,7 @@ const AdminTabs = ({
   onChange,
   ordersBadge = 0,
   reviewsBadge = 0,
+  messagesBadge = 0,
   role = 'admin',
 }: Props) => {
   const isSeller = role === 'seller';
@@ -78,6 +80,7 @@ const AdminTabs = ({
       key: 'messages',
       label: 'Сообщения',
       icon: <MessageCircle size={16} />,
+      badge: messagesBadge > 0 ? messagesBadge : undefined,
     },
     {
       key: 'profile',
