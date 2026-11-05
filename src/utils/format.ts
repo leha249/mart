@@ -3,6 +3,14 @@ import { priceFormatter, dateFormatter } from './constants';
 export const formatPrice = (price: number): string =>
   priceFormatter.format(price) + ' ₽';
 
+/** Телефон в виде «+7 900 555-35-35» из любых цифр. */
+export const formatPhone = (raw?: string | null): string => {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (digits.length < 11) return String(raw ?? '');
+  const d = digits.slice(-10);
+  return `+7 ${d.slice(0, 3)} ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8, 10)}`;
+};
+
 export const formatDate = (iso: string): string => {
   const d = new Date(iso);
   const now = new Date();

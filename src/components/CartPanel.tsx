@@ -14,10 +14,12 @@ import {
 import { useCart } from '../context/CartContext';
 import { usePromo } from '../context/PromoContext';
 import { useToast } from '../context/ToastContext';
+import { useCustomer } from '../context/CustomerContext';
 import { useBodyLock } from '../hooks/useBodyLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-import { formatPrice, pluralize } from '../utils/format';
+import { formatPrice, pluralize, formatPhone } from '../utils/format';
 import { ordersService } from '../services/orders';
+import { supabase } from '../lib/supabase';
 import { chatService } from '../services/chat';
 import { incrementPromocodeUsage } from '../utils/promocodes';
 import { navigate } from '../utils/navigate';
@@ -34,15 +36,44 @@ const CartPanel = ({ open, onClose }: Props) => {
     useCart();
   const promo = usePromo();
   const { addToast } = useToast();
+  const { session: customer, setCustomerName } = useCustomer();
   const [orderSent, setOrderSent] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  // Если покупатель уже вошёл по телефону — подставляем его данные
+  const [name, setName] = useState(customer?.name ?? '');
+  const [phone, setPhone] = useState(
+    customer?.phone ? formatPhone(customer.phone) : ''
+  );
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedData, setAgreedData] = useState(false);
   const [agreedMarketing, setAgreedMarketing] = useState(false);
+
+  // Покупатель вошёл по телефону уже после открытия корзины —
+  // добираем пустые поля из его сессии
+  useEffect(() => {
+    if (!customer) return;
+    setPhone((prev) => prev || formatPhone(customer.phone));
+    setName((prev) => prev || (customer.name ?? ''));
+  }, [customer]);
+
+  // Имени нет в сессии — берём его из прошлого заказа этого телефона
+  useEffect(() => {
+    if (!showCheckout || !customer || name.trim()) return;
+    let cancelled = false;
+
+    supabase
+      .rpc('get_orders_by_phone', { phone_input: customer.phone })
+      .then(({ data }) => {
+        const last = (data as { customer_name?: string }[] | null)?.[0];
+        if (!cancelled && last?.customer_name) setName(last.customer_name);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showCheckout, customer, name]);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useBodyLock(open);
@@ -188,6 +219,11 @@ const CartPanel = ({ open, onClose }: Props) => {
         });
       }
 
+      // Запоминаем имя в профиле покупателя — чтобы не спрашивать снова
+      if (customer && !customer.name && name.trim()) {
+        setCustomerName(name.trim());
+      }
+
       // Сразу открываем чат с продавцом и пишем номер заказа,
       // чтобы он понимал контекст и мог ответить по оплате и доставке.
       for (const o of createdOrders) {
@@ -242,8 +278,11 @@ const CartPanel = ({ open, onClose }: Props) => {
       setTimeout(() => {
         clearCart();
         promo.clearCode();
-        setName('');
-        setPhone('');
+        // Имя и телефон не стираем: покупатель вошёл, они ему ещё нужны
+        if (!customer) {
+          setName('');
+          setPhone('');
+        }
         setEmail('');
         setAgreedTerms(false);
         setAgreedData(false);

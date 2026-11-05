@@ -11,7 +11,8 @@ returns table (
   seller_id bigint,
   tracking_number text,
   carrier text,
-  payment_status text
+  payment_status text,
+  customer_name text
 )
 language sql
 security definer
@@ -26,7 +27,8 @@ as $fn$
     o.seller_id::bigint as seller_id,
     o.tracking_number   as tracking_number,
     o.carrier           as carrier,
-    o.payment_status    as payment_status
+    o.payment_status    as payment_status,
+    o.customer_name     as customer_name
   from public.orders o
   where length(regexp_replace(coalesce(phone_input, ''), '\D', '', 'g')) >= 10
     and regexp_replace(coalesce(o.customer_phone, ''), '\D', '', 'g')
