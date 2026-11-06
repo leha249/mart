@@ -44,6 +44,7 @@ const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 
 const CustomerLoginPage = lazy(() => import('./pages/CustomerLoginPage'));
 const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'));
+const LogoutPage = lazy(() => import('./pages/LogoutPage'));
 
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ContactsPage = lazy(() => import('./pages/ContactsPage'));
@@ -207,6 +208,7 @@ function AppRoutes() {
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<LogoutPage />} />
         <Route path="/register-seller" element={<RegisterSellerPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/login-customer" element={<CustomerLoginPage />} />

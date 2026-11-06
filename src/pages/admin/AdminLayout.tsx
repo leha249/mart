@@ -7,7 +7,6 @@ import { useReviews } from '../../context/ReviewsContext';
 import AdminTabs from '../../components/admin/AdminTabs';
 import type { AdminTab } from '../../components/admin/AdminTabs';
 import { useToast } from '../../context/ToastContext';
-import { navigate } from '../../utils/navigate';
 
 interface Props {
   activeTab: AdminTab;
@@ -53,10 +52,14 @@ const AdminLayout = ({
 
       await signOut();
       addToast('Вы вышли из аккаунта', 'info');
-      navigate('/');
     } catch (e) {
-      addToast('Ошибка выхода', 'error');
+      // signOut сам чистит сессию локально; сюда попадаем только при
+      // непредвиденной ошибке — всё равно уводим на главную.
+      console.error('[AdminLayout] signOut:', e);
     }
+    // Полная перезагрузка: гарантирует сброс всех провайдеров и кэшей,
+    // даже если какой-то компонент не успел отреагировать на role=guest.
+    window.location.replace('/');
   };
 
   if (authLoading) {

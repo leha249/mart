@@ -180,16 +180,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /**
+   * Выход из аккаунта.
+   *
+   * Важно: выход не должен зависеть от сети. Если Supabase не ответил
+   * (VPN, блокировка, протухший токен), локальную сессию всё равно
+   * вычищаем — иначе пользователь остаётся в кабинете навсегда.
+   */
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setRole('guest');
-      setSellerId(null);
-      setSellerName(null);
+      await supabase.auth.signOut();
     } catch (e) {
-      throw normalizeError(e);
+      console.warn('[AuthContext] signOut через сеть не удался:', e);
     }
+
+    // Локальный выход: чистит сессию в localStorage без запроса к серверу.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.warn('[AuthContext] локальный signOut:', e);
+    }
+
+    // Страховка: убираем оставшиеся токены Supabase вручную.
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('sb-') && key.includes('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // приватный режим — не критично
+    }
+
+    setUser(null);
+    setSession(null);
+    setRole('guest');
+    setSellerId(null);
+    setSellerName(null);
   };
 
   const refreshRole = async () => {

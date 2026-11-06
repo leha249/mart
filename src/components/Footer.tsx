@@ -1,13 +1,16 @@
 import { motion } from 'framer-motion';
-import { Send, Play, Mail, Camera, ArrowUpRight } from 'lucide-react';
+import { Send, Play, Mail, Camera, ArrowUpRight, LogOut } from 'lucide-react';
 import Logo from './Logo';
 import { useCustomer } from '../context/CustomerContext';
+import { useAuth } from '../context/AuthContext';
 import { navigate } from '../utils/navigate';
 
 const noop = (e: React.MouseEvent) => e.preventDefault();
 
 const Footer = () => {
   const { isAuthenticated: isCustomer } = useCustomer();
+  const { role } = useAuth();
+  const isSellerAccount = role === 'seller' || role === 'admin' || role === 'pending';
 
   const go = (path: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -230,6 +233,23 @@ const Footer = () => {
             >
               Условия
             </a>
+            {isSellerAccount && (
+              <a
+                href="/logout"
+                onClick={go('/logout')}
+                style={{
+                  color: 'var(--accent)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'color 0.2s',
+                }}
+                className="footer-bottom-link"
+              >
+                <LogOut size={13} /> Выйти из кабинета
+              </a>
+            )}
           </div>
         </div>
       </div>
