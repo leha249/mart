@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { errorMessage } from '../utils/errors';
 
 const STORAGE_KEY = 'mora-customer-session-v1';
 
@@ -19,7 +20,13 @@ interface CustomerSession {
 interface CustomerContextType {
   session: CustomerSession | null;
   isAuthenticated: boolean;
-  requestCode: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * `code` приходит только в demo-режиме (флаг otp_demo в БД).
+   * В обычном режиме сервер возвращает null — код уходит по SMS.
+   */
+  requestCode: (
+    phone: string
+  ) => Promise<{ success: boolean; code?: string | null; error?: string }>;
   verifyCode: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>;
   setCustomerName: (name: string) => void;
   signOut: () => void;
@@ -62,32 +69,31 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Запросить код подтверждения.
    *
-   * Код НЕ возвращается клиенту: иначе любой мог запросить код на чужой
-   * номер и сразу войти. Отправка должна идти через SMS-провайдера
-   * (сейчас провайдер не подключён — вход в кабинет временно недоступен).
+   * Код клиенту не возвращается, кроме demo-режима: флаг `otp_demo`
+   * в таблице app_settings включает показ кода на экране (для локальных
+   * тестов). В обычном режиме код уходит по SMS — провайдер ещё не
+   * подключён, поэтому вход в кабинет там недоступен.
    */
   const requestCode = useCallback(
-    async (phone: string): Promise<{ success: boolean; error?: string }> => {
+    async (
+      phone: string
+    ): Promise<{ success: boolean; code?: string | null; error?: string }> => {
       const normalized = normalizePhone(phone);
       if (normalized.length < 10) {
         return { success: false, error: 'Некорректный номер телефона' };
       }
 
       try {
-        const { error } = await supabase.rpc('create_customer_code', {
+        const { data, error } = await supabase.rpc('create_customer_code', {
           phone_input: phone,
         });
 
         if (error) throw error;
 
-        return { success: true };
+        return { success: true, code: (data as string | null) ?? null };
       } catch (e) {
         console.error('[CustomerContext.requestCode]', e);
-        return {
-          success: false,
-          error:
-            e instanceof Error ? e.message : 'Не удалось создать код',
-        };
+        return { success: false, error: errorMessage(e, 'Не удалось создать код') };
       }
     },
     []
@@ -133,8 +139,7 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         console.error('[CustomerContext.verifyCode]', e);
         return {
           success: false,
-          error:
-            e instanceof Error ? e.message : 'Ошибка проверки кода',
+          error: errorMessage(e, 'Ошибка проверки кода'),
         };
       }
     },

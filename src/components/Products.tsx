@@ -363,6 +363,10 @@ const ProductCard = memo(
               'Нет в наличии'
             ) : added ? (
               <>✓ Добавлено</>
+            ) : product.sizes.length > 0 ? (
+              <>
+                <Plus size={16} /> Выбрать размер
+              </>
             ) : (
               <>
                 <Plus size={16} /> В корзину

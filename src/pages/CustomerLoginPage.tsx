@@ -26,6 +26,11 @@ const CustomerLoginPage = () => {
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  /**
+   * Показываем код только если сервер его вернул — это demo-режим
+   * (флаг otp_demo в БД). В обычном режиме код уходит по SMS.
+   */
+  const [displayedCode, setDisplayedCode] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +69,8 @@ const CustomerLoginPage = () => {
     const result = await requestCode(trimmed);
 
     if (result.success) {
+      // В demo-режиме сервер отдаёт код — показываем. Иначе код ушёл по SMS.
+      setDisplayedCode(result.code ?? null);
       setStep('code');
       setTimeout(() => codeInputRef.current?.focus(), 200);
     } else {
@@ -100,6 +107,7 @@ const CustomerLoginPage = () => {
   const handleBackToPhone = () => {
     setStep('phone');
     setCode('');
+    setDisplayedCode(null);
     setError(null);
   };
 
@@ -188,6 +196,8 @@ const CustomerLoginPage = () => {
               >
                 {step === 'phone'
                   ? 'Введите номер телефона, который указывали при оформлении заказа'
+                  : displayedCode
+                  ? 'Demo-режим: код показан ниже. Введите 4 цифры.'
                   : `Мы отправили код на ${phone}. Введите 4 цифры.`}
               </p>
             </div>
@@ -234,6 +244,9 @@ const CustomerLoginPage = () => {
                     />
                     <input
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      maxLength={20}
                       value={phone}
                       onChange={(e) => {
                         setPhone(e.target.value);
@@ -394,6 +407,43 @@ const CustomerLoginPage = () => {
                     gap: 16,
                   }}
                 >
+                  {displayedCode && (
+                    <div
+                      style={{
+                        padding: '14px 16px',
+                        background: 'rgba(232,255,90,0.08)',
+                        border: '1px solid rgba(232,255,90,0.3)',
+                        borderRadius: 12,
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--muted)',
+                          letterSpacing: '1px',
+                          textTransform: 'uppercase',
+                          marginBottom: 6,
+                        }}
+                      >
+                        Ваш код (demo-режим)
+                      </div>
+                      <div
+                        className="price-num"
+                        style={{
+                          fontSize: 28,
+                          fontWeight: 900,
+                          letterSpacing: 8,
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        {displayedCode}
+                      </div>
+                    </div>
+                  )}
+
                   <label
                     style={{
                       fontSize: 12,

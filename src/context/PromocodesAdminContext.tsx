@@ -54,6 +54,15 @@ export const PromocodesAdminProvider = ({
 
   useEffect(() => {
     mountedRef.current = true;
+
+    // Гость не должен даже пробовать: после закрытия публичного SELECT
+    // на promocodes запрос возвращает 401 и засоряет консоль.
+    if (!user && role !== 'seller' && role !== 'admin') {
+      setLoading(false);
+      setPromocodes([]);
+      return;
+    }
+
     fetch();
 
     const channelName =

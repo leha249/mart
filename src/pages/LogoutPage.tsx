@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
+import { useCustomer } from '../context/CustomerContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 /**
@@ -10,9 +11,13 @@ import { usePageMeta } from '../hooks/usePageMeta';
  * Нужен, когда кнопка «Выйти» в кабинете недоступна (например, кабинет
  * не открывается или вкладка сломалась): достаточно набрать адрес
  * в браузере, сессия сбрасывается и человек уходит на главную.
+ *
+ * Гасит ОБЕ сессии: продавца/админа (Supabase Auth) и покупателя
+ * (localStorage mora-customer-session-v1).
  */
 const LogoutPage = () => {
   const { signOut } = useAuth();
+  const { signOut: signOutCustomer } = useCustomer();
   const [failed, setFailed] = useState(false);
 
   usePageMeta({ title: 'Выход — MØRA MART', noindex: true });
@@ -22,6 +27,15 @@ const LogoutPage = () => {
 
     const run = async () => {
       try {
+        // Покупательская сессия живёт отдельно от Supabase Auth.
+        // Удаляем ключ синхронно: эффект CustomerContext может не успеть
+        // сработать до window.location.replace и сессия остаётся.
+        try {
+          localStorage.removeItem('mora-customer-session-v1');
+        } catch {
+          // приватный режим — не критично
+        }
+        signOutCustomer();
         await signOut();
       } catch (e) {
         console.error('[LogoutPage] signOut:', e);
@@ -35,7 +49,7 @@ const LogoutPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [signOut]);
+  }, [signOut, signOutCustomer]);
 
   return (
     <div style={{ minHeight: '100vh' }}>

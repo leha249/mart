@@ -10,6 +10,11 @@ export default defineConfig({
     hmr: {
       host: '127.0.0.1',
     },
+    watch: {
+      // OneDrive: native watcher misses changes and serves stale code.
+      usePolling: true,
+      interval: 300,
+    },
   },
   build: {
     target: 'es2020',
