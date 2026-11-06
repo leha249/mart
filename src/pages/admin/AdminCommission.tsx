@@ -17,6 +17,7 @@ import {
   MIN_COMMISSION_PERCENT,
   commissionService,
   type CommissionBalance,
+  type CommissionInvoice,
   type CommissionPayment,
   type CommissionPaymentStatus,
 } from '../../services/commission';
@@ -41,6 +42,17 @@ const cardStyle: React.CSSProperties = {
   padding: 28,
 };
 
+/** Счёт за неделю — конкретная дата, а не «1 дн. назад». */
+const invoiceDate = (value: string): string => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
 const AdminCommission = () => {
   const { role, sellerId } = useAuth();
   const { sellers, refetch: refetchSellers } = useSellers();
@@ -55,6 +67,8 @@ const AdminCommission = () => {
 
   const [payments, setPayments] = useState<CommissionPayment[]>([]);
   const [balances, setBalances] = useState<CommissionBalance[]>([]);
+  const [invoices, setInvoices] = useState<CommissionInvoice[]>([]);
+  const [billing, setBilling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState<number | null>(null);
@@ -74,7 +88,23 @@ const AdminCommission = () => {
   );
 
   const debt = myBalance?.debt ?? 0;
-  const amountValue = amount ?? (debt > 0 ? String(debt) : '');
+
+  /** Самый старый неоплаченный счёт — его и предлагаем оплатить. */
+  const unpaidInvoice = useMemo(
+    () =>
+      [...invoices]
+        .filter((inv) => inv.status !== 'paid' && inv.status !== 'waived')
+        .sort((a, b) => a.period_start.localeCompare(b.period_start))[0] ?? null,
+    [invoices]
+  );
+
+  const amountValue =
+    amount ??
+    (unpaidInvoice
+      ? String(Math.max(unpaidInvoice.accrued - unpaidInvoice.paid, 0))
+      : debt > 0
+      ? String(debt)
+      : '');
   const rate = Number(me?.commissionPercent ?? COMMISSION.defaultPercent);
   const pending = payments.filter((p) => p.status === 'pending');
   const hasPendingRequest = pending.length > 0;
@@ -93,6 +123,12 @@ const AdminCommission = () => {
 
   const load = useCallback(async () => {
     try {
+      // Ленивый недельный прогон: сервер сам решит, пора ли выставлять счёт
+      // (пятница) и не пора ли кого-то поставить на паузу. Повтор безопасен.
+      await commissionService.runWeeklyBilling();
+
+      const invoiceRows = await commissionService.getInvoices();
+
       if (isAdmin) {
         const [paymentRows, balanceRows] = await Promise.all([
           commissionService.getAll(),
@@ -111,6 +147,8 @@ const AdminCommission = () => {
         setPayments([]);
         setBalances([]);
       }
+
+      setInvoices(invoiceRows);
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : 'Не удалось загрузить данные по комиссии';
@@ -137,7 +175,12 @@ const AdminCommission = () => {
 
     setSending(true);
     try {
-      await commissionService.requestPayment(sellerId, value, comment);
+      await commissionService.requestPayment(
+        sellerId,
+        value,
+        comment,
+        unpaidInvoice?.id
+      );
       addToast('Заявка отправлена — админ подтвердит оплату', 'success');
       setComment('');
       setAmount(null);
@@ -148,6 +191,28 @@ const AdminCommission = () => {
       addToast(msg, 'error');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleRunBilling = async () => {
+    if (billing) return;
+    setBilling(true);
+    try {
+      const created = await commissionService.forceWeeklyBilling();
+      addToast(
+        created > 0
+          ? `Сформировано счетов: ${created}`
+          : 'Новых счетов за эту неделю нет',
+        'success'
+      );
+      await load();
+    } catch (e) {
+      addToast(
+        e instanceof Error ? e.message : 'Не удалось сформировать счета',
+        'error'
+      );
+    } finally {
+      setBilling(false);
     }
   };
 
@@ -685,6 +750,108 @@ const AdminCommission = () => {
           )}
         </div>
       )}
+
+      {/* Недельные счета */}
+      <div style={cardStyle}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            marginBottom: 6,
+          }}
+        >
+          <h2 className="serif" style={{ fontSize: 24, margin: 0 }}>
+            Счета по неделям
+          </h2>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleRunBilling}
+              disabled={billing}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 100,
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--text)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: billing ? 'wait' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {billing ? 'Считаем…' : 'Сформировать за неделю'}
+            </button>
+          )}
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+          Комиссия {rate}% считается по пятницам за предыдущие 7 дней.
+          Оплатить — до конца следующей пятницы, иначе магазин уходит в паузу.
+        </p>
+
+        {loading ? (
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Загрузка…</div>
+        ) : invoices.length === 0 ? (
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+            Счетов пока нет — появятся после первых продаж.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {invoices.map((inv) => {
+              const isPaid = inv.status === 'paid';
+              const overdue =
+                !isPaid && new Date(inv.due_at).getTime() < Date.now();
+              return (
+                <div
+                  key={inv.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                    padding: '14px 16px',
+                    background: 'var(--bg)',
+                    border: `1px solid ${
+                      overdue ? 'var(--danger)' : 'var(--border)'
+                    }`,
+                    borderRadius: 14,
+                  }}
+                >
+                  <div style={{ minWidth: 180 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      {invoiceDate(inv.period_start)} —{' '}
+                      {invoiceDate(inv.period_end)}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      Оплатить до {invoiceDate(inv.due_at)}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>
+                    {formatPrice(inv.accrued)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: isPaid
+                        ? 'var(--success)'
+                        : overdue
+                        ? 'var(--danger)'
+                        : 'var(--accent)',
+                    }}
+                  >
+                    {isPaid ? 'Оплачен' : overdue ? 'Просрочен' : 'Ждёт оплаты'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Админ: заявки на подтверждение */}
       {isAdmin && (

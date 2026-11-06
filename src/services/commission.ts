@@ -4,7 +4,7 @@ import { normalizeError, ValidationError } from '../utils/errors';
 /** Условия платформы. Меняются в одном месте. */
 export const COMMISSION = {
   /** Ставка по умолчанию, %. */
-  defaultPercent: 10,
+  defaultPercent: 4,
   /** Реквизиты для перевода — заполните перед запуском. */
   payDetails: {
     method: 'СБП',
@@ -37,6 +37,22 @@ export interface CommissionBalance {
   accrued: number;
   paid: number;
   debt: number;
+}
+
+export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'waived';
+
+/** Недельный счёт: комиссия за период, срок оплаты — следующая пятница. */
+export interface CommissionInvoice {
+  id: number;
+  seller_id: number;
+  period_start: string;
+  period_end: string;
+  accrued: number;
+  paid: number;
+  status: InvoiceStatus;
+  due_at: string;
+  issued_at: string;
+  paid_at: string | null;
 }
 
 const clampComment = (comment?: string): string | null => {
@@ -93,13 +109,62 @@ export const commissionService = {
   },
 
   /**
+   * Недельные счета. RLS: продавец видит свои, админ — все.
+   */
+  async getInvoices(limit = 12): Promise<CommissionInvoice[]> {
+    try {
+      const { data, error } = await supabase
+        .from('commission_invoices')
+        .select('*')
+        .order('period_start', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as CommissionInvoice[];
+    } catch (e) {
+      console.error('[commissionService.getInvoices]', e);
+      throw normalizeError(e);
+    }
+  },
+
+  /**
+   * Ленивый прогон недельного биллинга: если сегодня пятница (или позже),
+   * сервер сформирует счета и расставит паузы. Дубли не создаются.
+   */
+  async runWeeklyBilling(): Promise<{ invoices_created?: number; sellers_paused?: number } | null> {
+    try {
+      const { data, error } = await supabase.rpc('run_weekly_billing_safe');
+      if (error) throw error;
+      return (data ?? null) as { invoices_created?: number } | null;
+    } catch (e) {
+      console.warn('[commissionService.runWeeklyBilling]', e);
+      return null;
+    }
+  },
+
+  /** Только админ: принудительно сформировать счета за неделю. */
+  async forceWeeklyBilling(issueDate?: string): Promise<number> {
+    try {
+      const { data, error } = await supabase.rpc('run_weekly_billing', {
+        p_issue_date: issueDate ?? new Date().toISOString().slice(0, 10),
+      });
+      if (error) throw error;
+      const payload = (data ?? {}) as { invoices_created?: number };
+      return payload.invoices_created ?? 0;
+    } catch (e) {
+      console.error('[commissionService.forceWeeklyBilling]', e);
+      throw normalizeError(e);
+    }
+  },
+
+  /**
    * Продавец сообщает о переводе комиссии: создаётся заявка pending.
    * seller_id обязателен: RLS проверяет seller_id = my_seller_id().
    */
   async requestPayment(
     sellerId: number,
     amount: number,
-    comment?: string
+    comment?: string,
+    invoiceId?: number
   ): Promise<void> {
     const value = Math.round(Number(amount));
     if (!Number.isFinite(value) || value < 1) {
@@ -113,6 +178,7 @@ export const commissionService = {
         method: 'sbp',
         status: 'pending',
         comment: clampComment(comment),
+        invoice_id: invoiceId ?? null,
       });
       if (error) throw error;
     } catch (e) {
