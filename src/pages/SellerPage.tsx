@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import type { UISeller, UIProduct } from '../types/database';
 import { mapProductToUI } from '../types/database';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import SellerHero from '../components/seller/SellerHero';
 import SellerCatalog from '../components/seller/SellerCatalog';
 import SellerLookbook from '../components/seller/SellerLookbook';
@@ -231,6 +232,7 @@ const SellerPage = ({ slug }: Props) => {
             <ArrowLeft size={16} /> На главную MØRA MART
           </button>
         </div>
+        <Footer />
       </>
     );
   }

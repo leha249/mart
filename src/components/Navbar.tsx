@@ -429,6 +429,10 @@ const Navbar = () => {
           align-items: center;
           justify-content: center;
           padding: 0;
+          /* Иконка 18×18, но область нажатия — 40×40 (WCAG 2.5.8 требует ≥24) */
+          min-width: 40px;
+          min-height: 40px;
+          margin: -11px 0;
           transition: color 0.2s;
         }
         .icon-btn:hover {

@@ -78,8 +78,14 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
     async (
       phone: string
     ): Promise<{ success: boolean; code?: string | null; error?: string }> => {
+      // Мусор в номере не «вырезаем молча»: иначе +7 999 000-00-0% станет
+      // другим валидным номером и код уйдёт не туда.
+      if (!/^[\d\s()+\-]+$/.test(phone.trim())) {
+        return { success: false, error: 'Некорректный номер телефона' };
+      }
+
       const normalized = normalizePhone(phone);
-      if (normalized.length < 10) {
+      if (normalized.length < 10 || normalized.length > 15) {
         return { success: false, error: 'Некорректный номер телефона' };
       }
 
