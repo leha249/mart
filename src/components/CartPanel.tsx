@@ -44,29 +44,33 @@ const CartPanel = ({ open, onClose }: Props) => {
     useCart();
   const promo = usePromo();
   const { addToast } = useToast();
-  const { session: customer, setCustomerName } = useCustomer();
+  const { session: customer, register, setCustomerName } = useCustomer();
   const [orderSent, setOrderSent] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  // Если покупатель уже вошёл по телефону — подставляем его данные,
+  // Если покупатель уже зарегистрирован — подставляем его данные,
   // иначе берём имя из прошлого заказа на этом устройстве
   const [name, setName] = useState(
-    () => customer?.name || readLastOrderName()
+    () => customer?.firstName || customer?.name || readLastOrderName()
   );
+  const [lastName, setLastName] = useState(() => customer?.lastName ?? '');
   const [phone, setPhone] = useState(
     customer?.phone ? formatPhone(customer.phone) : ''
   );
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(customer?.email ?? '');
   const [submitting, setSubmitting] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedData, setAgreedData] = useState(false);
   const [agreedMarketing, setAgreedMarketing] = useState(false);
 
-  // Покупатель вошёл по телефону уже после открытия корзины —
+  // Покупатель вошёл/зарегистрировался уже после открытия корзины —
   // добираем пустые поля из его сессии
   useEffect(() => {
     if (!customer) return;
     setPhone((prev) => prev || formatPhone(customer.phone));
-    setName((prev) => prev || (customer.name ?? ''));
+    setName((prev) => prev || customer.firstName || customer.name || '');
+    setLastName((prev) => prev || customer.lastName || '');
+    setEmail((prev) => prev || customer.email || '');
   }, [customer]);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -124,8 +128,57 @@ const CartPanel = ({ open, onClose }: Props) => {
 
   const canCheckout = agreedTerms && agreedData;
 
+  const validateRegistration = (): string | null => {
+    if (name.trim().length < 1) return 'Укажите имя';
+    if (lastName.trim().length < 1) return 'Укажите фамилию';
+    if (!/^[\d\s()+\-]+$/.test(phone.trim())) {
+      return 'Некорректный телефон';
+    }
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 15) {
+      return 'Укажите корректный телефон';
+    }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return 'Некорректный email';
+    }
+    if (!agreedData) return 'Необходимо согласие на обработку данных';
+    if (!agreedTerms) return 'Необходимо согласие с условиями';
+    return null;
+  };
+
+  /** Шаг 1 оформления: создать профиль покупателя. */
+  const handleRegister = async () => {
+    if (registering) return;
+
+    const err = validateRegistration();
+    if (err) {
+      addToast(err, 'error');
+      return;
+    }
+
+    setRegistering(true);
+    try {
+      const res = await register({
+        firstName: name,
+        lastName,
+        phone,
+        email,
+      });
+      if (!res.success) {
+        addToast(res.error || 'Не удалось создать профиль', 'error');
+        return;
+      }
+      addToast('Профиль покупателя создан', 'success');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   const validateCheckout = (): string | null => {
-    if (name.trim().length < 2) return 'Укажите имя';
+    if (!customer) {
+      return validateRegistration();
+    }
+    if (name.trim().length < 1) return 'Укажите имя';
     if (phone.replace(/\D/g, '').length < 10) {
       return 'Укажите корректный телефон';
     }
@@ -169,8 +222,17 @@ const CartPanel = ({ open, onClose }: Props) => {
         })
       );
 
+      // Имя берём из профиля покупателя целиком: имя + фамилия.
+      const customerName =
+        [customer?.firstName, customer?.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() ||
+        customer?.name ||
+        name.trim();
+
       const orders = await ordersService.createMany({
-        customer_name: name.trim(),
+        customer_name: customerName,
         customer_phone: phone.trim(),
         customer_email: email.trim() || undefined,
         groups,
@@ -435,31 +497,88 @@ const CartPanel = ({ open, onClose }: Props) => {
                       marginBottom: 8,
                     }}
                   >
-                    Контакты для связи
+                    {customer ? 'Покупатель' : 'Регистрация покупателя'}
                   </div>
-                  <Field
-                    label="Имя *"
-                    value={name}
-                    onChange={setName}
-                    placeholder="Иван Иванов"
-                    disabled={submitting || orderSent}
-                  />
-                  <Field
-                    label="Телефон *"
-                    value={phone}
-                    onChange={setPhone}
-                    placeholder="+7 900 000-00-00"
-                    type="tel"
-                    disabled={submitting || orderSent}
-                  />
-                  <Field
-                    label="Email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="you@example.com"
-                    type="email"
-                    disabled={submitting || orderSent}
-                  />
+
+                  {customer ? (
+                    <div
+                      style={{
+                        padding: '14px 16px',
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>
+                        {[customer.firstName, customer.lastName]
+                          .filter(Boolean)
+                          .join(' ') || customer.name}
+                      </div>
+                      <div style={{ color: 'var(--text-dim)' }}>
+                        {formatPhone(customer.phone)}
+                      </div>
+                      {customer.email && (
+                        <div style={{ color: 'var(--text-dim)' }}>
+                          {customer.email}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--muted)',
+                          marginTop: 6,
+                        }}
+                      >
+                        Данные из профиля покупателя. Изменить — в кабинете.
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--muted)',
+                          lineHeight: 1.5,
+                          marginBottom: 4,
+                        }}
+                      >
+                        Чтобы оформить заказ, создайте профиль покупателя:
+                        имя, фамилия, телефон и почта.
+                      </p>
+                      <Field
+                        label="Имя *"
+                        value={name}
+                        onChange={setName}
+                        placeholder="Иван"
+                        disabled={submitting || orderSent || registering}
+                      />
+                      <Field
+                        label="Фамилия *"
+                        value={lastName}
+                        onChange={setLastName}
+                        placeholder="Иванов"
+                        disabled={submitting || orderSent || registering}
+                      />
+                      <Field
+                        label="Телефон *"
+                        value={phone}
+                        onChange={setPhone}
+                        placeholder="+7 900 000-00-00"
+                        type="tel"
+                        disabled={submitting || orderSent || registering}
+                      />
+                      <Field
+                        label="Email"
+                        value={email}
+                        onChange={setEmail}
+                        placeholder="you@example.com"
+                        type="email"
+                        disabled={submitting || orderSent || registering}
+                      />
+                    </>
+                  )}
 
                   {willSplitInto && (
                     <div
@@ -952,10 +1071,15 @@ const CartPanel = ({ open, onClose }: Props) => {
                   whileHover={{ scale: orderSent ? 1 : 1.02 }}
                   whileTap={{ scale: orderSent ? 1 : 0.98 }}
                   onClick={
-                    showCheckout ? handleCheckout : () => setShowCheckout(true)
+                    !showCheckout
+                      ? () => setShowCheckout(true)
+                      : customer
+                      ? handleCheckout
+                      : handleRegister
                   }
                   disabled={
                     submitting ||
+                    registering ||
                     orderSent ||
                     (showCheckout && !canCheckout)
                   }
@@ -995,11 +1119,15 @@ const CartPanel = ({ open, onClose }: Props) => {
                     <>
                       <Check size={18} /> Заказ оформлен!
                     </>
+                  ) : registering ? (
+                    'Создаём профиль…'
                   ) : submitting ? (
                     'Отправка...'
                   ) : showCheckout ? (
                     !canCheckout ? (
                       'Примите условия'
+                    ) : !customer ? (
+                      'Зарегистрироваться и продолжить'
                     ) : willSplitInto ? (
                       `Оформить (${uniqueSellers} ${pluralize(
                         uniqueSellers,
@@ -1020,7 +1148,7 @@ const CartPanel = ({ open, onClose }: Props) => {
         </>
       )}
 
-      <style>{`
+      <style key="cart-panel-styles">{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }

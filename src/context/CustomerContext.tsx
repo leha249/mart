@@ -14,7 +14,18 @@ const STORAGE_KEY = 'mora-customer-session-v1';
 interface CustomerSession {
   phone: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  customerId?: number;
   verifiedAt: string;
+}
+
+export interface RegisterCustomerInput {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
 }
 
 interface CustomerContextType {
@@ -28,6 +39,10 @@ interface CustomerContextType {
     phone: string
   ) => Promise<{ success: boolean; code?: string | null; error?: string }>;
   verifyCode: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  /** Регистрация покупателя: имя, фамилия, телефон, email. */
+  register: (
+    input: RegisterCustomerInput
+  ) => Promise<{ success: boolean; error?: string }>;
   setCustomerName: (name: string) => void;
   signOut: () => void;
 }
@@ -152,6 +167,73 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
+  /**
+   * Регистрация покупателя перед первым заказом.
+   * Профиль (имя, фамилия, телефон, email) хранится на сервере,
+   * на устройстве остаётся только сессия.
+   */
+  const register = useCallback(
+    async (
+      input: RegisterCustomerInput
+    ): Promise<{ success: boolean; error?: string }> => {
+      const firstName = input.firstName.trim();
+      const lastName = input.lastName.trim();
+      const phone = input.phone.trim();
+      const email = input.email?.trim() ?? '';
+
+      if (!firstName) return { success: false, error: 'Укажите имя' };
+      if (!lastName) return { success: false, error: 'Укажите фамилию' };
+      if (!/^[\d\s()+\-]+$/.test(phone)) {
+        return { success: false, error: 'Некорректный номер телефона' };
+      }
+
+      const digits = normalizePhone(phone);
+      if (digits.length < 10 || digits.length > 15) {
+        return { success: false, error: 'Некорректный номер телефона' };
+      }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { success: false, error: 'Некорректный email' };
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('register_customer', {
+          p_first_name: firstName,
+          p_last_name: lastName,
+          p_phone: phone,
+          p_email: email || null,
+        });
+        if (error) throw error;
+
+        const row = (data ?? {}) as {
+          id?: number;
+          phone?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string | null;
+        };
+
+        setSession({
+          phone: row.phone ?? digits,
+          firstName: row.first_name ?? firstName,
+          lastName: row.last_name ?? lastName,
+          email: row.email ?? (email || undefined),
+          customerId: row.id,
+          name: `${row.first_name ?? firstName} ${row.last_name ?? lastName}`.trim(),
+          verifiedAt: new Date().toISOString(),
+        });
+
+        return { success: true };
+      } catch (e) {
+        console.error('[CustomerContext.register]', e);
+        return {
+          success: false,
+          error: errorMessage(e, 'Не удалось создать профиль покупателя'),
+        };
+      }
+    },
+    []
+  );
+
   const setCustomerName = useCallback((name: string) => {
     setSession((prev) => (prev ? { ...prev, name: name.trim() } : prev));
   }, []);
@@ -167,6 +249,7 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!session,
         requestCode,
         verifyCode,
+        register,
         setCustomerName,
         signOut,
       }}
