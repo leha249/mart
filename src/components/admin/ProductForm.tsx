@@ -8,7 +8,6 @@ import { useCmdS } from '../../hooks/useHotkey';
 import {
   isValidHex,
   isPositiveNumber,
-  isValidRating,
   parseCommaList,
 } from '../../utils/validators';
 import type { Product } from '../../types/database';
@@ -24,8 +23,6 @@ export interface FormState {
   tag: '' | 'NEW' | 'HOT' | 'SALE';
   sizes: string;
   colors: string;
-  rating: string;
-  reviews: string;
   in_stock: boolean;
 }
 
@@ -40,8 +37,6 @@ export const emptyForm: FormState = {
   tag: '',
   sizes: '',
   colors: '',
-  rating: '0',
-  reviews: '0',
   in_stock: true,
 };
 
@@ -63,8 +58,6 @@ export const formFromProduct = (p: Product): FormState => {
     tag: p.tag ?? '',
     sizes: (p.sizes ?? []).join(', '),
     colors: (p.colors ?? []).join(', '),
-    rating: String(p.rating),
-    reviews: String(p.reviews),
     in_stock: p.in_stock,
   };
 };
@@ -141,12 +134,6 @@ const ProductForm = ({
 
     if (!form.category.trim()) errs.category = 'Выберите категорию';
     if (form.images.length === 0) errs.images = 'Загрузите хотя бы одно фото';
-
-    if (form.rating && !isValidRating(form.rating))
-      errs.rating = 'Рейтинг от 0 до 5';
-
-    if (form.reviews && Number(form.reviews) < 0)
-      errs.reviews = 'Не может быть отрицательным';
 
     if (form.colors) {
       const colors = parseCommaList(form.colors);
@@ -419,27 +406,6 @@ const ProductForm = ({
         error={errors.colors}
         disabled={saving}
       />
-
-      <Row>
-        <Field
-          label="Рейтинг (0–5)"
-          value={form.rating}
-          onChange={(v) => setField('rating', v)}
-          placeholder="4.9"
-          type="number"
-          error={errors.rating}
-          disabled={saving}
-        />
-        <Field
-          label="Отзывов"
-          value={form.reviews}
-          onChange={(v) => setField('reviews', v)}
-          placeholder="128"
-          type="number"
-          error={errors.reviews}
-          disabled={saving}
-        />
-      </Row>
 
       <label
         style={{

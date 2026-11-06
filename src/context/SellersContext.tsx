@@ -39,6 +39,18 @@ export const SellersProvider = ({ children }: { children: ReactNode }) => {
       const data = isAdmin
         ? await sellersService.getAll()
         : await sellersService.getActive();
+
+      // Публичный view не содержит ставку комиссии. Продавцу добавляем
+      // его собственную строку из таблицы sellers (RLS: только своя).
+      if (!isAdmin && user) {
+        const mine = await sellersService.getMy();
+        if (mine) {
+          const index = data.findIndex((s) => s.id === mine.id);
+          if (index >= 0) data[index] = { ...data[index], ...mine };
+          else data.push(mine);
+        }
+      }
+
       if (mountedRef.current) setSellers(data);
     } catch (e) {
       if (mountedRef.current)

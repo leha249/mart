@@ -39,6 +39,28 @@ export interface CreateOrderInput {
   marketing_consent?: boolean;
 }
 
+/** Позиция в группе заказа: сервер сам подтянет название, цену и картинку. */
+export interface CreateOrdersBatchItem {
+  id: number;
+  quantity: number;
+  size?: string | null;
+}
+
+/** Группа позиций одного продавца — станет одним заказом. */
+export interface CreateOrdersBatchGroup {
+  seller_id: number | null;
+  items: CreateOrdersBatchItem[];
+}
+
+export interface CreateOrdersBatchInput {
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  groups: CreateOrdersBatchGroup[];
+  promo_code?: string | null;
+  marketing_consent?: boolean;
+}
+
 /** Ключ localStorage, где лежат токены доступа к заказам этого устройства. */
 const ORDER_TOKENS_KEY = 'mora-order-tokens-v1';
 /** Сколько последних заказов помним на устройстве. */
@@ -110,6 +132,25 @@ const validateOrder = (order: CreateOrderInput): void => {
   }
 };
 
+const validateBatchOrder = (order: CreateOrdersBatchInput): void => {
+  // Сумму и скидку считает сервер (create_orders_batch), поэтому total здесь
+  // не проверяем — только контакты и состав корзины.
+  if ((order.customer_name ?? '').trim().length < 2)
+    throw new ValidationError('Укажите имя');
+  if ((order.customer_phone ?? '').replace(/\D/g, '').length < 10)
+    throw new ValidationError('Укажите корректный телефон');
+  if (!Array.isArray(order.groups) || order.groups.length === 0)
+    throw new ValidationError('Корзина пуста');
+  if (order.groups.some((group) => !group.items || group.items.length === 0))
+    throw new ValidationError('Корзина пуста');
+  if (
+    order.customer_email &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.customer_email)
+  ) {
+    throw new ValidationError('Некорректный email');
+  }
+};
+
 export const ordersService = {
   async create(order: CreateOrderInput): Promise<Order> {
     validateOrder(order);
@@ -143,6 +184,57 @@ export const ordersService = {
       return data;
     } catch (e) {
       console.error('[ordersService.create]', e);
+      throw normalizeError(e);
+    }
+  },
+
+  /**
+   * Оформление корзины одним атомарным вызовом: сервер создаёт заказы по
+   * группам продавцов в одной транзакции. При любой ошибке (нет товара,
+   * лимит, промокод) не создаётся ни одного заказа.
+   */
+  async createMany(input: CreateOrdersBatchInput): Promise<Order[]> {
+    validateBatchOrder(input);
+
+    try {
+      const groups = input.groups.map((group) => ({
+        seller_id: group.seller_id ?? null,
+        // Сервер принимает только id/quantity/size и сам берёт цену из БД.
+        items: group.items.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          size: item.size ?? null,
+        })),
+      }));
+
+      const { data: created, error } = await supabase.rpc(
+        'create_orders_batch',
+        {
+          p_customer_name: input.customer_name.trim(),
+          p_customer_phone: input.customer_phone.trim(),
+          p_customer_email: input.customer_email?.trim() || null,
+          p_groups: groups,
+          p_promo_code: input.promo_code?.trim() || null,
+          p_marketing_consent: input.marketing_consent ?? false,
+        }
+      );
+
+      if (error) throw error;
+
+      const orders = ((created ?? []) as Order[]).filter(
+        (order) => order && typeof order.id === 'number'
+      );
+      if (orders.length === 0) throw new Error('Заказ не создан');
+
+      // access_token приходит на каждый заказ — сохраняем все, чтобы
+      // покупатель видел их в «Моих заказах».
+      for (const order of orders) {
+        if (order.access_token) orderTokens.add(order.access_token);
+      }
+
+      return orders;
+    } catch (e) {
+      console.error('[ordersService.createMany]', e);
       throw normalizeError(e);
     }
   },

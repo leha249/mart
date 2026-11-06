@@ -17,6 +17,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { UISeller, SellerStatus } from '../../types/database';
+import { COMMISSION } from '../../services/commission';
 
 type SortKey = 'name' | 'created' | 'status';
 type SortDir = 'asc' | 'desc';
@@ -231,7 +232,7 @@ const SellersTable = ({
             width: '100%',
             borderCollapse: 'collapse',
             fontSize: 14,
-            minWidth: 900,
+            minWidth: 980,
           }}
         >
           <thead>
@@ -262,6 +263,7 @@ const SellersTable = ({
               <th style={thStyle}>Slug</th>
               <th style={thStyle}>Контакты</th>
               <th style={thStyle}>Товаров</th>
+              <th style={thStyle}>Комиссия</th>
               <th
                 onClick={() => toggleSort('status')}
                 style={{
@@ -409,6 +411,22 @@ const SellersTable = ({
                       <Package size={14} color="var(--muted)" />
                       {count}
                     </div>
+                  </td>
+
+                  <td style={{ padding: 12 }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {Number(
+                        s.commissionPercent ?? COMMISSION.defaultPercent
+                      )}
+                      %
+                    </span>
                   </td>
 
                   <td style={{ padding: 12 }}>

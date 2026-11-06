@@ -155,66 +155,45 @@ const CartPanel = ({ open, onClose }: Props) => {
         grouped.get(key)!.push(item);
       });
 
-      const groupedEntries = Array.from(grouped.entries());
-
-      const createdOrders: {
-        id: number;
-        sellerId: number | null;
-        total: number;
-        itemsCount: number;
-      }[] = [];
-
-      let remainingDiscount = promoDiscount;
-
-      for (let i = 0; i < groupedEntries.length; i++) {
-        const [sellerId, groupItems] = groupedEntries[i];
-        const isLast = i === groupedEntries.length - 1;
-
-        const groupTotal = groupItems.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0
-        );
-
-        let groupDiscount: number;
-        if (isLast) {
-          groupDiscount = remainingDiscount;
-        } else {
-          const share = totalPrice > 0 ? groupTotal / totalPrice : 0;
-          groupDiscount = Math.round(promoDiscount * share);
-          remainingDiscount -= groupDiscount;
-        }
-
-        groupDiscount = Math.min(groupDiscount, groupTotal);
-
-        const groupFinalTotal = Math.max(0, groupTotal - groupDiscount);
-
-        const order = await ordersService.create({
-          customer_name: name.trim(),
-          customer_phone: phone.trim(),
-          customer_email: email.trim() || undefined,
+      // Один атомарный заказ на всю корзину: сервер сам делит её по
+      // продавцам, считает суммы, скидку и комиссию. Скидку клиент больше
+      // не распределяет — промокод применяется на сервере один раз.
+      const groups = Array.from(grouped.entries()).map(
+        ([sellerId, groupItems]) => ({
+          seller_id: sellerId,
           items: groupItems.map((it) => ({
             id: it.id,
-            name: it.name,
-            price: it.price,
-            image: it.image,
             quantity: it.quantity,
-            size: it.size,
+            size: it.size ?? null,
           })),
-          total: groupFinalTotal,
-          promo_code: promo.applied?.code,
-          promo_discount: groupDiscount,
-          seller_id: sellerId,
-          marketing_consent: agreedMarketing,
-        });
+        })
+      );
 
-        createdOrders.push({
+      const orders = await ordersService.createMany({
+        customer_name: name.trim(),
+        customer_phone: phone.trim(),
+        customer_email: email.trim() || undefined,
+        groups,
+        promo_code: promo.applied?.code ?? null,
+        marketing_consent: agreedMarketing,
+      });
+
+      // Порядок и состав заказов определяет сервер; количество позиций
+      // берём из корзины по продавцу заказа.
+      const createdOrders = orders.map((order) => {
+        const sellerId = order.seller_id ?? null;
+        const groupItems = grouped.get(sellerId);
+        const itemsCount = groupItems
+          ? groupItems.reduce((sum, it) => sum + it.quantity, 0)
+          : (order.items ?? []).reduce((sum, it) => sum + it.quantity, 0);
+
+        return {
           id: order.id,
           sellerId,
-          // Сумма — из ответа сервера: create_order сам считает скидку
           total: order.total,
-          itemsCount: groupItems.reduce((s, it) => s + it.quantity, 0),
-        });
-      }
+          itemsCount,
+        };
+      });
 
       // Запоминаем имя в профиле покупателя — чтобы не спрашивать снова
       if (customer && !customer.name && name.trim()) {

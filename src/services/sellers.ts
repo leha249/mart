@@ -54,8 +54,9 @@ export const sellersService = {
 
   async getActive(): Promise<UISeller[]> {
     try {
+      // Публичная витрина — через view без user_id/подписки/комиссии.
       const { data, error } = await supabase
-        .from('sellers')
+        .from('sellers_public')
         .select('*')
         .eq('status', 'active')
         .order('name', { ascending: true });
@@ -71,7 +72,7 @@ export const sellersService = {
   async getBySlug(slug: string): Promise<UISeller | null> {
     try {
       const { data, error } = await supabase
-        .from('sellers')
+        .from('sellers_public')
         .select('*')
         .eq('slug', slug.trim())
         .maybeSingle();
@@ -87,7 +88,7 @@ export const sellersService = {
   async getById(id: number): Promise<UISeller | null> {
     try {
       const { data, error } = await supabase
-        .from('sellers')
+        .from('sellers_public')
         .select('*')
         .eq('id', id)
         .maybeSingle();

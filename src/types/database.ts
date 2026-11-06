@@ -72,6 +72,10 @@ export interface Order {
   created_at: string;
   /** Токен доступа к заказу. Хранится только на устройстве покупателя. */
   access_token?: string;
+  /** Ставка комиссии платформы на момент заказа, %. */
+  commission_percent?: number;
+  /** Комиссия платформы по заказу, рубли. */
+  commission_amount?: number;
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -193,8 +197,18 @@ export interface Seller {
   inn: string | null;
   legal_address: string | null;
 
-  subscription_until: string | null;
-  subscription_plan: string | null;
+  /**
+   * Ставка комиссии платформы, %. Есть в таблице sellers, но отсутствует
+   * в публичном view sellers_public — поэтому поле optional.
+   */
+  commission_percent?: number;
+
+  /**
+   * Поля старой подписки. Витрина от них больше не зависит, но история
+   * и админка могут их использовать. В sellers_public их нет.
+   */
+  subscription_until?: string | null;
+  subscription_plan?: string | null;
 
   created_at: string;
   updated_at: string;
@@ -230,7 +244,10 @@ export interface UISeller {
   inn?: string;
   legalAddress?: string;
 
-  /** До какой даты оплачена подписка (включая trial). */
+  /** Ставка комиссии платформы, %. Может отсутствовать в sellers_public. */
+  commissionPercent?: number;
+
+  /** Поля старой подписки — только для истории, витрина их не использует. */
   subscriptionUntil?: string;
   subscriptionPlan?: string;
 
@@ -267,6 +284,7 @@ export const mapSellerToUI = (s: Seller): UISeller => ({
   inn: s.inn ?? undefined,
   legalAddress: s.legal_address ?? undefined,
 
+  commissionPercent: s.commission_percent,
   subscriptionUntil: s.subscription_until ?? undefined,
   subscriptionPlan: s.subscription_plan ?? undefined,
 

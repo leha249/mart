@@ -1,11 +1,18 @@
-import { Check, ArrowRight, Store, ShieldCheck, Percent } from 'lucide-react';
+import {
+  Check,
+  ArrowRight,
+  Store,
+  ShieldCheck,
+  Percent,
+  Wallet,
+} from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { navigate } from '../utils/navigate';
-import { SUBSCRIPTION } from '../services/subscriptions';
+import { COMMISSION } from '../services/commission';
 
 const FEATURES = [
   'Свой магазин на отдельном адресе /seller/…',
@@ -16,10 +23,51 @@ const FEATURES = [
   'Отзывы и рейтинг магазина',
 ];
 
+const ADVANTAGES = [
+  {
+    icon: Percent,
+    title: 'Платишь только когда продаёшь',
+    text: `Комиссия ${COMMISSION.defaultPercent}% начисляется с каждого проданного заказа. Нет продаж — нет начислений.`,
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Без фиксированных списаний',
+    text: 'Ни абонентской платы, ни платы за регистрацию, ни скрытых сборов за размещение магазина.',
+  },
+  {
+    icon: Wallet,
+    title: 'Деньги за товар — напрямую',
+    text: 'Покупатель переводит стоимость заказа продавцу. Платформа не удерживает деньги за товар.',
+  },
+];
+
+const FAQ = [
+  {
+    q: 'Сколько стоит регистрация и размещение магазина?',
+    a: 'Ничего. Регистрация, магазин на отдельном адресе и все инструменты кабинета бесплатны.',
+  },
+  {
+    q: 'Как считается комиссия?',
+    a: `Комиссия — ${COMMISSION.defaultPercent}% от суммы заказа. Она фиксируется в момент оформления и видна в разделе «Комиссия» в кабинете.`,
+  },
+  {
+    q: 'Как оплатить комиссию?',
+    a: 'В кабинете показано, сколько начислено, сколько оплачено и каков долг. Переведите сумму долга по СБП и нажмите «Я перевёл — сообщить» — администратор подтвердит платёж.',
+  },
+  {
+    q: 'Что будет, если заказов нет?',
+    a: 'Комиссия не начисляется, списывать нечего. Фиксированных платежей и платы за простой нет.',
+  },
+  {
+    q: 'Можно ли изменить ставку?',
+    a: 'Базовую ставку устанавливает платформа. Индивидуальные условия можно обсудить с администратором.',
+  },
+];
+
 const PricingPage = () => {
   usePageMeta({
-    title: 'Тарифы для продавцов',
-    description: `Подписка продавца MØRA MART — ${SUBSCRIPTION.priceMonth} ${SUBSCRIPTION.currency} в месяц. Первые ${SUBSCRIPTION.trialDays} дней бесплатно. Покупатели не платят платформе ничего.`,
+    title: 'Комиссия для продавцов',
+    description: `MØRA MART берёт ${COMMISSION.defaultPercent}% с каждого заказа. Без абонентской платы и без платы за регистрацию — продавцы платят только когда продают.`,
   });
 
   return (
@@ -52,9 +100,9 @@ const PricingPage = () => {
               marginBottom: 20,
             }}
           >
-            Подписка{' '}
+            Комиссия{' '}
             <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
-              вместо комиссии
+              вместо подписки
             </span>
           </h1>
 
@@ -67,9 +115,10 @@ const PricingPage = () => {
               marginBottom: 48,
             }}
           >
-            Покупатели не платят платформе ни копейки: деньги за товар они
-            переводят вам напрямую. Вы платите только за место на витрине —{' '}
-            {SUBSCRIPTION.priceMonth} {SUBSCRIPTION.currency} в месяц.
+            {COMMISSION.defaultPercent}% с каждого заказа, без абонентской
+            платы и без платы за регистрацию. Покупатели переводят деньги за
+            товар вам напрямую, а платформа получает только комиссию с
+            проданных заказов.
           </p>
 
           <div
@@ -117,16 +166,21 @@ const PricingPage = () => {
                   className="price-num"
                   style={{ fontSize: 52, fontWeight: 700 }}
                 >
-                  {SUBSCRIPTION.priceMonth}
+                  {COMMISSION.defaultPercent}%
                 </span>
                 <span style={{ fontSize: 20, color: 'var(--muted)' }}>
-                  {SUBSCRIPTION.currency}/мес
+                  с каждого заказа
                 </span>
               </div>
 
-              <p style={{ fontSize: 13, color: 'var(--accent)', marginBottom: 24 }}>
-                Первые {SUBSCRIPTION.trialDays} дней бесплатно. Без комиссии с
-                продаж.
+              <p
+                style={{
+                  fontSize: 13,
+                  color: 'var(--accent)',
+                  marginBottom: 24,
+                }}
+              >
+                Без абонентской платы и без платы за регистрацию.
               </p>
 
               <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
@@ -144,7 +198,11 @@ const PricingPage = () => {
                   >
                     <Check
                       size={16}
-                      style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}
+                      style={{
+                        color: 'var(--accent)',
+                        flexShrink: 0,
+                        marginTop: 2,
+                      }}
                     />
                     {f}
                   </div>
@@ -176,23 +234,7 @@ const PricingPage = () => {
 
             {/* Как это работает */}
             <div style={{ display: 'grid', gap: 16 }}>
-              {[
-                {
-                  icon: Percent,
-                  title: 'Без комиссии с продаж',
-                  text: 'Сколько продали — столько и ваше. Платформа не берёт процент с заказов.',
-                },
-                {
-                  icon: ShieldCheck,
-                  title: 'Оплата товара — напрямую',
-                  text: 'Покупатель переводит деньги продавцу (СБП или при получении). Платформа в расчётах не участвует.',
-                },
-                {
-                  icon: Store,
-                  title: 'Одна подписка — весь кабинет',
-                  text: 'Товары, заказы, промокоды, аналитика и отзывы включены в тариф.',
-                },
-              ].map(({ icon: Icon, title, text }) => (
+              {ADVANTAGES.map(({ icon: Icon, title, text }) => (
                 <div
                   key={title}
                   style={{
@@ -224,6 +266,61 @@ const PricingPage = () => {
                     }}
                   >
                     {text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div style={{ marginTop: 56 }}>
+            <h2
+              className="serif"
+              style={{
+                fontSize: 'clamp(26px, 4vw, 40px)',
+                fontWeight: 900,
+                marginBottom: 20,
+              }}
+            >
+              Частые вопросы
+            </h2>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: 14,
+              }}
+            >
+              {FAQ.map(({ q, a }) => (
+                <div
+                  key={q}
+                  style={{
+                    padding: 20,
+                    borderRadius: 18,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: 'var(--text)',
+                      marginBottom: 8,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {q}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: 'var(--muted)',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {a}
                   </p>
                 </div>
               ))}

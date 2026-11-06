@@ -610,6 +610,26 @@ const OrderModal = ({ order, onClose, onUpdateStatus, onDelete }: Props) => {
                   {formatPrice(order.total)}
                 </span>
               </div>
+
+              {typeof order.commission_amount === 'number' &&
+                order.commission_amount > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 4px 0',
+                      fontSize: 12,
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    <span>
+                      Комиссия платформы (
+                      {Number(order.commission_percent ?? 0)}%)
+                    </span>
+                    <span>{formatPrice(order.commission_amount)}</span>
+                  </div>
+                )}
             </div>
           </motion.div>
         </motion.div>

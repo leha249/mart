@@ -36,11 +36,19 @@ const validateFile = (file: File): void => {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const storageService = {
-  async upload(file: File, folder = ''): Promise<UploadResult> {
+  async upload(file: File): Promise<UploadResult> {
     validateFile(file);
 
+    // Файл кладём в папку пользователя: политика Storage разрешает
+    // писать/удалять только внутри своей папки (или админу).
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (userError || !uid) {
+      throw new ValidationError('Войдите в аккаунт, чтобы загрузить фото');
+    }
+
     const fileName = generateFileName(file);
-    const path = folder ? `${folder}/${fileName}` : fileName;
+    const path = `${uid}/${fileName}`;
 
     let lastError: unknown;
 

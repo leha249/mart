@@ -24,6 +24,24 @@ import ProductForm, {
 import type { FormState } from '../../components/admin/ProductForm';
 import type { Product, UIProduct } from '../../types/database';
 
+type DuplicateProduct = Omit<
+  Product,
+  'id' | 'created_at' | 'updated_at' | 'rating' | 'reviews'
+>;
+
+// Копия товара без полей, которыми владеют БД и триггер:
+// id/created_at/updated_at выдаст БД при вставке, rating/reviews
+// пересчитает update_product_rating из одобренных отзывов.
+const withoutDbOwnedFields = (full: Product): DuplicateProduct => {
+  const copy: Partial<Product> = { ...full };
+  delete copy.id;
+  delete copy.created_at;
+  delete copy.updated_at;
+  delete copy.rating;
+  delete copy.reviews;
+  return copy as DuplicateProduct;
+};
+
 const AdminProducts = () => {
   const { products, loading: productsLoading, refetch } = useProducts();
   const { sellerId } = useAuth();
@@ -119,8 +137,9 @@ const AdminProducts = () => {
           .split(',')
           .map((s) => s.trim())
           .filter((c) => c.startsWith('#')),
-        rating: Number(form.rating) || 0,
-        reviews: Number(form.reviews) || 0,
+        // rating/reviews не отправляем: их пересчитывает триггер
+        // update_product_rating из одобренных отзывов. При создании БД
+        // ставит 0, при редактировании текущие значения не затираются.
         in_stock: form.in_stock,
         // При редактировании сохраняем прежнего владельца: у админа sellerId
         // равен null, и иначе товар продавца стал бы «товаром платформы».
@@ -202,7 +221,7 @@ const AdminProducts = () => {
     try {
       const full = await productsService.getById(product.id);
       if (!full) return;
-      const { id, created_at, updated_at, ...rest } = full;
+      const rest = withoutDbOwnedFields(full);
       await productsService.create({
         ...rest,
         name: `${rest.name} (копия)`,
