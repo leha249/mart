@@ -6,7 +6,6 @@ import { useOrders } from '../../context/OrdersContext';
 import { useReviews } from '../../context/ReviewsContext';
 import AdminTabs from '../../components/admin/AdminTabs';
 import type { AdminTab } from '../../components/admin/AdminTabs';
-import { useToast } from '../../context/ToastContext';
 
 interface Props {
   activeTab: AdminTab;
@@ -21,10 +20,9 @@ const AdminLayout = ({
   children,
   messagesBadge = 0,
 }: Props) => {
-  const { user, loading: authLoading, signOut, role } = useAuth();
+  const { user, loading: authLoading, role } = useAuth();
   const { newOrdersCount, markAllSeen } = useOrders();
   const { pendingCount: reviewsPendingCount } = useReviews();
-  const { addToast } = useToast();
 
   const isPending = role === 'pending';
   const headerLabel = isPending
@@ -40,26 +38,25 @@ const AdminLayout = ({
     }
   };
 
-  const handleSignOut = async () => {
-    const ok = window.confirm('Выйти из аккаунта?');
-    if (!ok) return;
+  /**
+   * Выход без window.confirm.
+   *
+   * Chrome умеет блокировать confirm() («не показывать больше диалоги»),
+   * и тогда он молча возвращает false — кнопка выглядит нерабочей.
+   * Поэтому клик сразу уводит на /logout: там сессия чистится на свежей
+   * странице, даже если текущая вкладка в странном состоянии.
+   */
+  const handleSignOut = () => {
     try {
       localStorage.removeItem('mora-cart-v1');
       localStorage.removeItem('mora-favorites-v1');
       localStorage.removeItem('mora-promo-v1');
       localStorage.removeItem('mora-recently-viewed-v1');
       localStorage.removeItem('mora-search-history-v1');
-
-      await signOut();
-      addToast('Вы вышли из аккаунта', 'info');
-    } catch (e) {
-      // signOut сам чистит сессию локально; сюда попадаем только при
-      // непредвиденной ошибке — всё равно уводим на главную.
-      console.error('[AdminLayout] signOut:', e);
+    } catch {
+      // приватный режим — не критично
     }
-    // Полная перезагрузка: гарантирует сброс всех провайдеров и кэшей,
-    // даже если какой-то компонент не успел отреагировать на role=guest.
-    window.location.replace('/');
+    window.location.replace('/logout');
   };
 
   if (authLoading) {
