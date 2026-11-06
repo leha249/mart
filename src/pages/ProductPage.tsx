@@ -301,6 +301,7 @@ const ProductPage = ({ slug }: Props) => {
           {/* Галерея */}
           <div>
             <div
+              id="product-gallery"
               style={{
                 position: 'relative',
                 borderRadius: 20,
@@ -895,6 +896,14 @@ const ProductPage = ({ slug }: Props) => {
         #product-grid img {
           max-width: 100%;
         }
+        /* На телефоне фото не должно выталкивать кнопку «В корзину»
+           за пределы первого экрана: ограничиваем высоту галереи. */
+        #product-gallery {
+          max-height: 52vh;
+        }
+        #product-gallery img {
+          object-fit: cover;
+        }
         @media (max-width: 900px) {
           #product-grid {
             grid-template-columns: 1fr !important;
@@ -904,6 +913,10 @@ const ProductPage = ({ slug }: Props) => {
         @media (max-width: 520px) {
           #product-grid {
             gap: 22px !important;
+          }
+          /* Кнопка «Добавить в корзину» должна попадать в первый экран */
+          #product-gallery {
+            max-height: 40vh;
           }
         }
       `}</style>

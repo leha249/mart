@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ValidationError, normalizeError } from '../utils/errors';
+import { escapeFilterValue } from '../utils/validators';
 import type { Order, OrderItem, OrderStatus } from '../types/database';
 
 export interface OrderFilters {
@@ -63,8 +64,18 @@ export interface CreateOrdersBatchInput {
 
 /** Ключ localStorage, где лежат токены доступа к заказам этого устройства. */
 const ORDER_TOKENS_KEY = 'mora-order-tokens-v1';
-/** Сколько последних заказов помним на устройстве. */
-const MAX_ORDER_TOKENS = 100;
+/**
+ * Сколько последних заказов помним на устройстве.
+ * Должно совпадать с limit внутри get_orders_by_tokens (50 в БД):
+ * всё, что сверху, сервер и так не отдаст.
+ */
+const MAX_ORDER_TOKENS = 50;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Токен заказа — uuid. Мусор в localStorage не должен ломать всю историю. */
+const isOrderToken = (value: string): boolean => UUID_RE.test(value.trim());
 
 /**
  * Токены заказов покупателя. Прямой доступ к таблице orders анониму закрыт,
@@ -79,7 +90,7 @@ export const orderTokens = {
       if (!Array.isArray(parsed)) return [];
       return parsed.filter(
         (token): token is string =>
-          typeof token === 'string' && token.trim().length > 0
+          typeof token === 'string' && isOrderToken(token)
       );
     } catch {
       // localStorage может быть недоступен (приватный режим, запрет cookies)
@@ -89,7 +100,7 @@ export const orderTokens = {
 
   add(token: string): void {
     const value = token?.trim();
-    if (!value) return;
+    if (!value || !isOrderToken(value)) return;
     try {
       const tokens = orderTokens.list().filter((t) => t !== value);
       tokens.push(value);
@@ -247,9 +258,12 @@ export const ordersService = {
   async getByTokens(tokens: string[]): Promise<Order[]> {
     if (!tokens || tokens.length === 0) return [];
 
+    const safe = tokens.filter(isOrderToken).slice(-MAX_ORDER_TOKENS);
+    if (safe.length === 0) return [];
+
     try {
       const { data, error } = await supabase.rpc('get_orders_by_tokens', {
-        p_tokens: tokens,
+        p_tokens: safe,
       });
 
       if (error) throw error;
@@ -283,7 +297,7 @@ export const ordersService = {
       if (status !== 'all') query = query.eq('status', status);
 
       if (search.trim()) {
-        const q = search.trim();
+        const q = escapeFilterValue(search);
         query = query.or(
           `customer_name.ilike.%${q}%,customer_phone.ilike.%${q}%,customer_email.ilike.%${q}%`
         );

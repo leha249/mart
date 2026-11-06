@@ -440,7 +440,7 @@ const CustomerLoginPage = () => {
                           marginTop: 6,
                         }}
                       >
-                        Код действует 10 минут
+                        Код действует 5 минут
                       </div>
                     </motion.div>
                   )}

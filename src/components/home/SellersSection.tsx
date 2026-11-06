@@ -147,7 +147,7 @@ const SellersSection = ({
             >
               • Магазины
             </div>
-            <h2
+            <h1
               className="serif"
               style={{
                 fontSize: 'clamp(36px, 5vw, 64px)',
@@ -160,7 +160,7 @@ const SellersSection = ({
               <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
                 по духу
               </span>
-            </h2>
+            </h1>
           </motion.div>
 
           {hasMore && (

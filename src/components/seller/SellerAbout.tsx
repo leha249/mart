@@ -36,7 +36,13 @@ const SellerAbout = ({ seller }: Props) => {
   return (
     <section
       id="about"
-      style={{ padding: '120px 0', scrollMarginTop: 80 }}
+      style={{
+        padding: '120px 0',
+        scrollMarginTop: 80,
+        // Бейдж вынесен за край (right: -20) и анимация идёт со сдвигом —
+        // без clip страница получает горизонтальный скролл на 1280/1024/768.
+        overflowX: 'clip',
+      }}
     >
       <div className="container">
         <div

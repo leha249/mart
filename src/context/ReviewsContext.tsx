@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { normalizeError } from '../utils/errors';
+import { escapeFilterValue } from '../utils/validators';
 import type { Review } from '../types/database';
 import { useAuth } from './AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -132,7 +133,7 @@ export const ReviewsProvider = ({ children }: { children: ReactNode }) => {
           .order('created_at', { ascending: false });
 
         if (search.trim()) {
-          const q = search.trim();
+          const q = escapeFilterValue(search);
           query = query.or(`author_name.ilike.%${q}%,text.ilike.%${q}%`);
         }
 

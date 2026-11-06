@@ -46,6 +46,7 @@ const FavoritesPanel = ({ open, onClose }: Props) => {
       name: product.name,
       price: product.price,
       image: product.image,
+      seller_id: product.sellerId ?? null,
     });
     addToast(`${product.name} добавлен в корзину`, 'success');
   };

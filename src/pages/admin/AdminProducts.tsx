@@ -26,12 +26,13 @@ import type { Product, UIProduct } from '../../types/database';
 
 type DuplicateProduct = Omit<
   Product,
-  'id' | 'created_at' | 'updated_at' | 'rating' | 'reviews'
+  'id' | 'created_at' | 'updated_at' | 'rating' | 'reviews' | 'slug' | 'purchases'
 >;
 
 // Копия товара без полей, которыми владеют БД и триггер:
 // id/created_at/updated_at выдаст БД при вставке, rating/reviews
-// пересчитает update_product_rating из одобренных отзывов.
+// пересчитает update_product_rating из одобренных отзывов,
+// slug уникален (триггер сделает новый из имени), purchases — счётчик продаж.
 const withoutDbOwnedFields = (full: Product): DuplicateProduct => {
   const copy: Partial<Product> = { ...full };
   delete copy.id;
@@ -39,6 +40,8 @@ const withoutDbOwnedFields = (full: Product): DuplicateProduct => {
   delete copy.updated_at;
   delete copy.rating;
   delete copy.reviews;
+  delete copy.slug;
+  delete copy.purchases;
   return copy as DuplicateProduct;
 };
 

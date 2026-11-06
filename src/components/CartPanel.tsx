@@ -483,7 +483,8 @@ const CartPanel = ({ open, onClose }: Props) => {
                         В корзине товары от {uniqueSellers}{' '}
                         {uniqueSellers === 1 ? 'магазина' : 'магазинов'}
                       </div>
-                      Будет создано {uniqueSellers} отдельных заказа. Каждый
+                      Будет создано {uniqueSellers}{' '}
+                      {pluralize(uniqueSellers, 'отдельный заказ', 'отдельных заказа', 'отдельных заказов')}. Каждый
                       продавец получит только свою часть.
                     </div>
                   )}
@@ -1000,7 +1001,12 @@ const CartPanel = ({ open, onClose }: Props) => {
                     !canCheckout ? (
                       'Примите условия'
                     ) : willSplitInto ? (
-                      `Оформить (${uniqueSellers} заказа)`
+                      `Оформить (${uniqueSellers} ${pluralize(
+                        uniqueSellers,
+                        'заказ',
+                        'заказа',
+                        'заказов'
+                      )})`
                     ) : (
                       'Подтвердить заказ'
                     )

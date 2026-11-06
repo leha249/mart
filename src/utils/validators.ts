@@ -35,3 +35,16 @@ export const parseHexList = (value: string): string[] => {
 export const sanitizeText = (value: string): string => {
   return value.trim().replace(/\s+/g, ' ');
 };
+
+/**
+ * Значение для PostgREST-фильтра (.or / .ilike / .eq).
+ * Запятая и скобки разделяют условия, `%` и `_` — шаблонные символы LIKE,
+ * обратная косая и кавычки ломают разбор. Срезаем их, иначе поиск по
+ * строке «Москва, ул.» даёт 400 или подменяет фильтр.
+ */
+export const escapeFilterValue = (value: string): string => {
+  return value
+    .trim()
+    .replace(/[,()"'\\%_]/g, ' ')
+    .replace(/\s+/g, ' ');
+};

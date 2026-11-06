@@ -634,7 +634,7 @@ const Products = ({ onProductClick }: ProductsProps) => {
             >
               • Каталог
             </motion.div>
-            <motion.h2
+            <motion.h1
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -650,7 +650,7 @@ const Products = ({ onProductClick }: ProductsProps) => {
               <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
                 товары
               </span>
-            </motion.h2>
+            </motion.h1>
           </div>
 
           <div

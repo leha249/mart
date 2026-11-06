@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { normalizeError } from '../utils/errors';
+import { escapeFilterValue } from '../utils/validators';
 import type { Product } from '../types/database';
 
 export interface ProductsPage {
@@ -73,7 +74,7 @@ export const productsService = {
       }
 
       if (filters?.search?.trim()) {
-        const q = filters.search.trim();
+        const q = escapeFilterValue(filters.search);
         query = query.or(
           `name.ilike.%${q}%,category.ilike.%${q}%,subcategory.ilike.%${q}%`
         );

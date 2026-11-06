@@ -33,6 +33,22 @@ const CookieBanner = () => {
     setVisible(false);
   };
 
+  /** Отказ: оставляем только технически необходимые (cookies/localStorage),
+   *  ничего аналитического у нас и так нет — просто не показываем баннер. */
+  const handleReject = () => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          accepted: false,
+          necessaryOnly: true,
+          date: new Date().toISOString(),
+        })
+      );
+    } catch {}
+    setVisible(false);
+  };
+
   const goToPolicy = (e: React.MouseEvent) => {
     e.preventDefault();
     navigate('/privacy');
@@ -42,6 +58,7 @@ const CookieBanner = () => {
     <AnimatePresence>
       {visible && (
         <motion.div
+          key="cookie-banner"
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
@@ -52,7 +69,7 @@ const CookieBanner = () => {
             left: 24,
             right: 24,
             maxWidth: 480,
-            zIndex: 9999,
+            zIndex: 90,
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             borderRadius: 20,
@@ -162,6 +179,24 @@ const CookieBanner = () => {
             >
               Принять
             </button>
+            <button
+              onClick={handleReject}
+              style={{
+                flex: 1,
+                minWidth: 120,
+                padding: '12px 20px',
+                borderRadius: 100,
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--muted)',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Только необходимое
+            </button>
             <a
               href="/privacy"
               onClick={goToPolicy}
@@ -190,7 +225,7 @@ const CookieBanner = () => {
         </motion.div>
       )}
 
-      <style>{`
+      <style key="cookie-banner-styles">{`
         @media (max-width: 600px) {
           .cookie-banner {
             left: 12px !important;

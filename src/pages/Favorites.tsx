@@ -6,7 +6,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import { useProducts } from '../context/ProductsContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-import { formatPrice } from '../utils/format';
+import { formatPrice, pluralize } from '../utils/format';
 import { optimizeImageUrl } from '../utils/imageLoader';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -117,11 +117,12 @@ const FavoritesPage = () => {
               <span>
                 {favoriteProducts.length}{' '}
                 <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>
-                  {favoriteProducts.length === 1
-                    ? 'товар'
-                    : favoriteProducts.length < 5
-                    ? 'товара'
-                    : 'товаров'}
+                  {pluralize(
+                    favoriteProducts.length,
+                    'товар',
+                    'товара',
+                    'товаров'
+                  )}
                 </span>
               </span>
             </h1>

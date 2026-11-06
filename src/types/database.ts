@@ -40,7 +40,8 @@ export interface OrderItem {
   price: number;
   image: string;
   quantity: number;
-  size?: string;
+  /** В orders.items приходит null, если размер не выбран. */
+  size?: string | null;
 }
 
 export type OrderStatus =
