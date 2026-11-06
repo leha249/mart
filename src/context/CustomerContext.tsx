@@ -19,7 +19,7 @@ interface CustomerSession {
 interface CustomerContextType {
   session: CustomerSession | null;
   isAuthenticated: boolean;
-  requestCode: (phone: string) => Promise<{ success: boolean; code?: string; error?: string }>;
+  requestCode: (phone: string) => Promise<{ success: boolean; error?: string }>;
   verifyCode: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>;
   setCustomerName: (name: string) => void;
   signOut: () => void;
@@ -61,25 +61,26 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
 
   /**
    * Запросить код подтверждения.
-   * Пока возвращает код клиенту (для теста), потом — отправка SMS.
+   *
+   * Код НЕ возвращается клиенту: иначе любой мог запросить код на чужой
+   * номер и сразу войти. Отправка должна идти через SMS-провайдера
+   * (сейчас провайдер не подключён — вход в кабинет временно недоступен).
    */
   const requestCode = useCallback(
-    async (
-      phone: string
-    ): Promise<{ success: boolean; code?: string; error?: string }> => {
+    async (phone: string): Promise<{ success: boolean; error?: string }> => {
       const normalized = normalizePhone(phone);
       if (normalized.length < 10) {
         return { success: false, error: 'Некорректный номер телефона' };
       }
 
       try {
-        const { data, error } = await supabase.rpc('create_customer_code', {
+        const { error } = await supabase.rpc('create_customer_code', {
           phone_input: phone,
         });
 
         if (error) throw error;
 
-        return { success: true, code: data as string };
+        return { success: true };
       } catch (e) {
         console.error('[CustomerContext.requestCode]', e);
         return {

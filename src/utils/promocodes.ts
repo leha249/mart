@@ -8,6 +8,25 @@ export interface PromoValidation {
   promocode?: Promocode;
 }
 
+interface PromoValidateRow {
+  valid: boolean;
+  discount: number;
+  percent: number;
+  min_total: number;
+  code: string | null;
+  expires_at: string | null;
+  seller_id: number | null;
+  message: string;
+}
+
+/**
+ * Проверка промокода через SECURITY DEFINER RPC.
+ *
+ * Раньше корзина читала таблицу promocodes напрямую: anon мог выгрузить
+ * весь список активных кодов (включая 100%-е) и использовать их.
+ * Теперь таблица закрыта, а RPC отдаёт только результат проверки
+ * конкретного кода — без листинга и без used_by_order_ids.
+ */
 export const validatePromocode = async (
   code: string,
   cartTotal: number
@@ -18,43 +37,46 @@ export const validatePromocode = async (
     return { valid: false, discount: 0, message: 'Введите промокод' };
   }
 
-  const { data, error } = await supabase
-    .from('promocodes')
-    .select('*')
-    .eq('code', trimmed)
-    .eq('active', true)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('promo_validate', {
+    p_code: trimmed,
+    p_seller_id: null,
+    p_subtotal: Math.round(cartTotal),
+  });
 
   if (error) {
     return { valid: false, discount: 0, message: 'Ошибка проверки' };
   }
 
-  if (!data) {
-    return { valid: false, discount: 0, message: 'Промокод не найден' };
-  }
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | PromoValidateRow
+    | null
+    | undefined;
 
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { valid: false, discount: 0, message: 'Промокод истёк' };
-  }
-
-  if (data.max_uses !== null && data.used_count >= data.max_uses) {
-    return { valid: false, discount: 0, message: 'Лимит использований исчерпан' };
-  }
-
-  if (cartTotal < data.min_total) {
+  if (!row || !row.valid || !row.code) {
     return {
       valid: false,
       discount: 0,
-      message: `Минимальная сумма — ${new Intl.NumberFormat('ru-RU').format(data.min_total)} ₽`,
+      message: row?.message || 'Промокод не найден',
     };
   }
 
-  const discount = Math.round((cartTotal * data.discount_percent) / 100);
+  const promocode: Promocode = {
+    id: 0,
+    code: row.code,
+    discount_percent: row.percent,
+    min_total: row.min_total,
+    max_uses: null,
+    used_count: 0,
+    expires_at: row.expires_at,
+    active: true,
+    seller_id: row.seller_id,
+    created_at: new Date().toISOString(),
+  };
 
   return {
     valid: true,
-    discount,
-    message: `Скидка −${data.discount_percent}%`,
-    promocode: data,
+    discount: row.discount,
+    message: row.message,
+    promocode,
   };
 };

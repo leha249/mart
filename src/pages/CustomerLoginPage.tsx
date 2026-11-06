@@ -26,7 +26,6 @@ const CustomerLoginPage = () => {
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
-  const [displayedCode, setDisplayedCode] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +63,7 @@ const CustomerLoginPage = () => {
 
     const result = await requestCode(trimmed);
 
-    if (result.success && result.code) {
-      setDisplayedCode(result.code);
+    if (result.success) {
       setStep('code');
       setTimeout(() => codeInputRef.current?.focus(), 200);
     } else {
@@ -102,7 +100,6 @@ const CustomerLoginPage = () => {
   const handleBackToPhone = () => {
     setStep('phone');
     setCode('');
-    setDisplayedCode(null);
     setError(null);
   };
 
@@ -397,54 +394,6 @@ const CustomerLoginPage = () => {
                     gap: 16,
                   }}
                 >
-                  {displayedCode && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      style={{
-                        padding: '14px 16px',
-                        background: 'rgba(232,255,90,0.08)',
-                        border: '1px solid rgba(232,255,90,0.3)',
-                        borderRadius: 12,
-                        fontSize: 13,
-                        lineHeight: 1.5,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: 'var(--muted)',
-                          letterSpacing: '1px',
-                          textTransform: 'uppercase',
-                          marginBottom: 6,
-                        }}
-                      >
-                        Ваш код (тестовый режим)
-                      </div>
-                      <div
-                        className="price-num"
-                        style={{
-                          fontSize: 28,
-                          fontWeight: 900,
-                          letterSpacing: 8,
-                          color: 'var(--accent)',
-                        }}
-                      >
-                        {displayedCode}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: 'var(--muted)',
-                          marginTop: 6,
-                        }}
-                      >
-                        Код действует 5 минут
-                      </div>
-                    </motion.div>
-                  )}
-
                   <label
                     style={{
                       fontSize: 12,
