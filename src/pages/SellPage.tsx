@@ -58,50 +58,28 @@ const SellPage = () => {
       {/* Левая половина: знак + текст. Точки живут только здесь. */}
       <section className="lg-left">
         <DotGrid className="lg-dots" />
+
+        {/* Декоративные слои: мягкое свечение и тонкое кольцо за знаком */}
+        <div className="lg-aura" aria-hidden="true" />
+
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className="lg-brand"
         >
-          <img
-            src="/mora-logo.png"
-            alt="MØRA MART"
-            className="lg-mark"
-            draggable={false}
-          />
+          <div className="lg-logo">
+            <img
+              src="/mora-logo.png"
+              alt="MØRA MART"
+              className="lg-mark"
+              draggable={false}
+            />
+            <span className="lg-ring" aria-hidden="true" />
+          </div>
           <div className="lg-word">mora.mart</div>
           <h1 className="lg-tag serif">Продавать теперь легче</h1>
-
-          <ul className="lg-perks">
-            <li>
-              <span className="lg-perk-dot" />
-              <span>
-                <strong>4% с заказа</strong> — без подписки и платы за
-                регистрацию
-              </span>
-            </li>
-            <li>
-              <span className="lg-perk-dot" />
-              <span>
-                <strong>Своя витрина</strong> — лукбук, категории, размеры и
-                отзывы
-              </span>
-            </li>
-            <li>
-              <span className="lg-perk-dot" />
-              <span>
-                <strong>Заказы и чат</strong> с покупателем — в одном кабинете
-              </span>
-            </li>
-            <li>
-              <span className="lg-perk-dot" />
-              <span>
-                <strong>Счёт раз в неделю</strong> — платите только за
-                проданное
-              </span>
-            </li>
-          </ul>
+          <div className="lg-rule" aria-hidden="true" />
         </motion.div>
       </section>
 
@@ -220,6 +198,25 @@ const SellPage = () => {
           -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 58%, transparent 100%);
         }
 
+        /* Тонкий разделитель между половинами, растворяется к краям */
+        .lg::before {
+          content: '';
+          position: absolute;
+          z-index: 1;
+          left: 50%;
+          top: 12%;
+          bottom: 12%;
+          width: 1px;
+          background: linear-gradient(
+            180deg,
+            transparent,
+            rgba(255,255,255,.10) 25%,
+            rgba(255,255,255,.10) 75%,
+            transparent
+          );
+          pointer-events: none;
+        }
+
         /* ---- левая половина ---- */
         .lg-left {
           position: relative;
@@ -239,10 +236,37 @@ const SellPage = () => {
         }
 
         .lg-mark {
+          position: relative;
+          z-index: 1;
           width: clamp(150px, 22vw, 300px);
           height: auto;
           user-select: none;
           filter: drop-shadow(0 0 70px rgba(232,255,90,.10));
+        }
+
+        .lg-logo { position: relative; display: inline-flex; }
+
+        /* Тонкое кольцо вокруг знака */
+        .lg-ring {
+          position: absolute;
+          z-index: 0;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 152%;
+          aspect-ratio: 1;
+          border-radius: 50%;
+          border: 1px solid rgba(232,255,90,.10);
+          box-shadow: inset 0 0 120px rgba(232,255,90,.05);
+          pointer-events: none;
+        }
+
+        .lg-ring::after {
+          content: '';
+          position: absolute;
+          inset: 8%;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,.045);
         }
 
         .lg-word {
@@ -264,39 +288,27 @@ const SellPage = () => {
           max-width: 22ch;
         }
 
-        /* Что получает продавец — заполняет левую половину */
-        .lg-perks {
-          list-style: none;
-          margin: clamp(22px, 3vw, 40px) 0 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: clamp(10px, 1.2vw, 16px);
-          max-width: 380px;
+        /* Тонкая акцентная черта под слоганом */
+        .lg-rule {
+          margin-top: clamp(20px, 2.6vw, 32px);
+          width: 72px;
+          height: 2px;
+          border-radius: 2px;
+          background: linear-gradient(90deg, #e8ff5a, rgba(232,255,90,0));
         }
 
-        .lg-perks li {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          font-size: 13.5px;
-          line-height: 1.55;
-          color: rgba(255,255,255,.58);
-        }
-
-        .lg-perks strong {
-          color: rgba(255,255,255,.9);
-          font-weight: 600;
-        }
-
-        .lg-perk-dot {
-          flex-shrink: 0;
-          width: 6px;
-          height: 6px;
-          margin-top: 7px;
+        /* Свечение за знаком */
+        .lg-aura {
+          position: absolute;
+          z-index: 0;
+          width: 68%;
+          aspect-ratio: 1;
+          left: -14%;
+          top: 4%;
           border-radius: 50%;
-          background: #e8ff5a;
-          box-shadow: 0 0 12px rgba(232,255,90,.6);
+          background: radial-gradient(circle, rgba(232,255,90,.13) 0%, transparent 62%);
+          filter: blur(60px);
+          pointer-events: none;
         }
 
         @media (min-width: 901px) {
@@ -457,6 +469,8 @@ const SellPage = () => {
 
         /* ---- адаптив ---- */
         @media (max-width: 900px) {
+          .lg::before,
+          .lg-ring { display: none; }
           .lg {
             grid-template-columns: 1fr;
             grid-auto-rows: min-content;
