@@ -240,6 +240,8 @@ const SellPage = () => {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
+          /* ближе к превью кабинета справа */
+          margin-left: clamp(0px, 2.4vw, 40px);
         }
 
         /* Превью кабинета: наклонено и уходит за правый край половины */
