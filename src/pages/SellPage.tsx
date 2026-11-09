@@ -7,6 +7,7 @@ import { CONTACTS } from '../utils/constants';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
 import DotGrid from '../components/DotGrid';
+import SellerPanelPreview from '../components/SellerPanelPreview';
 
 /**
  * /sell — вход для продавцов.
@@ -61,6 +62,11 @@ const SellPage = () => {
 
         {/* Декоративные слои: мягкое свечение и тонкое кольцо за знаком */}
         <div className="lg-aura" aria-hidden="true" />
+
+        {/* Превью кабинета продавца — под наклоном, справа от знака */}
+        <div className="lg-mock" aria-hidden="true">
+          <SellerPanelPreview />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 18 }}
@@ -229,16 +235,30 @@ const SellPage = () => {
 
         .lg-brand {
           position: relative;
-          z-index: 1;
+          z-index: 2;
           display: flex;
           flex-direction: column;
           align-items: flex-start;
         }
 
+        /* Превью кабинета: наклонено и уходит за правый край половины */
+        .lg-mock {
+          position: absolute;
+          z-index: 1;
+          right: 4%;
+          top: 45%;
+          width: min(330px, 44%);
+          transform: translateY(-50%) perspective(1100px) rotateY(-16deg)
+            rotateX(5deg) rotate(-3deg);
+          transform-origin: right center;
+          opacity: .95;
+          pointer-events: none;
+        }
+
         .lg-mark {
           position: relative;
           z-index: 1;
-          width: clamp(150px, 22vw, 300px);
+          width: clamp(140px, 15vw, 230px);
           height: auto;
           user-select: none;
           filter: drop-shadow(0 0 70px rgba(232,255,90,.10));
@@ -271,7 +291,7 @@ const SellPage = () => {
 
         .lg-word {
           margin-top: clamp(16px, 2.2vw, 28px);
-          font-size: clamp(34px, 4.8vw, 66px);
+          font-size: clamp(30px, 3.6vw, 52px);
           font-weight: 800;
           letter-spacing: -.055em;
           line-height: .95;
@@ -279,7 +299,7 @@ const SellPage = () => {
 
         .lg-tag {
           margin: clamp(12px, 1.6vw, 20px) 0 0;
-          font-size: clamp(19px, 2.1vw, 28px);
+          font-size: clamp(16px, 1.7vw, 22px);
           font-weight: 700;
           font-style: italic;
           letter-spacing: -.03em;
@@ -470,7 +490,8 @@ const SellPage = () => {
         /* ---- адаптив ---- */
         @media (max-width: 900px) {
           .lg::before,
-          .lg-ring { display: none; }
+          .lg-ring,
+          .lg-mock { display: none; }
           .lg {
             grid-template-columns: 1fr;
             grid-auto-rows: min-content;
