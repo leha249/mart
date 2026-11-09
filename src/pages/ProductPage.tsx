@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Package,
+  MessageCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -23,6 +24,7 @@ import Lightbox from '../components/Lightbox';
 import SizeChartModal from '../components/SizeChartModal';
 import ReviewsSection from '../components/ReviewsSection';
 import ReviewModal from '../components/ReviewModal';
+import ChatPanel from '../components/chat/ChatPanel';
 import Skeleton from '../components/Skeleton';
 import { useProducts } from '../context/ProductsContext';
 import { useSellers } from '../context/SellersContext';
@@ -52,6 +54,7 @@ const ProductPage = ({ slug }: Props) => {
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -749,6 +752,29 @@ const ProductPage = ({ slug }: Props) => {
                     В магазин <ChevronRight size={13} />
                   </button>
                 </div>
+
+                <button
+                  onClick={() => setChatOpen(true)}
+                  style={{
+                    marginTop: 12,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '11px 16px',
+                    borderRadius: 999,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-hi)',
+                    color: 'var(--text)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <MessageCircle size={15} /> Написать продавцу
+                </button>
                 <div
                   style={{
                     marginTop: 14,
@@ -936,6 +962,12 @@ const ProductPage = ({ slug }: Props) => {
         productId={product.id}
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
+      />
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        sellerId={seller?.id ?? null}
+        sellerName={seller?.name}
       />
     </div>
   );

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, MessageCircle, Loader2 } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
 import { chatService, getStoredToken, type ChatMessage } from '../../services/chat';
-import { navigate } from '../../utils/navigate';
 import { useToast } from '../../context/ToastContext';
 
 interface Props {
@@ -19,8 +18,20 @@ const time = (iso: string) =>
     minute: '2-digit',
   });
 
+const guestInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '11px 14px',
+  borderRadius: 12,
+  border: '1px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text)',
+  fontSize: 13,
+  outline: 'none',
+  fontFamily: 'inherit',
+};
+
 const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
-  const { session } = useCustomer();
+  const { session, register } = useCustomer();
   const { addToast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,7 +40,41 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestFirst, setGuestFirst] = useState('');
+  const [guestLast, setGuestLast] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [regBusy, setRegBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  /** Регистрация прямо в чате: имя, фамилия, телефон. */
+  const handleGuestRegister = useCallback(async () => {
+    if (regBusy) return;
+    if (!guestFirst.trim()) {
+      setError('Укажите имя');
+      return;
+    }
+    if (!guestLast.trim()) {
+      setError('Укажите фамилию');
+      return;
+    }
+
+    setRegBusy(true);
+    setError(null);
+    try {
+      const res = await register({
+        firstName: guestFirst,
+        lastName: guestLast,
+        phone: guestPhone,
+      });
+      if (!res.success) {
+        setError(res.error || 'Не удалось создать профиль');
+        return;
+      }
+      addToast('Профиль создан — можно писать продавцу', 'success');
+    } finally {
+      setRegBusy(false);
+    }
+  }, [addToast, guestFirst, guestLast, guestPhone, regBusy, register]);
 
   // Открытие треда
   useEffect(() => {
@@ -167,30 +212,54 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
             </button>
           </div>
 
-          {/* Без сессии */}
+          {/* Без сессии — быстрая регистрация прямо в чате */}
           {!session && (
             <div
               style={{
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
                 justifyContent: 'center',
-                gap: 14,
-                padding: 24,
-                textAlign: 'center',
+                gap: 10,
+                padding: 20,
               }}
             >
-              <MessageCircle size={28} style={{ color: 'var(--muted)' }} />
               <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-                Чтобы написать продавцу, войдите по номеру телефона — так он
-                поймёт, кому отвечает.
+                Представьтесь — продавец поймёт, кому отвечает. Профиль
+                создаётся один раз и работает для заказов и чатов.
               </div>
+              <input
+                value={guestFirst}
+                onChange={(e) => setGuestFirst(e.target.value)}
+                placeholder="Имя"
+                maxLength={60}
+                disabled={regBusy}
+                style={guestInputStyle}
+              />
+              <input
+                value={guestLast}
+                onChange={(e) => setGuestLast(e.target.value)}
+                placeholder="Фамилия"
+                maxLength={60}
+                disabled={regBusy}
+                style={guestInputStyle}
+              />
+              <input
+                value={guestPhone}
+                onChange={(e) => setGuestPhone(e.target.value)}
+                placeholder="+7 900 000-00-00"
+                type="tel"
+                inputMode="tel"
+                maxLength={20}
+                disabled={regBusy}
+                style={guestInputStyle}
+              />
+              {error && (
+                <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div>
+              )}
               <button
-                onClick={() => {
-                  onClose();
-                  navigate('/login-customer');
-                }}
+                onClick={handleGuestRegister}
+                disabled={regBusy}
                 style={{
                   padding: '11px 20px',
                   borderRadius: 100,
@@ -199,11 +268,11 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                   color: 'var(--accent-contrast)',
                   fontSize: 13,
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: regBusy ? 'wait' : 'pointer',
                   fontFamily: 'inherit',
                 }}
               >
-                Войти по телефону
+                {regBusy ? 'Создаём профиль…' : 'Начать чат'}
               </button>
             </div>
           )}
