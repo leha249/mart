@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Send } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { CONTACTS } from '../utils/constants';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
+import DotGrid from '../components/DotGrid';
 
 /**
  * /sell — вход для продавцов.
  *
- * Экран разделён пополам: слева знак и слоган, справа минималистичная
- * форма. Ни хедера, ни футера. Фон — едва заметное движение света.
+ * Слева знак и слоган, справа форма входа. Под кнопкой — заявка
+ * и Telegram менеджера. Фон — сетка точек, которая тянется за курсором.
  */
 const SellPage = () => {
   const { signIn } = useAuth();
@@ -19,7 +21,9 @@ const SellPage = () => {
 
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   usePageMeta({
@@ -28,10 +32,12 @@ const SellPage = () => {
     noindex: true,
   });
 
+  const canSubmit = login.trim().length > 0 && password.length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    if (!login.trim() || !password) {
+    if (!canSubmit) {
       setError('Введите логин и пароль');
       return;
     }
@@ -49,14 +55,37 @@ const SellPage = () => {
     }
   };
 
+  const handleForgot = async () => {
+    if (resetting) return;
+
+    const value = login.trim();
+    if (!value.includes('@')) {
+      setError(
+        'Введите email в поле выше — пришлём ссылку для сброса пароля'
+      );
+      return;
+    }
+
+    setResetting(true);
+    setError(null);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        value
+      );
+      if (resetError) throw resetError;
+      addToast('Письмо со ссылкой для сброса отправлено', 'success');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Не удалось отправить письмо'
+      );
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="lg">
-      {/* Минималистичный анимированный фон */}
-      <div className="lg-bg" aria-hidden="true">
-        <div className="lg-halo lg-halo-1" />
-        <div className="lg-halo lg-halo-2" />
-        <div className="lg-lines" />
-      </div>
+      <DotGrid className="lg-dots" />
 
       {/* Левая половина: знак + текст */}
       <section className="lg-left">
@@ -66,7 +95,12 @@ const SellPage = () => {
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className="lg-brand"
         >
-          <img src="/mora-logo.png" alt="MØRA MART" className="lg-mark" draggable={false} />
+          <img
+            src="/mora-logo.png"
+            alt="MØRA MART"
+            className="lg-mark"
+            draggable={false}
+          />
           <div className="lg-word">mora.mart</div>
           <h1 className="lg-tag serif">Продавать теперь легче</h1>
         </motion.div>
@@ -81,36 +115,45 @@ const SellPage = () => {
           transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="lg-form"
         >
-          <div className="lg-eyebrow">Вход для продавцов</div>
+          <h2 className="lg-title">Войти</h2>
 
-          <label className="lg-field">
-            <span className="lg-label">Email или телефон</span>
-            <input
-              type="text"
-              value={login}
-              onChange={(e) => {
-                setLogin(e.target.value);
-                if (error) setError(null);
-              }}
-              placeholder="you@shop.ru"
-              autoComplete="username"
-              maxLength={80}
-            />
-          </label>
+          <input
+            type="text"
+            value={login}
+            onChange={(e) => {
+              setLogin(e.target.value);
+              if (error) setError(null);
+            }}
+            placeholder="Номер телефона или почта"
+            autoComplete="username"
+            maxLength={80}
+            className="lg-input"
+            aria-label="Номер телефона или почта"
+          />
 
-          <label className="lg-field">
-            <span className="lg-label">Пароль</span>
+          <div className="lg-pass">
             <input
-              type="password"
+              type={showPass ? 'text' : 'password'}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="••••••••"
+              placeholder="Введите пароль"
               autoComplete="current-password"
+              className="lg-input lg-input-pass"
+              aria-label="Пароль"
             />
-          </label>
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="lg-eye"
+              aria-label={showPass ? 'Скрыть пароль' : 'Показать пароль'}
+              tabIndex={-1}
+            >
+              {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
           {error && (
             <div className="lg-error">
@@ -119,22 +162,47 @@ const SellPage = () => {
             </div>
           )}
 
-          <button type="submit" className="lg-submit" disabled={submitting}>
+          <button
+            type="submit"
+            className="lg-submit"
+            disabled={submitting || !canSubmit}
+          >
             {submitting ? (
               <>
-                <Loader2 size={16} className="lg-spin" /> Входим…
+                <Loader2 size={16} className="lg-spin" /> Проверяем…
               </>
             ) : (
               <>
-                Войти <ArrowRight size={16} />
+                Продолжить <ArrowRight size={16} />
               </>
             )}
           </button>
 
-          <div className="lg-note">
-            Нет доступа?{' '}
-            <a href={CONTACTS.telegram} target="_blank" rel="noopener noreferrer">
-              Напишите менеджеру
+          <button
+            type="button"
+            onClick={handleForgot}
+            className="lg-forgot"
+            disabled={resetting}
+          >
+            {resetting ? 'Отправляем…' : 'Забыли пароль?'}
+          </button>
+
+          <div className="lg-actions">
+            <a
+              className="lg-secondary"
+              href={`mailto:${CONTACTS.email}?subject=${encodeURIComponent(
+                'Заявка на магазин на mora.mart'
+              )}`}
+            >
+              Написать заявку
+            </a>
+            <a
+              className="lg-secondary lg-telegram"
+              href={CONTACTS.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Send size={15} /> Telegram
             </a>
           </div>
         </motion.form>
@@ -142,20 +210,6 @@ const SellPage = () => {
 
       <style>{`
         @keyframes lg-spin-kf { to { transform: rotate(360deg); } }
-        @keyframes lg-halo-a {
-          0%   { transform: translate3d(-6%, -4%, 0) scale(1); opacity: .55; }
-          50%  { transform: translate3d(4%, 6%, 0) scale(1.12); opacity: .8; }
-          100% { transform: translate3d(-2%, 2%, 0) scale(1.04); opacity: .6; }
-        }
-        @keyframes lg-halo-b {
-          0%   { transform: translate3d(4%, 5%, 0) scale(1.05); opacity: .35; }
-          50%  { transform: translate3d(-5%, -3%, 0) scale(.95); opacity: .55; }
-          100% { transform: translate3d(2%, -6%, 0) scale(1.08); opacity: .4; }
-        }
-        @keyframes lg-lines-drift {
-          from { background-position: 0 0; }
-          to   { background-position: 0 96px; }
-        }
 
         .lg {
           position: relative;
@@ -169,39 +223,14 @@ const SellPage = () => {
           overflow: hidden;
         }
 
-        /* ---- фон ---- */
-        .lg-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-        .lg-halo {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(120px);
-          will-change: transform, opacity;
-        }
-        .lg-halo-1 {
-          width: 52vmax; height: 52vmax;
-          top: -20vmax; left: -22vmax;
-          background: radial-gradient(circle, rgba(232,255,90,.22) 0%, transparent 66%);
-          animation: lg-halo-a 24s ease-in-out infinite;
-        }
-        .lg-halo-2 {
-          width: 40vmax; height: 40vmax;
-          bottom: -18vmax; right: -14vmax;
-          background: radial-gradient(circle, rgba(232,255,90,.12) 0%, transparent 70%);
-          animation: lg-halo-b 30s ease-in-out infinite;
-        }
-        .lg-lines {
+        .lg-dots {
           position: absolute;
           inset: 0;
-          background-image: repeating-linear-gradient(
-            180deg,
-            rgba(255,255,255,.028) 0px,
-            rgba(255,255,255,.028) 1px,
-            transparent 1px,
-            transparent 96px
-          );
-          mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
-          -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
-          animation: lg-lines-drift 22s linear infinite;
+          width: 100%;
+          height: 100%;
+          display: block;
+          z-index: 0;
+          pointer-events: none;
         }
 
         /* ---- левая половина ---- */
@@ -211,21 +240,20 @@ const SellPage = () => {
           display: flex;
           align-items: center;
           padding: clamp(32px, 5vw, 88px);
-          border-right: 1px solid rgba(255,255,255,.06);
         }
 
         .lg-brand { display: flex; flex-direction: column; align-items: flex-start; }
 
         .lg-mark {
-          width: clamp(150px, 24vw, 320px);
+          width: clamp(150px, 22vw, 300px);
           height: auto;
           user-select: none;
-          filter: drop-shadow(0 0 60px rgba(232,255,90,.12));
+          filter: drop-shadow(0 0 70px rgba(232,255,90,.10));
         }
 
         .lg-word {
-          margin-top: clamp(18px, 2.4vw, 30px);
-          font-size: clamp(34px, 5.2vw, 72px);
+          margin-top: clamp(16px, 2.2vw, 28px);
+          font-size: clamp(34px, 4.8vw, 66px);
           font-weight: 800;
           letter-spacing: -.055em;
           line-height: .95;
@@ -253,49 +281,69 @@ const SellPage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: clamp(32px, 5vw, 88px);
+          padding: clamp(28px, 4vw, 64px);
         }
 
         .lg-form {
           width: 100%;
-          max-width: 360px;
+          max-width: 340px;
           display: flex;
           flex-direction: column;
-          gap: 22px;
+          gap: 14px;
         }
 
-        .lg-eyebrow {
-          font-size: 11.5px;
-          letter-spacing: .16em;
-          text-transform: uppercase;
-          color: rgba(255,255,255,.4);
+        .lg-title {
+          margin: 0 0 14px;
+          text-align: center;
+          font-size: 34px;
+          font-weight: 800;
+          letter-spacing: -.03em;
+          font-family: inherit;
         }
 
-        .lg-field { display: flex; flex-direction: column; gap: 8px; }
-
-        .lg-label {
-          font-size: 11.5px;
-          letter-spacing: .08em;
-          text-transform: uppercase;
-          color: rgba(255,255,255,.38);
-        }
-
-        .lg-field input {
+        .lg-input {
           width: 100%;
-          padding: 10px 2px 12px;
-          background: transparent;
-          border: none;
-          border-bottom: 1px solid rgba(255,255,255,.16);
+          padding: 16px 18px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.14);
+          background: rgba(255,255,255,.03);
           color: #f5f5f5;
-          font-size: 16px;
+          font-size: 14.5px;
           font-family: inherit;
           outline: none;
-          transition: border-color .25s, color .25s;
+          transition: border-color .2s, box-shadow .2s, background .2s;
         }
 
-        .lg-field input::placeholder { color: rgba(255,255,255,.22); }
+        .lg-input::placeholder { color: rgba(255,255,255,.32); }
 
-        .lg-field input:focus { border-bottom-color: #e8ff5a; }
+        .lg-input:focus {
+          border-color: rgba(232,255,90,.65);
+          background: rgba(232,255,90,.04);
+          box-shadow: 0 0 0 1px rgba(232,255,90,.25);
+        }
+
+        .lg-pass { position: relative; }
+
+        .lg-input-pass { padding-right: 48px; }
+
+        .lg-eye {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: none;
+          color: rgba(255,255,255,.4);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+        }
+
+        .lg-eye:hover { color: rgba(255,255,255,.75); }
 
         .lg-error {
           display: flex;
@@ -309,36 +357,84 @@ const SellPage = () => {
         .lg-submit {
           margin-top: 6px;
           width: 100%;
-          padding: 15px;
-          border-radius: 100px;
+          padding: 16px;
+          border-radius: 12px;
           border: none;
           background: #e8ff5a;
           color: #000;
           font-size: 15px;
-          font-weight: 800;
+          font-weight: 700;
           font-family: inherit;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 9px;
-          transition: transform .18s, box-shadow .18s, opacity .18s;
+          transition: transform .18s, box-shadow .18s, opacity .18s, background .18s;
         }
 
         .lg-submit:hover:not(:disabled) {
           transform: translateY(-1px);
-          box-shadow: 0 16px 40px rgba(232,255,90,.22);
+          box-shadow: 0 14px 34px rgba(232,255,90,.22);
         }
-        .lg-submit:disabled { opacity: .65; cursor: wait; }
+
+        .lg-submit:disabled {
+          background: rgba(255,255,255,.08);
+          color: rgba(255,255,255,.35);
+          cursor: not-allowed;
+        }
 
         .lg-spin { animation: lg-spin-kf 1s linear infinite; }
 
-        .lg-note { font-size: 12px; color: rgba(255,255,255,.4); }
-        .lg-note a {
-          color: rgba(232,255,90,.9);
-          text-decoration: none;
-          border-bottom: 1px solid rgba(232,255,90,.35);
+        .lg-forgot {
+          align-self: center;
+          margin-top: 4px;
+          background: none;
+          border: none;
+          color: rgba(255,255,255,.55);
+          font-size: 13px;
+          font-family: inherit;
+          cursor: pointer;
+          padding: 6px;
+          text-decoration: underline;
+          text-underline-offset: 4px;
         }
+
+        .lg-forgot:hover { color: #e8ff5a; }
+
+        .lg-actions {
+          margin-top: 18px;
+          padding-top: 18px;
+          border-top: 1px solid rgba(255,255,255,.07);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .lg-secondary {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 13px 16px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.12);
+          background: transparent;
+          color: rgba(255,255,255,.85);
+          font-size: 13.5px;
+          font-weight: 600;
+          text-decoration: none;
+          font-family: inherit;
+          transition: border-color .2s, color .2s, background .2s;
+        }
+
+        .lg-secondary:hover {
+          border-color: rgba(232,255,90,.45);
+          color: #e8ff5a;
+          background: rgba(232,255,90,.04);
+        }
+
+        .lg-telegram { color: rgba(232,255,90,.9); }
 
         /* ---- адаптив ---- */
         @media (max-width: 900px) {
@@ -347,21 +443,17 @@ const SellPage = () => {
             grid-auto-rows: min-content;
             align-content: start;
           }
-          .lg-left {
-            border-right: none;
-            border-bottom: 1px solid rgba(255,255,255,.06);
-            padding: 28px 22px 24px;
-            justify-content: flex-start;
-          }
-          .lg-mark { width: clamp(92px, 24vw, 128px); }
+          .lg-left { padding: 28px 22px 22px; }
+          .lg-mark { width: clamp(88px, 22vw, 120px); }
           .lg-word { font-size: clamp(28px, 7.6vw, 40px); margin-top: 12px; }
           .lg-tag { font-size: clamp(17px, 4.4vw, 22px); margin-top: 8px; }
-          .lg-right { align-items: flex-start; padding: 26px 22px 40px; }
-          .lg-form { max-width: none; gap: 18px; }
+          .lg-right { padding: 26px 22px 40px; align-items: flex-start; }
+          .lg-form { max-width: none; }
+          .lg-title { font-size: 28px; text-align: left; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .lg-halo, .lg-lines { animation: none !important; }
+          .lg-submit:hover:not(:disabled) { transform: none; }
         }
       `}</style>
     </div>
