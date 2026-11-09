@@ -34,6 +34,10 @@ export interface UpdateSellerInput {
   ogrnip?: string | null;
   inn?: string | null;
   legal_address?: string | null;
+
+  /** Ссылка на платёжную страницу продавца и подпись к ней. */
+  pay_url?: string | null;
+  pay_note?: string | null;
 }
 
 export const sellersService = {

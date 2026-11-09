@@ -105,6 +105,10 @@ const AdminSellers = () => {
         ogrnip: form.ogrnip.trim() || null,
         inn: form.inn.trim() || null,
         legal_address: form.legal_address.trim() || null,
+
+        // Оплата напрямую продавцу
+        pay_url: form.pay_url.trim() || null,
+        pay_note: form.pay_note.trim() || null,
       });
 
       if (form.slug.trim() !== editingSeller.slug) {

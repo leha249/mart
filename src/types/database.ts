@@ -199,6 +199,14 @@ export interface Seller {
   legal_address: string | null;
 
   /**
+   * Оплата напрямую продавцу: ссылка на его платёжную страницу
+   * (Lava-виджет, СБП-ссылка) и подпись вроде «СБП по номеру».
+   * Платформа денег не принимает — только передаёт ссылку покупателю.
+   */
+  pay_url?: string | null;
+  pay_note?: string | null;
+
+  /**
    * Ставка комиссии платформы, %. Есть в таблице sellers, но отсутствует
    * в публичном view sellers_public — поэтому поле optional.
    */
@@ -245,6 +253,10 @@ export interface UISeller {
   inn?: string;
   legalAddress?: string;
 
+  /** Оплата напрямую продавцу: ссылка на его платёжную страницу. */
+  payUrl?: string;
+  payNote?: string;
+
   /** Ставка комиссии платформы, %. Может отсутствовать в sellers_public. */
   commissionPercent?: number;
 
@@ -284,6 +296,9 @@ export const mapSellerToUI = (s: Seller): UISeller => ({
   ogrnip: s.ogrnip ?? undefined,
   inn: s.inn ?? undefined,
   legalAddress: s.legal_address ?? undefined,
+
+  payUrl: s.pay_url ?? undefined,
+  payNote: s.pay_note ?? undefined,
 
   commissionPercent: s.commission_percent,
   subscriptionUntil: s.subscription_until ?? undefined,

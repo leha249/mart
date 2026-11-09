@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, Package, Home, Phone } from 'lucide-react';
+import { Check, ArrowRight, Package, Home, Phone, CreditCard } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
@@ -8,11 +8,20 @@ import ScrollProgress from '../components/ScrollProgress';
 import { formatPrice } from '../utils/format';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { sellersService } from '../services/sellers';
 
 interface OrderInfo {
   id: number;
   total: number;
   itemsCount: number;
+  sellerId?: number | null;
+}
+
+/** Куда платить конкретному продавцу — данные из sellers_public. */
+interface SellerPay {
+  name: string;
+  payUrl?: string;
+  payNote?: string;
 }
 
 interface LastOrdersData {
@@ -25,6 +34,7 @@ interface LastOrdersData {
 const OrderSuccess = () => {
   const [data, setData] = useState<LastOrdersData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sellers, setSellers] = useState<Record<number, SellerPay>>({});
 
   usePageMeta({
     title: 'Заказ оформлен',
@@ -44,6 +54,52 @@ const OrderSuccess = () => {
       setLoading(false);
     }
   }, []);
+
+  // Кому платить: подтягиваем ссылки на оплату продавцов из заказа
+  useEffect(() => {
+    const ids = [
+      ...new Set(
+        (data?.orders ?? [])
+          .map((o) => o.sellerId)
+          .filter((id): id is number => typeof id === 'number')
+      ),
+    ];
+    if (ids.length === 0) return;
+
+    let alive = true;
+
+    (async () => {
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const seller = await sellersService.getById(id);
+            if (!seller) return [id, null] as const;
+            return [
+              id,
+              {
+                name: seller.name,
+                payUrl: seller.payUrl,
+                payNote: seller.payNote,
+              } as SellerPay,
+            ] as const;
+          } catch {
+            return [id, null] as const;
+          }
+        })
+      );
+
+      if (!alive) return;
+      const map: Record<number, SellerPay> = {};
+      for (const [id, seller] of entries) {
+        if (seller) map[id] = seller;
+      }
+      setSellers(map);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [data]);
 
   const goHome = () => {
     sessionStorage.removeItem('mora-last-orders');
@@ -308,68 +364,145 @@ const OrderSuccess = () => {
                 gap: 12,
               }}
             >
-              {data.orders.map((order, i) => (
-                <motion.div
-                  key={order.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + i * 0.1 }}
-                  style={{
-                    padding: 16,
-                    background: 'var(--bg)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        background: 'var(--accent)',
-                        color: '#000',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: 13,
-                        flexShrink: 0,
-                      }}
-                    >
-                      #{order.id}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>
-                        Заказ №{order.id}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        {order.itemsCount}{' '}
-                        {order.itemsCount === 1
-                          ? 'товар'
-                          : order.itemsCount < 5
-                          ? 'товара'
-                          : 'товаров'}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="price-num"
+              {data.orders.map((order, i) => {
+                const seller = order.sellerId
+                  ? sellers[order.sellerId]
+                  : undefined;
+                return (
+                  <motion.div
+                    key={order.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.1 }}
                     style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color: 'var(--accent)',
+                      padding: 16,
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
                     }}
                   >
-                    {formatPrice(order.total)}
-                  </div>
-                </motion.div>
-              ))}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                      >
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'var(--accent)',
+                            color: '#000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            flexShrink: 0,
+                          }}
+                        >
+                          #{order.id}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>
+                            Заказ №{order.id}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                            {order.itemsCount}{' '}
+                            {order.itemsCount === 1
+                              ? 'товар'
+                              : order.itemsCount < 5
+                              ? 'товара'
+                              : 'товаров'}
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        className="price-num"
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        {formatPrice(order.total)}
+                      </div>
+                    </div>
+
+                    {order.sellerId && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 12,
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          paddingTop: 12,
+                          borderTop: '1px solid var(--border)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            color: 'var(--muted)',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          Оплата напрямую продавцу
+                          {seller ? (
+                            <>
+                              {' '}
+                              <strong style={{ color: 'var(--text)' }}>
+                                {seller.name}
+                              </strong>
+                              {seller.payNote ? ` · ${seller.payNote}` : ''}
+                            </>
+                          ) : null}
+                        </div>
+                        {seller?.payUrl ? (
+                          <a
+                            href={seller.payUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '10px 20px',
+                              borderRadius: 100,
+                              border: 'none',
+                              background: 'var(--accent)',
+                              color: 'var(--accent-contrast)',
+                              fontSize: 13,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            <CreditCard size={15} /> Оплатить{' '}
+                            {formatPrice(order.total)}
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                            Способ оплаты уточнит продавец
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
 
             {data.orders.length > 1 && (
@@ -411,23 +544,37 @@ const OrderSuccess = () => {
           >
             <div
               style={{
-                display: 'flex',
-                gap: 12,
-                alignItems: 'flex-start',
+                display: 'grid',
+                gap: 14,
                 fontSize: 13,
                 color: 'var(--muted)',
                 lineHeight: 1.6,
               }}
             >
-              <Phone
-                size={16}
-                color="var(--accent)"
-                style={{ flexShrink: 0, marginTop: 2 }}
-              />
-              <div>
-                Каждый продавец свяжется с вами по телефону{' '}
-                <strong style={{ color: 'var(--text)' }}>{data.phone}</strong>{' '}
-                для подтверждения заказа и уточнения деталей доставки.
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <Phone
+                  size={16}
+                  color="var(--accent)"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
+                <div>
+                  Каждый продавец свяжется с вами по телефону{' '}
+                  <strong style={{ color: 'var(--text)' }}>{data.phone}</strong>{' '}
+                  для подтверждения заказа и уточнения деталей доставки.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <CreditCard
+                  size={16}
+                  color="var(--accent)"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
+                <div>
+                  Деньги за заказ вы переводите продавцу напрямую — платформа
+                  их не принимает и не хранит. Чек об оплате выдаёт продавец
+                  (самозанятый — через приложение «Мой налог»).
+                </div>
               </div>
             </div>
           </motion.div>

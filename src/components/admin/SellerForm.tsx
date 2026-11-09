@@ -38,6 +38,10 @@ export interface SellerFormState {
   ogrnip: string;
   inn: string;
   legal_address: string;
+
+  // Оплата напрямую продавцу
+  pay_url: string;
+  pay_note: string;
 }
 
 export const sellerFormFrom = (s: UISeller): SellerFormState => ({
@@ -68,6 +72,9 @@ export const sellerFormFrom = (s: UISeller): SellerFormState => ({
   ogrnip: s.ogrnip ?? '',
   inn: s.inn ?? '',
   legal_address: s.legalAddress ?? '',
+
+  pay_url: s.payUrl ?? '',
+  pay_note: s.payNote ?? '',
 });
 
 interface Props {
@@ -85,7 +92,8 @@ type SectionKey =
   | 'lookbook'
   | 'about'
   | 'footer'
-  | 'legal';
+  | 'legal'
+  | 'payment';
 
 const SellerForm = ({
   initialForm,
@@ -165,6 +173,11 @@ const SellerForm = ({
       }
     }
 
+    // Ссылка на оплату: только http(s), иначе в href можно подсунуть js:
+    if (form.pay_url.trim() && !/^https?:\/\/\S{4,}$/i.test(form.pay_url.trim())) {
+      errs.pay_url = 'Ссылка должна начинаться с https://';
+    }
+
     return errs;
   };
 
@@ -196,7 +209,8 @@ const SellerForm = ({
         setActiveSection('about');
       else if (errs.lookbook_images) setActiveSection('lookbook');
       else if (errs.footer_text) setActiveSection('footer');
-      else if (errs.ogrnip) setActiveSection('legal');
+      else if (errs.pay_url) setActiveSection('payment');
+      else if (errs.ogrnip || errs.inn) setActiveSection('legal');
       else setActiveSection('main');
       addToast('Проверьте поля формы', 'error');
       return;
@@ -230,6 +244,7 @@ const SellerForm = ({
     { key: 'about', label: 'About' },
     { key: 'footer', label: 'Footer' },
     { key: 'legal', label: 'Реквизиты' },
+    { key: 'payment', label: 'Оплата' },
   ];
 
   const ogrnipLabel =
@@ -753,6 +768,42 @@ const SellerForm = ({
             disabled={saving}
             rows={2}
           />
+        </div>
+      )}
+
+      {/* === ОПЛАТА НАПРЯМУЮ ПРОДАВЦУ === */}
+      {activeSection === 'payment' && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={hintStyle}>
+            Платформа деньги не принимает: покупатель оплачивает заказ
+            напрямую вам по ссылке. Ссылка показывается на странице «Заказ
+            оформлен» и в кабинете покупателя. Чек покупателю выдаёте вы
+            (самозанятый — через «Мой налог»).
+          </div>
+
+          <Field
+            label="Ссылка на оплату"
+            value={form.pay_url}
+            onChange={(v) => setField('pay_url', v.trim())}
+            placeholder="https://lava.ru/..."
+            error={errors.pay_url}
+            disabled={saving}
+            hint="Подойдёт ссылка на ваш Lava-виджет, СБП-ссылку банка или страницу оплаты. Обязательно https://"
+          />
+
+          <Field
+            label="Подпись для покупателя"
+            value={form.pay_note}
+            onChange={(v) => setField('pay_note', v)}
+            placeholder="СБП по номеру +7 900 000-00-00, в комментарии укажите номер заказа"
+            disabled={saving}
+            hint="Необязательно. Показывается рядом с кнопкой «Оплатить», если банк или Lava требуют пояснений"
+          />
+
+          <div style={hintStyle}>
+            Если поле пустое, покупатель увидит «Оплата по договорённости» и
+            сможет уточнить способ оплаты в чате с вами.
+          </div>
         </div>
       )}
 

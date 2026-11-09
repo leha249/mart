@@ -71,9 +71,10 @@ const STATIC_PAGES = [
   { path: '/', priority: '1.0', changefreq: 'daily' },
   { path: '/catalog', priority: '0.9', changefreq: 'daily' },
   { path: '/sellers', priority: '0.8', changefreq: 'weekly' },
+  { path: '/sell', priority: '0.6', changefreq: 'monthly' },
+  { path: '/pricing', priority: '0.5', changefreq: 'monthly' },
   { path: '/about', priority: '0.5', changefreq: 'monthly' },
   { path: '/contacts', priority: '0.5', changefreq: 'monthly' },
-  { path: '/register-seller', priority: '0.6', changefreq: 'monthly' },
   { path: '/terms', priority: '0.3', changefreq: 'yearly' },
   { path: '/privacy', priority: '0.3', changefreq: 'yearly' },
   { path: '/seller-agreement', priority: '0.3', changefreq: 'yearly' },
@@ -103,9 +104,11 @@ const main = async () => {
 
   if (supabaseUrl && supabaseKey) {
     try {
+      // Колонки перечисляем явно: у anon нет select * на sellers
+      // (закрыты user_id, email и служебные поля), поэтому нужен view.
       const [products, sellers] = await Promise.all([
-        fetchTable(supabaseUrl, supabaseKey, 'products', '*'),
-        fetchTable(supabaseUrl, supabaseKey, 'sellers', '*'),
+        fetchTable(supabaseUrl, supabaseKey, 'products', 'id,name,slug'),
+        fetchTable(supabaseUrl, supabaseKey, 'sellers_public', 'slug,status'),
       ]);
 
       for (const product of products) {

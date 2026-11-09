@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Package,
   MessageCircle,
+  CreditCard,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -775,6 +776,34 @@ const ProductPage = ({ slug }: Props) => {
                 >
                   <MessageCircle size={15} /> Написать продавцу
                 </button>
+
+                {seller.payUrl ? (
+                  <a
+                    href={seller.payUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      marginTop: 10,
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '11px 16px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(232,255,90,0.35)',
+                      background: 'rgba(232,255,90,0.08)',
+                      color: 'var(--accent)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: 'inherit',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <CreditCard size={15} /> Оплата напрямую продавцу
+                  </a>
+                ) : null}
+
                 <div
                   style={{
                     marginTop: 14,
@@ -786,7 +815,8 @@ const ProductPage = ({ slug }: Props) => {
                   }}
                 >
                   Товар продаёт {seller.name}. MØRA MART — информационный
-                  посредник и не является стороной сделки. Доставку, возврат и
+                  посредник и не является стороной сделки. Оплату вы вносите
+                  продавцу напрямую, чек об оплате выдаёт он. Доставку, возврат и
                   гарантию обеспечивает продавец.
                 </div>
               </div>
