@@ -210,7 +210,7 @@ const PricingPage = () => {
               </div>
 
               <button
-                onClick={() => navigate('/register-seller')}
+                onClick={() => navigate('/sell')}
                 style={{
                   width: '100%',
                   display: 'flex',

@@ -44,21 +44,18 @@ const CartPanel = ({ open, onClose }: Props) => {
     useCart();
   const promo = usePromo();
   const { addToast } = useToast();
-  const { session: customer, register, setCustomerName } = useCustomer();
+  const { session: customer, setCustomerName } = useCustomer();
   const [orderSent, setOrderSent] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  // Если покупатель уже зарегистрирован — подставляем его данные,
-  // иначе берём имя из прошлого заказа на этом устройстве
+  // Если покупатель уже зарегистрирован — подставляем его данные
   const [name, setName] = useState(
     () => customer?.firstName || customer?.name || readLastOrderName()
   );
-  const [lastName, setLastName] = useState(() => customer?.lastName ?? '');
   const [phone, setPhone] = useState(
     customer?.phone ? formatPhone(customer.phone) : ''
   );
   const [email, setEmail] = useState(customer?.email ?? '');
   const [submitting, setSubmitting] = useState(false);
-  const [registering, setRegistering] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedData, setAgreedData] = useState(false);
   const [agreedMarketing, setAgreedMarketing] = useState(false);
@@ -69,7 +66,6 @@ const CartPanel = ({ open, onClose }: Props) => {
     if (!customer) return;
     setPhone((prev) => prev || formatPhone(customer.phone));
     setName((prev) => prev || customer.firstName || customer.name || '');
-    setLastName((prev) => prev || customer.lastName || '');
     setEmail((prev) => prev || customer.email || '');
   }, [customer]);
 
@@ -128,56 +124,8 @@ const CartPanel = ({ open, onClose }: Props) => {
 
   const canCheckout = agreedTerms && agreedData;
 
-  const validateRegistration = (): string | null => {
-    if (name.trim().length < 1) return 'Укажите имя';
-    if (lastName.trim().length < 1) return 'Укажите фамилию';
-    if (!/^[\d\s()+\-]+$/.test(phone.trim())) {
-      return 'Некорректный телефон';
-    }
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10 || digits.length > 15) {
-      return 'Укажите корректный телефон';
-    }
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return 'Некорректный email';
-    }
-    if (!agreedData) return 'Необходимо согласие на обработку данных';
-    if (!agreedTerms) return 'Необходимо согласие с условиями';
-    return null;
-  };
-
-  /** Шаг 1 оформления: создать профиль покупателя. */
-  const handleRegister = async () => {
-    if (registering) return;
-
-    const err = validateRegistration();
-    if (err) {
-      addToast(err, 'error');
-      return;
-    }
-
-    setRegistering(true);
-    try {
-      const res = await register({
-        firstName: name,
-        lastName,
-        phone,
-        email,
-      });
-      if (!res.success) {
-        addToast(res.error || 'Не удалось создать профиль', 'error');
-        return;
-      }
-      addToast('Профиль покупателя создан', 'success');
-    } finally {
-      setRegistering(false);
-    }
-  };
-
   const validateCheckout = (): string | null => {
-    if (!customer) {
-      return validateRegistration();
-    }
+    if (!customer) return 'Войдите, чтобы оформить заказ';
     if (name.trim().length < 1) return 'Укажите имя';
     if (phone.replace(/\D/g, '').length < 10) {
       return 'Укажите корректный телефон';
@@ -535,49 +483,19 @@ const CartPanel = ({ open, onClose }: Props) => {
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--muted)',
-                          lineHeight: 1.5,
-                          marginBottom: 4,
-                        }}
-                      >
-                        Чтобы оформить заказ, создайте профиль покупателя:
-                        имя, фамилия, телефон и почта.
-                      </p>
-                      <Field
-                        label="Имя *"
-                        value={name}
-                        onChange={setName}
-                        placeholder="Иван"
-                        disabled={submitting || orderSent || registering}
-                      />
-                      <Field
-                        label="Фамилия *"
-                        value={lastName}
-                        onChange={setLastName}
-                        placeholder="Иванов"
-                        disabled={submitting || orderSent || registering}
-                      />
-                      <Field
-                        label="Телефон *"
-                        value={phone}
-                        onChange={setPhone}
-                        placeholder="+7 900 000-00-00"
-                        type="tel"
-                        disabled={submitting || orderSent || registering}
-                      />
-                      <Field
-                        label="Email"
-                        value={email}
-                        onChange={setEmail}
-                        placeholder="you@example.com"
-                        type="email"
-                        disabled={submitting || orderSent || registering}
-                      />
-                    </>
+                    <div
+                      style={{
+                        padding: '14px 16px',
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        fontSize: 13,
+                        color: 'var(--muted)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Чтобы оформить заказ, войдите или зарегистрируйтесь.
+                    </div>
                   )}
 
                   {willSplitInto && (
@@ -1072,16 +990,20 @@ const CartPanel = ({ open, onClose }: Props) => {
                   whileTap={{ scale: orderSent ? 1 : 0.98 }}
                   onClick={
                     !showCheckout
-                      ? () => setShowCheckout(true)
-                      : customer
-                      ? handleCheckout
-                      : handleRegister
+                      ? () => {
+                          if (!customer) {
+                            // По схеме: оформление начинается со страницы
+                            // входа/регистрации, адрес меняется, потом возврат.
+                            onClose();
+                            navigate('/login-customer?next=cart');
+                            return;
+                          }
+                          setShowCheckout(true);
+                        }
+                      : handleCheckout
                   }
                   disabled={
-                    submitting ||
-                    registering ||
-                    orderSent ||
-                    (showCheckout && !canCheckout)
+                    submitting || orderSent || (showCheckout && !canCheckout)
                   }
                   style={{
                     width: '100%',
@@ -1119,15 +1041,11 @@ const CartPanel = ({ open, onClose }: Props) => {
                     <>
                       <Check size={18} /> Заказ оформлен!
                     </>
-                  ) : registering ? (
-                    'Создаём профиль…'
                   ) : submitting ? (
                     'Отправка...'
                   ) : showCheckout ? (
                     !canCheckout ? (
                       'Примите условия'
-                    ) : !customer ? (
-                      'Зарегистрироваться и продолжить'
                     ) : willSplitInto ? (
                       `Оформить (${uniqueSellers} ${pluralize(
                         uniqueSellers,
@@ -1158,54 +1076,7 @@ const CartPanel = ({ open, onClose }: Props) => {
   );
 };
 
-interface FieldProps {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  disabled?: boolean;
-}
 
-const Field = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  disabled,
-}: FieldProps) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-    <label
-      style={{
-        fontSize: 11,
-        color: 'var(--muted)',
-        letterSpacing: '1px',
-        textTransform: 'uppercase',
-      }}
-    >
-      {label}
-    </label>
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-      style={{
-        padding: '12px 16px',
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        color: 'var(--text)',
-        fontSize: 14,
-        outline: 'none',
-        fontFamily: 'inherit',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    />
-  </div>
-);
 
 interface CheckboxRowProps {
   checked: boolean;

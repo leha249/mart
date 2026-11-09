@@ -37,12 +37,11 @@ const SellerPage = lazy(() => import('./pages/SellerPage'));
 const ProductPage = lazy(() => import('./pages/ProductPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const Admin = lazy(() => import('./pages/Admin'));
-const Login = lazy(() => import('./pages/Login'));
 const FavoritesPage = lazy(() => import('./pages/Favorites'));
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
 const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 
-const CustomerLoginPage = lazy(() => import('./pages/CustomerLoginPage'));
+const CustomerAuthPage = lazy(() => import('./pages/CustomerAuthPage'));
 const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'));
 const LogoutPage = lazy(() => import('./pages/LogoutPage'));
 
@@ -52,7 +51,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const SellerAgreementPage = lazy(() => import('./pages/SellerAgreementPage'));
 const DataRequestPage = lazy(() => import('./pages/DataRequestPage'));
-const RegisterSellerPage = lazy(() => import('./pages/RegisterSellerPage'));
+const SellPage = lazy(() => import('./pages/SellPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 
 function DataSync() {
@@ -156,7 +155,15 @@ function LinkInterceptor() {
  * теперь своя страница /product/:slug, поэтому выбор в поиске ведёт на неё.
  */
 function GlobalPanels() {
-  const { activePanel, closePanels } = useUI();
+  const { activePanel, closePanels, openCart } = useUI();
+  const location = useLocation();
+
+  // Возврат с /login-customer?next=cart: адрес «/?cart=1» — открываем корзину.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('cart') === '1') {
+      openCart();
+    }
+  }, [location.search, openCart]);
 
   const openProductPage = (product: { id: number; slug?: string | null }) => {
     closePanels();
@@ -207,11 +214,11 @@ function AppRoutes() {
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/order-success" element={<OrderSuccess />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<SellPage />} />
         <Route path="/logout" element={<LogoutPage />} />
-        <Route path="/register-seller" element={<RegisterSellerPage />} />
+        <Route path="/sell" element={<SellPage />} />
         <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/login-customer" element={<CustomerLoginPage />} />
+        <Route path="/login-customer" element={<CustomerAuthPage />} />
         <Route path="/account" element={<CustomerAccountPage />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/about" element={<AboutPage />} />

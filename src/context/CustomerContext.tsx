@@ -43,6 +43,8 @@ interface CustomerContextType {
   register: (
     input: RegisterCustomerInput
   ) => Promise<{ success: boolean; error?: string }>;
+  /** Вход по номеру телефона (без SMS — до подключения провайдера). */
+  login: (phone: string) => Promise<{ success: boolean; error?: string }>;
   setCustomerName: (name: string) => void;
   signOut: () => void;
 }
@@ -234,6 +236,61 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
+  /**
+   * Вход существующего покупателя по номеру телефона.
+   * Пока SMS не подключён, это единственный способ «войти»: профиль
+   * ищется по номеру, подтверждения номера нет.
+   */
+  const login = useCallback(
+    async (phone: string): Promise<{ success: boolean; error?: string }> => {
+      if (!/^[\d\s()+\-]+$/.test(phone.trim())) {
+        return { success: false, error: 'Некорректный номер телефона' };
+      }
+      const digits = normalizePhone(phone);
+      if (digits.length < 10 || digits.length > 15) {
+        return { success: false, error: 'Некорректный номер телефона' };
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('customer_login', {
+          p_phone: phone,
+        });
+        if (error) throw error;
+
+        const row = data as {
+          id?: number;
+          phone?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string | null;
+        } | null;
+
+        if (!row || !row.id) {
+          return {
+            success: false,
+            error: 'Профиль с таким номером не найден — зарегистрируйтесь',
+          };
+        }
+
+        setSession({
+          phone: row.phone ?? digits,
+          firstName: row.first_name ?? '',
+          lastName: row.last_name ?? '',
+          email: row.email ?? undefined,
+          customerId: row.id,
+          name: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim(),
+          verifiedAt: new Date().toISOString(),
+        });
+
+        return { success: true };
+      } catch (e) {
+        console.error('[CustomerContext.login]', e);
+        return { success: false, error: errorMessage(e, 'Не удалось войти') };
+      }
+    },
+    []
+  );
+
   const setCustomerName = useCallback((name: string) => {
     setSession((prev) => (prev ? { ...prev, name: name.trim() } : prev));
   }, []);
@@ -250,6 +307,7 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         requestCode,
         verifyCode,
         register,
+        login,
         setCustomerName,
         signOut,
       }}

@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
 import { navigate } from '../utils/navigate';
+import { CONTACTS } from '../utils/constants';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 const AboutPage = () => {
@@ -178,19 +179,23 @@ const AboutPage = () => {
                 Хотите стать продавцом?
               </h2>
               <p>
-                Платформа открыта для новых магазинов. Если у вас есть коллекция
-                и вы хотите продавать её на MØRA MART — напишите нам:{' '}
+                Платформа открыта для новых магазинов, но аккаунты продавцов
+                создаём мы — так на витрине не появляется случайных магазинов.
+                Если у вас есть коллекция и вы хотите продавать её на MØRA MART,
+                напишите менеджеру в Telegram:{' '}
                 <a
-                  href="mailto:hello@moramart.ru"
+                  href={CONTACTS.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     color: 'var(--accent)',
                     textDecoration: 'none',
                     fontWeight: 600,
                   }}
                 >
-                  hello@moramart.ru
+                  {CONTACTS.telegramLabel}
                 </a>
-                . Мы рассмотрим вашу заявку и поможем с размещением.
+                . Он задаст пару вопросов и заведёт кабинет.
               </p>
             </div>
           </motion.div>

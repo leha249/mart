@@ -13,6 +13,13 @@ export const STORAGE_KEYS = {
   productDraft: 'mora-product-draft-v1',
 } as const;
 
+// Контакты платформы. Замените telegram на реальный аккаунт менеджера.
+export const CONTACTS = {
+  email: 'hello@moramart.ru',
+  telegram: 'https://t.me/moramart',
+  telegramLabel: 'Написать менеджеру в Telegram',
+} as const;
+
 // Animation timings (ms)
 export const ANIMATIONS = {
   quick: 200,

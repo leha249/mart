@@ -10,6 +10,10 @@ import {
   Store,
   Package,
   User,
+  Tag,
+  Info,
+  Mail,
+  Send,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -20,6 +24,7 @@ import { useBodyLock } from '../hooks/useBodyLock';
 import { useThrottle } from '../hooks/useDebounce';
 import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
+import { CONTACTS } from '../utils/constants';
 import { navigate } from '../utils/navigate';
 
 const navLinks = [
@@ -62,7 +67,7 @@ const Navbar = () => {
   const goToCatalog = () => go('/catalog');
   const goToAdmin = () => go('/admin');
   const goToAccount = () => go(isCustomer ? '/account' : '/login-customer');
-  const goToRegisterSeller = () => go('/register-seller');
+  const goToSell = () => go('/sell');
 
   return (
     <>
@@ -162,9 +167,9 @@ const Navbar = () => {
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.94 }}
                 className="icon-btn"
-                aria-label="Стать продавцом"
-                title="Стать продавцом"
-                onClick={goToRegisterSeller}
+                aria-label="Магазин — вход для продавцов"
+                title="Магазин — вход для продавцов"
+                onClick={goToSell}
               >
                 <Store size={18} strokeWidth={1.75} />
               </motion.button>
@@ -329,87 +334,154 @@ const Navbar = () => {
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
-                marginTop: 'auto',
-                marginBottom: 'auto',
+                gap: 2,
+                marginTop: 24,
+                flex: 1,
+                overflowY: 'auto',
+                paddingRight: 4,
+              }}
+            >
+              {[
+                { label: 'Каталог', icon: Package, go: goToCatalog },
+                { label: 'Магазины', icon: Store, go: goToSellers },
+                {
+                  label: `Избранное${favorites.length ? ` · ${favorites.length}` : ''}`,
+                  icon: Heart,
+                  go: goToFavorites,
+                },
+                {
+                  label: `Корзина${totalItems ? ` · ${totalItems}` : ''}`,
+                  icon: ShoppingBag,
+                  go: () => {
+                    setMenuOpen(false);
+                    openCart();
+                  },
+                },
+                {
+                  label: isCustomer ? 'Мой кабинет' : 'Войти',
+                  icon: User,
+                  go: goToAccount,
+                  accent: true,
+                },
+                { label: 'Тарифы', icon: Tag, go: () => go('/pricing') },
+                { label: 'О платформе', icon: Info, go: () => go('/about') },
+                { label: 'Контакты', icon: Mail, go: () => go('/contacts') },
+                ...(canManage
+                  ? [
+                      {
+                        label: isPending ? 'Аккаунт на модерации' : 'Управление',
+                        icon: Settings,
+                        go: goToAdmin,
+                      },
+                    ]
+                  : []),
+              ].map(({ label, icon: Icon, go: action, accent }, i) => (
+                <motion.button
+                  key={label}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    action();
+                  }}
+                  initial={{ opacity: 0, x: -30, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                  transition={{
+                    delay: 0.05 + i * 0.04,
+                    duration: 0.4,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    fontSize: 'clamp(20px, 3.4vw, 30px)',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: accent ? 'var(--accent)' : 'var(--text)',
+                    background: 'none',
+                    border: 'none',
+                    textAlign: 'left',
+                    fontFamily: 'inherit',
+                    padding: '6px 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  <Icon size={20} strokeWidth={1.75} />
+                  {label}
+                </motion.button>
+              ))}
+            </div>
+
+            {/* Низ меню: вход для продавцов + менеджер */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                paddingTop: 18,
+                borderTop: '1px solid var(--border)',
               }}
             >
               <motion.button
                 onClick={() => {
                   setMenuOpen(false);
-                  goToSellers();
+                  goToSell();
                 }}
-                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                style={mobileLinkStyle}
-              >
-                <Store size={40} strokeWidth={1.5} />
-                Магазины
-              </motion.button>
-
-              <motion.button
-                onClick={() => {
-                  setMenuOpen(false);
-                  goToCatalog();
-                }}
-                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{ delay: 0.17, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                style={mobileLinkStyle}
-              >
-                <Package size={40} strokeWidth={1.5} />
-                Каталог
-              </motion.button>
-
-              <motion.button
-                onClick={() => {
-                  setMenuOpen(false);
-                  goToAccount();
-                }}
-                initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{ delay: 0.24, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.4 }}
                 style={{
-                  ...mobileLinkStyle,
-                  color: isCustomer ? 'var(--accent)' : 'var(--text)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '16px 20px',
+                  borderRadius: 16,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
                 }}
               >
-                <User size={40} strokeWidth={1.5} />
-                {isCustomer ? 'Кабинет' : 'Войти'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Store size={22} strokeWidth={1.75} />
+                  <span style={{ textAlign: 'left' }}>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: 17,
+                        fontWeight: 800,
+                      }}
+                    >
+                      Магазин
+                    </span>
+                    <span
+                      style={{ fontSize: 11.5, color: 'var(--muted)' }}
+                    >
+                      Вход для продавцов
+                    </span>
+                  </span>
+                </span>
+                <span style={{ color: 'var(--accent)', fontSize: 18 }}>→</span>
               </motion.button>
 
-              {canBecomeSeller && (
-                <motion.button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    goToRegisterSeller();
-                  }}
-                  initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  transition={{ delay: 0.31, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  style={mobileLinkStyle}
-                >
-                  <Store size={40} strokeWidth={1.5} />
-                  Стать продавцом
-                </motion.button>
-              )}
-
-              {canManage && (
-                <motion.button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    goToAdmin();
-                  }}
-                  initial={{ opacity: 0, x: -40, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  transition={{ delay: 0.38, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  style={mobileLinkStyle}
-                >
-                  <Settings size={40} strokeWidth={1.5} />
-                  {isPending ? 'Аккаунт на модерации' : 'Управление'}
-                </motion.button>
-              )}
+              <a
+                href={CONTACTS.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 4px',
+                  fontSize: 12.5,
+                  color: 'var(--muted)',
+                  textDecoration: 'none',
+                }}
+              >
+                <Send size={14} />
+                Ещё не продаёте? Напишите менеджеру в Telegram
+              </a>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -443,9 +515,13 @@ const Navbar = () => {
           outline-offset: 4px;
           border-radius: 4px;
         }
+        /* Бургер — основное меню сайта на всех экранах */
+        .mobile-menu-btn { display: flex !important; }
+        @media (min-width: 1151px) {
+          .desktop-nav { display: flex !important; }
+        }
         @media (max-width: 1150px) {
           .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: flex !important; }
         }
         @media (max-width: 500px) {
           .theme-toggle-wrap { display: none; }
@@ -453,22 +529,6 @@ const Navbar = () => {
       `}</style>
     </>
   );
-};
-
-const mobileLinkStyle: React.CSSProperties = {
-  fontSize: 'clamp(40px, 10vw, 72px)',
-  fontWeight: 700,
-  letterSpacing: '-0.03em',
-  color: 'var(--text)',
-  background: 'none',
-  border: 'none',
-  textAlign: 'left',
-  fontFamily: 'inherit',
-  padding: 0,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 16,
-  lineHeight: 1.1,
 };
 
 export default Navbar;
