@@ -246,11 +246,11 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: -22%;
+          right: -14%;
           top: 47%;
-          width: min(600px, 84%);
-          /* только 2D-поворот: без 3D-перспективы браузер не размывает текст */
-          transform: translateY(-50%) rotate(-2.5deg);
+          width: min(540px, 78%);
+          /* 2D-наклон вместо 3D: текст остаётся векторным и резким */
+          transform: translateY(-50%) rotate(-2deg) skewY(-2.2deg) scaleX(1.01);
           transform-origin: right center;
           opacity: .96;
           pointer-events: none;
