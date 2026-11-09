@@ -1,4 +1,4 @@
-import { BarChart3, Package, ShoppingCart, Percent, Settings } from 'lucide-react';
+import { BarChart3, Package, ShoppingCart, Percent, Settings, MessageCircle } from 'lucide-react';
 
 /**
  * Декоративный превью кабинета продавца для страницы входа.
@@ -6,11 +6,13 @@ import { BarChart3, Package, ShoppingCart, Percent, Settings } from 'lucide-reac
  * нужна, чтобы левая часть не выглядела пустой.
  */
 const SellerPanelPreview = () => {
-  const bars = [38, 62, 44, 78, 52, 90, 66];
+  const bars = [28, 46, 36, 58, 44, 72, 52, 88, 63, 74, 58, 96];
   const rows = [
-    { name: 'Заказ 1', price: '7 999 ₽', status: 'новый' },
-    { name: 'Заказ 2', price: '12 400 ₽', status: 'оплачен' },
-    { name: 'Заказ 3', price: '4 900 ₽', status: 'отправлен' },
+    { name: 'Заказ 1', price: '7 999 ₽', status: 'новый', tone: 'new' },
+    { name: 'Заказ 2', price: '12 400 ₽', status: 'оплачен', tone: 'ok' },
+    { name: 'Заказ 3', price: '4 900 ₽', status: 'отправлен', tone: 'ship' },
+    { name: 'Заказ 4', price: '15 700 ₽', status: 'доставлен', tone: 'done' },
+    { name: 'Заказ 5', price: '3 200 ₽', status: 'оплачен', tone: 'ok' },
   ];
 
   return (
@@ -20,33 +22,42 @@ const SellerPanelPreview = () => {
           <span className="sp-dot" />
           <span className="sp-dot" />
           <span className="sp-dot" />
-          <span className="sp-url">mora.mart / кабинет</span>
+          <span className="sp-url">mora.mart / кабинет продавца</span>
+          <span className="sp-pill">7 дней</span>
         </div>
 
         <div className="sp-body">
           <div className="sp-side">
-            {[BarChart3, Package, ShoppingCart, Percent, Settings].map(
+            {[BarChart3, Package, ShoppingCart, Percent, MessageCircle, Settings].map(
               (Icon, i) => (
                 <span key={i} className={`sp-side-item${i === 0 ? ' is-on' : ''}`}>
-                  <Icon size={12} />
+                  <Icon size={13} />
                 </span>
               )
             )}
           </div>
 
           <div className="sp-main">
+            <div className="sp-head">
+              <span className="sp-head-title">Дашборд</span>
+              <span className="sp-head-sub">выручка за неделю</span>
+            </div>
+
             <div className="sp-metrics">
               <div className="sp-metric">
                 <span className="sp-metric-label">Выручка</span>
                 <span className="sp-metric-value">23 997 ₽</span>
+                <span className="sp-metric-diff">+18%</span>
               </div>
               <div className="sp-metric">
                 <span className="sp-metric-label">Заказы</span>
                 <span className="sp-metric-value">3</span>
+                <span className="sp-metric-diff">+2</span>
               </div>
               <div className="sp-metric">
                 <span className="sp-metric-label">Комиссия</span>
                 <span className="sp-metric-value sp-accent">960 ₽</span>
+                <span className="sp-metric-diff sp-accent">4%</span>
               </div>
             </div>
 
@@ -54,18 +65,23 @@ const SellerPanelPreview = () => {
               {bars.map((h, i) => (
                 <span
                   key={i}
-                  className={`sp-bar-col${i === 5 ? ' is-top' : ''}`}
+                  className={`sp-bar-col${i === bars.length - 1 ? ' is-top' : ''}`}
                   style={{ height: `${h}%` }}
                 />
               ))}
             </div>
 
-            <div className="sp-rows">
+            <div className="sp-table">
+              <div className="sp-table-head">
+                <span>Заказ</span>
+                <span>Сумма</span>
+                <span>Статус</span>
+              </div>
               {rows.map((r) => (
                 <div key={r.name} className="sp-row">
                   <span className="sp-row-name">{r.name}</span>
                   <span className="sp-row-price">{r.price}</span>
-                  <span className="sp-row-status">{r.status}</span>
+                  <span className={`sp-row-status sp-${r.tone}`}>{r.status}</span>
                 </div>
               ))}
             </div>
@@ -81,74 +97,88 @@ const SellerPanelPreview = () => {
 
         .sp {
           width: 100%;
-          filter: drop-shadow(0 40px 80px rgba(0,0,0,.65));
+          filter: drop-shadow(0 44px 90px rgba(0,0,0,.7));
           animation: sp-float 9s ease-in-out infinite;
           will-change: transform;
         }
 
         .sp-window {
-          border-radius: 14px;
-          border: 1px solid rgba(255,255,255,.10);
-          background: linear-gradient(180deg, #141414 0%, #0c0c0c 100%);
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,.11);
+          background: linear-gradient(180deg, #151515 0%, #0b0b0b 100%);
           overflow: hidden;
         }
 
         .sp-bar {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 9px 12px;
+          gap: 7px;
+          padding: 11px 14px;
           border-bottom: 1px solid rgba(255,255,255,.07);
+          background: rgba(255,255,255,.015);
         }
 
         .sp-dot {
-          width: 7px;
-          height: 7px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
-          background: rgba(255,255,255,.16);
+          background: rgba(255,255,255,.17);
         }
 
         .sp-url {
-          margin-left: 8px;
-          font-size: 10.5px;
-          color: rgba(255,255,255,.30);
-          letter-spacing: .02em;
+          margin-left: 10px;
+          font-size: 11px;
+          color: rgba(255,255,255,.32);
+          letter-spacing: .01em;
+        }
+
+        .sp-pill {
+          margin-left: auto;
+          padding: 3px 9px;
+          border-radius: 100px;
+          border: 1px solid rgba(255,255,255,.10);
+          font-size: 9.5px;
+          color: rgba(255,255,255,.45);
         }
 
         .sp-body { display: flex; }
 
         .sp-side {
-          width: 44px;
-          padding: 12px 0;
+          width: 52px;
+          padding: 14px 0;
           border-right: 1px solid rgba(255,255,255,.06);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .sp-side-item {
-          width: 28px;
-          height: 28px;
-          border-radius: 7px;
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: rgba(255,255,255,.28);
+          color: rgba(255,255,255,.26);
         }
 
         .sp-side-item.is-on {
-          background: rgba(232,255,90,.12);
+          background: rgba(232,255,90,.13);
           color: #e8ff5a;
         }
 
-        .sp-main { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .sp-main { flex: 1; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
 
-        .sp-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .sp-head { display: flex; align-items: baseline; gap: 8px; }
+        .sp-head-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.88); }
+        .sp-head-sub { font-size: 10px; color: rgba(255,255,255,.3); }
+
+        .sp-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
         .sp-metric {
-          padding: 8px 9px;
-          border-radius: 9px;
+          padding: 10px 11px;
+          border-radius: 10px;
           background: rgba(255,255,255,.035);
           border: 1px solid rgba(255,255,255,.06);
           display: flex;
@@ -156,52 +186,74 @@ const SellerPanelPreview = () => {
           gap: 3px;
         }
 
-        .sp-metric-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.35); }
-        .sp-metric-value { font-size: 14px; font-weight: 700; color: #f2f2f2; }
+        .sp-metric-label { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: rgba(255,255,255,.34); }
+        .sp-metric-value { font-size: 15px; font-weight: 700; color: #f4f4f4; line-height: 1.1; }
+        .sp-metric-diff { font-size: 9.5px; color: rgba(255,255,255,.38); }
         .sp-accent { color: #e8ff5a; }
 
         .sp-chart {
-          height: 76px;
+          height: 88px;
           display: flex;
           align-items: flex-end;
-          gap: 6px;
-          padding: 8px 6px 0;
-          border-radius: 9px;
-          background: rgba(255,255,255,.02);
-          border: 1px solid rgba(255,255,255,.05);
+          gap: 7px;
+          padding: 10px 10px 0;
+          border-radius: 10px;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 70%),
+            rgba(255,255,255,.015);
+          border: 1px solid rgba(255,255,255,.055);
         }
 
         .sp-bar-col {
           flex: 1;
           border-radius: 3px 3px 0 0;
-          background: rgba(232,255,90,.22);
+          background: rgba(232,255,90,.20);
         }
 
         .sp-bar-col.is-top { background: #e8ff5a; }
 
-        .sp-rows { display: flex; flex-direction: column; gap: 5px; }
+        .sp-table { display: flex; flex-direction: column; gap: 4px; }
+
+        .sp-table-head {
+          display: grid;
+          grid-template-columns: 1fr 90px 82px;
+          gap: 8px;
+          padding: 0 9px 4px;
+          font-size: 8.5px;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,.26);
+        }
+
+        .sp-table-head span:nth-child(2) { text-align: right; }
+        .sp-table-head span:nth-child(3) { text-align: right; }
 
         .sp-row {
-          display: flex;
-          align-items: center;
+          display: grid;
+          grid-template-columns: 1fr 90px 82px;
           gap: 8px;
-          padding: 6px 8px;
-          border-radius: 7px;
+          align-items: center;
+          padding: 7px 9px;
+          border-radius: 8px;
           background: rgba(255,255,255,.025);
-          font-size: 10px;
+          font-size: 10.5px;
         }
 
         .sp-row-name {
-          flex: 1;
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          color: rgba(255,255,255,.62);
+          color: rgba(255,255,255,.66);
         }
 
-        .sp-row-price { color: rgba(255,255,255,.85); font-weight: 600; }
-        .sp-row-status { color: rgba(232,255,90,.85); }
+        .sp-row-price { text-align: right; color: rgba(255,255,255,.88); font-weight: 600; }
+
+        .sp-row-status { text-align: right; font-size: 9.5px; }
+        .sp-new { color: rgba(255,255,255,.45); }
+        .sp-ok { color: rgba(232,255,90,.9); }
+        .sp-ship { color: rgba(120,190,255,.85); }
+        .sp-done { color: rgba(120,220,150,.8); }
 
         @media (prefers-reduced-motion: reduce) {
           .sp { animation: none !important; }

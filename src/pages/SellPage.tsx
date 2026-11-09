@@ -246,13 +246,13 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: -8%;
+          right: -12%;
           top: 47%;
-          width: min(440px, 60%);
-          transform: translateY(-50%) perspective(1200px) rotateY(-15deg)
-            rotateX(5deg) rotate(-3deg) scale(1.18);
+          width: min(520px, 72%);
+          transform: translateY(-50%) perspective(1300px) rotateY(-15deg)
+            rotateX(5deg) rotate(-3deg) scale(1.22);
           transform-origin: right center;
-          opacity: .94;
+          opacity: .95;
           pointer-events: none;
         }
 
