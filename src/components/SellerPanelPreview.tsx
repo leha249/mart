@@ -8,9 +8,9 @@ import { BarChart3, Package, ShoppingCart, Percent, Settings } from 'lucide-reac
 const SellerPanelPreview = () => {
   const bars = [38, 62, 44, 78, 52, 90, 66];
   const rows = [
-    { name: 'Rick Owens x DRKSHDW', price: '7 999 ₽', status: 'новый' },
-    { name: 'Кеды Rick Owens', price: '12 400 ₽', status: 'оплачен' },
-    { name: 'Худи oversized', price: '4 900 ₽', status: 'отправлен' },
+    { name: 'Заказ 1', price: '7 999 ₽', status: 'новый' },
+    { name: 'Заказ 2', price: '12 400 ₽', status: 'оплачен' },
+    { name: 'Заказ 3', price: '4 900 ₽', status: 'отправлен' },
   ];
 
   return (
@@ -110,7 +110,7 @@ const SellerPanelPreview = () => {
 
         .sp-url {
           margin-left: 8px;
-          font-size: 9.5px;
+          font-size: 10.5px;
           color: rgba(255,255,255,.30);
           letter-spacing: .02em;
         }
@@ -118,8 +118,8 @@ const SellerPanelPreview = () => {
         .sp-body { display: flex; }
 
         .sp-side {
-          width: 38px;
-          padding: 10px 0;
+          width: 44px;
+          padding: 12px 0;
           border-right: 1px solid rgba(255,255,255,.06);
           display: flex;
           flex-direction: column;
@@ -128,8 +128,8 @@ const SellerPanelPreview = () => {
         }
 
         .sp-side-item {
-          width: 24px;
-          height: 24px;
+          width: 28px;
+          height: 28px;
           border-radius: 7px;
           display: flex;
           align-items: center;
@@ -156,12 +156,12 @@ const SellerPanelPreview = () => {
           gap: 3px;
         }
 
-        .sp-metric-label { font-size: 7.5px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.35); }
-        .sp-metric-value { font-size: 12px; font-weight: 700; color: #f2f2f2; }
+        .sp-metric-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.35); }
+        .sp-metric-value { font-size: 14px; font-weight: 700; color: #f2f2f2; }
         .sp-accent { color: #e8ff5a; }
 
         .sp-chart {
-          height: 62px;
+          height: 76px;
           display: flex;
           align-items: flex-end;
           gap: 6px;
@@ -188,7 +188,7 @@ const SellerPanelPreview = () => {
           padding: 6px 8px;
           border-radius: 7px;
           background: rgba(255,255,255,.025);
-          font-size: 9px;
+          font-size: 10px;
         }
 
         .sp-row-name {

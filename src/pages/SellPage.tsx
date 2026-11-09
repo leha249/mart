@@ -245,9 +245,9 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: 4%;
-          top: 45%;
-          width: min(330px, 44%);
+          right: 1%;
+          top: 44%;
+          width: min(410px, 56%);
           transform: translateY(-50%) perspective(1100px) rotateY(-16deg)
             rotateX(5deg) rotate(-3deg);
           transform-origin: right center;
