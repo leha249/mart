@@ -246,16 +246,15 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: -20%;
+          right: -22%;
           top: 47%;
-          width: min(560px, 78%);
-          /* без scale: размер задаётся реальными пикселями, поэтому текст резкий */
-          transform: translateY(-50%) perspective(1500px) rotateY(-14deg)
-            rotateX(4deg) rotate(-2.5deg);
+          width: min(600px, 84%);
+          /* только 2D-поворот: без 3D-перспективы браузер не размывает текст */
+          transform: translateY(-50%) rotate(-2.5deg);
           transform-origin: right center;
-          opacity: .95;
+          opacity: .96;
           pointer-events: none;
-          backface-visibility: hidden;
+          will-change: transform;
         }
 
         .lg-mark {
@@ -267,7 +266,7 @@ const SellPage = () => {
           filter: drop-shadow(0 0 70px rgba(232,255,90,.10));
         }
 
-        .lg-logo { position: relative; display: inline-flex; }
+        .lg-logo { position: relative; z-index: 3; display: inline-flex; }
 
         /* Тонкое кольцо вокруг знака */
         .lg-ring {
@@ -336,6 +335,14 @@ const SellPage = () => {
 
         @media (min-width: 901px) {
           .lg-tag { white-space: nowrap; max-width: none; }
+        }
+
+        @media (max-width: 1400px) {
+          .lg-mock { width: min(500px, 74%); right: -12%; }
+        }
+
+        @media (max-width: 1150px) {
+          .lg-mock { width: min(430px, 70%); right: -8%; }
         }
 
         /* ---- правая половина ---- */
