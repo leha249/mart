@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cookie, X } from 'lucide-react';
 import { navigate } from '../utils/navigate';
@@ -7,6 +8,9 @@ const STORAGE_KEY = 'mora-cookie-consent-v1';
 
 const CookieBanner = () => {
   const [visible, setVisible] = useState(false);
+  const location = useLocation();
+  // На полноэкранной странице входа продавца баннер перекрывает форму.
+  const hidden = location.pathname === '/sell';
 
   useEffect(() => {
     try {
@@ -53,6 +57,8 @@ const CookieBanner = () => {
     e.preventDefault();
     navigate('/privacy');
   };
+
+  if (hidden) return null;
 
   return (
     <AnimatePresence>
