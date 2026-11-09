@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Send } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { CONTACTS } from '../utils/constants';
@@ -23,7 +22,6 @@ const SellPage = () => {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   usePageMeta({
@@ -55,34 +53,6 @@ const SellPage = () => {
     }
   };
 
-  const handleForgot = async () => {
-    if (resetting) return;
-
-    const value = login.trim();
-    if (!value.includes('@')) {
-      setError(
-        'Введите email в поле выше — пришлём ссылку для сброса пароля'
-      );
-      return;
-    }
-
-    setResetting(true);
-    setError(null);
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        value
-      );
-      if (resetError) throw resetError;
-      addToast('Письмо со ссылкой для сброса отправлено', 'success');
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Не удалось отправить письмо'
-      );
-    } finally {
-      setResetting(false);
-    }
-  };
-
   return (
     <div className="lg">
       {/* Левая половина: знак + текст. Точки живут только здесь. */}
@@ -102,6 +72,36 @@ const SellPage = () => {
           />
           <div className="lg-word">mora.mart</div>
           <h1 className="lg-tag serif">Продавать теперь легче</h1>
+
+          <ul className="lg-perks">
+            <li>
+              <span className="lg-perk-dot" />
+              <span>
+                <strong>4% с заказа</strong> — без подписки и платы за
+                регистрацию
+              </span>
+            </li>
+            <li>
+              <span className="lg-perk-dot" />
+              <span>
+                <strong>Своя витрина</strong> — лукбук, категории, размеры и
+                отзывы
+              </span>
+            </li>
+            <li>
+              <span className="lg-perk-dot" />
+              <span>
+                <strong>Заказы и чат</strong> с покупателем — в одном кабинете
+              </span>
+            </li>
+            <li>
+              <span className="lg-perk-dot" />
+              <span>
+                <strong>Счёт раз в неделю</strong> — платите только за
+                проданное
+              </span>
+            </li>
+          </ul>
         </motion.div>
       </section>
 
@@ -177,20 +177,8 @@ const SellPage = () => {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={handleForgot}
-            className="lg-forgot"
-            disabled={resetting}
-          >
-            {resetting ? 'Отправляем…' : 'Забыли пароль?'}
-          </button>
-
           <div className="lg-actions">
             <div className="lg-actions-title">Начать продавать</div>
-            <div className="lg-actions-sub">
-              4% с заказа · без подписки · свой мини-магазин
-            </div>
             <a
               className="lg-telegram-btn"
               href={CONTACTS.telegram}
@@ -274,6 +262,41 @@ const SellPage = () => {
           line-height: 1.15;
           color: #e8ff5a;
           max-width: 22ch;
+        }
+
+        /* Что получает продавец — заполняет левую половину */
+        .lg-perks {
+          list-style: none;
+          margin: clamp(22px, 3vw, 40px) 0 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: clamp(10px, 1.2vw, 16px);
+          max-width: 380px;
+        }
+
+        .lg-perks li {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: rgba(255,255,255,.58);
+        }
+
+        .lg-perks strong {
+          color: rgba(255,255,255,.9);
+          font-weight: 600;
+        }
+
+        .lg-perk-dot {
+          flex-shrink: 0;
+          width: 6px;
+          height: 6px;
+          margin-top: 7px;
+          border-radius: 50%;
+          background: #e8ff5a;
+          box-shadow: 0 0 12px rgba(232,255,90,.6);
         }
 
         @media (min-width: 901px) {
@@ -392,22 +415,6 @@ const SellPage = () => {
 
         .lg-spin { animation: lg-spin-kf 1s linear infinite; }
 
-        .lg-forgot {
-          align-self: center;
-          margin-top: 4px;
-          background: none;
-          border: none;
-          color: rgba(255,255,255,.55);
-          font-size: 13px;
-          font-family: inherit;
-          cursor: pointer;
-          padding: 6px;
-          text-decoration: underline;
-          text-underline-offset: 4px;
-        }
-
-        .lg-forgot:hover { color: #e8ff5a; }
-
         .lg-actions {
           margin-top: 20px;
           padding-top: 20px;
@@ -421,12 +428,6 @@ const SellPage = () => {
           font-size: 15px;
           font-weight: 700;
           letter-spacing: -.01em;
-        }
-
-        .lg-actions-sub {
-          font-size: 12px;
-          color: rgba(255,255,255,.4);
-          line-height: 1.5;
         }
 
         /* Кнопка заявки — в фирменном цвете Telegram */
