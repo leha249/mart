@@ -46,7 +46,6 @@ const Navbar = () => {
   const isSellerOrAdmin = role === 'seller' || role === 'admin';
   const isPending = role === 'pending';
   const canManage = isSellerOrAdmin || isPending;
-  const canBecomeSeller = role === 'guest';
 
   const handleScroll = useThrottle(() => {
     setScrolled(window.scrollY > 40);
@@ -149,6 +148,29 @@ const Navbar = () => {
           </nav>
 
           <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+            {/* «Войти» текстом — перед всеми иконками справа */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={goToAccount}
+              aria-label={isCustomer ? 'Личный кабинет' : 'Войти'}
+              title={isCustomer ? 'Личный кабинет' : 'Войти'}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px 2px',
+                color: isCustomer ? 'var(--accent)' : 'var(--text)',
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: '0.01em',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {isCustomer ? 'Кабинет' : 'Войти'}
+            </motion.button>
+
             {canManage && (
               <motion.button
                 whileHover={{ scale: 1.08 }}
@@ -159,19 +181,6 @@ const Navbar = () => {
                 onClick={goToAdmin}
               >
                 <Settings size={18} strokeWidth={1.75} />
-              </motion.button>
-            )}
-
-            {canBecomeSeller && (
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
-                className="icon-btn"
-                aria-label="Магазин — вход для продавцов"
-                title="Магазин — вход для продавцов"
-                onClick={goToSell}
-              >
-                <Store size={18} strokeWidth={1.75} />
               </motion.button>
             )}
 
@@ -187,20 +196,6 @@ const Navbar = () => {
               onClick={openSearch}
             >
               <Search size={18} strokeWidth={1.75} />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.94 }}
-              className="icon-btn"
-              aria-label={isCustomer ? 'Личный кабинет' : 'Войти'}
-              title={isCustomer ? 'Личный кабинет' : 'Войти'}
-              onClick={goToAccount}
-              style={{
-                color: isCustomer ? 'var(--accent)' : 'var(--text)',
-              }}
-            >
-              <User size={18} strokeWidth={1.75} />
             </motion.button>
 
             <motion.button

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { normalizeError } from '../utils/errors';
+import { normalizeError, AuthError } from '../utils/errors';
 import { navigate } from '../utils/navigate';
 
 export type UserRole = 'admin' | 'seller' | 'pending' | 'guest';
@@ -168,10 +168,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  /**
+   * Вход продавца/админа. Принимает email ИЛИ телефон:
+   * телефон резолвится в email магазина на сервере (RPC
+   * seller_login_email), потому что Supabase Auth умеет только email.
+   */
+  const signIn = async (login: string, password: string) => {
     try {
+      let email = login.trim();
+
+      if (!email.includes('@')) {
+        const digits = email.replace(/\D/g, '');
+        if (digits.length < 10) {
+          throw new AuthError('Введите email или телефон');
+        }
+
+        const { data, error } = await supabase.rpc('seller_login_email', {
+          p_phone: digits,
+        });
+        if (error) throw error;
+        if (!data) {
+          throw new AuthError(
+            'Аккаунт с таким телефоном не найден. Проверьте номер или войдите по email.'
+          );
+        }
+        email = String(data);
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email,
         password,
       });
       if (error) throw error;
