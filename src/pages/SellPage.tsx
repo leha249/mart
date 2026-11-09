@@ -230,7 +230,8 @@ const SellPage = () => {
           display: flex;
           align-items: center;
           padding: clamp(32px, 5vw, 88px);
-          overflow: hidden;
+          /* превью кабинета выходит за границу половины */
+          overflow: visible;
         }
 
         .lg-brand {
@@ -245,13 +246,13 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: 1%;
-          top: 44%;
-          width: min(410px, 56%);
-          transform: translateY(-50%) perspective(1100px) rotateY(-16deg)
-            rotateX(5deg) rotate(-3deg);
+          right: -8%;
+          top: 47%;
+          width: min(440px, 60%);
+          transform: translateY(-50%) perspective(1200px) rotateY(-15deg)
+            rotateX(5deg) rotate(-3deg) scale(1.18);
           transform-origin: right center;
-          opacity: .95;
+          opacity: .94;
           pointer-events: none;
         }
 
