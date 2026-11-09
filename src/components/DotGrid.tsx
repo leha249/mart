@@ -31,8 +31,17 @@ const DotGrid = ({ className }: { className?: string }) => {
 
     const onMove = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      pointer.tx = (e.clientX - rect.left) / rect.width;
-      pointer.ty = (e.clientY - rect.top) / rect.height;
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+
+      // Курсор вне области сетки — не подсвечиваем ничего.
+      if (nx < 0 || nx > 1 || ny < 0 || ny > 1) {
+        pointer.active = false;
+        return;
+      }
+
+      pointer.tx = nx;
+      pointer.ty = ny;
       pointer.active = true;
     };
 

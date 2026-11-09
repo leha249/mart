@@ -85,10 +85,9 @@ const SellPage = () => {
 
   return (
     <div className="lg">
-      <DotGrid className="lg-dots" />
-
-      {/* Левая половина: знак + текст */}
+      {/* Левая половина: знак + текст. Точки живут только здесь. */}
       <section className="lg-left">
+        <DotGrid className="lg-dots" />
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,21 +187,18 @@ const SellPage = () => {
           </button>
 
           <div className="lg-actions">
+            <div className="lg-actions-title">Начать продавать</div>
+            <div className="lg-actions-sub">
+              4% с заказа · без подписки · свой мини-магазин
+            </div>
             <a
-              className="lg-secondary"
-              href={`mailto:${CONTACTS.email}?subject=${encodeURIComponent(
-                'Заявка на магазин на mora.mart'
-              )}`}
-            >
-              Написать заявку
-            </a>
-            <a
-              className="lg-secondary lg-telegram"
+              className="lg-telegram-btn"
               href={CONTACTS.telegram}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Send size={15} /> Telegram
+              Оставить заявку
+              <Send size={16} />
             </a>
           </div>
         </motion.form>
@@ -231,6 +227,9 @@ const SellPage = () => {
           display: block;
           z-index: 0;
           pointer-events: none;
+          /* мягко растворяем сетку к правому краю, чтобы не было обрыва */
+          mask-image: linear-gradient(90deg, #000 0%, #000 58%, transparent 100%);
+          -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 58%, transparent 100%);
         }
 
         /* ---- левая половина ---- */
@@ -240,9 +239,16 @@ const SellPage = () => {
           display: flex;
           align-items: center;
           padding: clamp(32px, 5vw, 88px);
+          overflow: hidden;
         }
 
-        .lg-brand { display: flex; flex-direction: column; align-items: flex-start; }
+        .lg-brand {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
 
         .lg-mark {
           width: clamp(150px, 22vw, 300px);
@@ -403,38 +409,50 @@ const SellPage = () => {
         .lg-forgot:hover { color: #e8ff5a; }
 
         .lg-actions {
-          margin-top: 18px;
-          padding-top: 18px;
+          margin-top: 20px;
+          padding-top: 20px;
           border-top: 1px solid rgba(255,255,255,.07);
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
-        .lg-secondary {
+        .lg-actions-title {
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: -.01em;
+        }
+
+        .lg-actions-sub {
+          font-size: 12px;
+          color: rgba(255,255,255,.4);
+          line-height: 1.5;
+        }
+
+        /* Кнопка заявки — в фирменном цвете Telegram */
+        .lg-telegram-btn {
+          margin-top: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 13px 16px;
+          gap: 9px;
+          padding: 14px 18px;
           border-radius: 12px;
-          border: 1px solid rgba(255,255,255,.12);
-          background: transparent;
-          color: rgba(255,255,255,.85);
-          font-size: 13.5px;
-          font-weight: 600;
-          text-decoration: none;
+          border: none;
+          background: #229ED9;
+          color: #fff;
+          font-size: 14.5px;
+          font-weight: 700;
           font-family: inherit;
-          transition: border-color .2s, color .2s, background .2s;
+          text-decoration: none;
+          transition: background .2s, transform .18s, box-shadow .18s;
         }
 
-        .lg-secondary:hover {
-          border-color: rgba(232,255,90,.45);
-          color: #e8ff5a;
-          background: rgba(232,255,90,.04);
+        .lg-telegram-btn:hover {
+          background: #1e8fc4;
+          transform: translateY(-1px);
+          box-shadow: 0 12px 30px rgba(34,158,217,.35);
         }
-
-        .lg-telegram { color: rgba(232,255,90,.9); }
 
         /* ---- адаптив ---- */
         @media (max-width: 900px) {
