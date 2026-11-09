@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageCircle, Send, Loader2, Phone } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Phone, Search, X } from 'lucide-react';
 import { chatService, type ChatThread, type ChatMessage } from '../../services/chat';
 import { useToast } from '../../context/ToastContext';
+
+type ThreadRow = ChatThread & {
+  preview: string | null;
+  previewSender: 'customer' | 'seller' | null;
+};
 
 const time = (iso: string) =>
   new Date(iso).toLocaleString('ru-RU', {
@@ -13,10 +18,11 @@ const time = (iso: string) =>
 
 const AdminMessages = () => {
   const { addToast } = useToast();
-  const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [active, setActive] = useState<ChatThread | null>(null);
+  const [threads, setThreads] = useState<ThreadRow[]>([]);
+  const [active, setActive] = useState<ThreadRow | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [unread, setUnread] = useState<Record<number, number>>({});
@@ -25,7 +31,7 @@ const AdminMessages = () => {
   const loadThreads = useCallback(async () => {
     try {
       const [list, counts] = await Promise.all([
-        chatService.sellerThreads(),
+        chatService.sellerThreadsWithPreview(),
         chatService.unreadByThread(),
       ]);
       setThreads(list);
@@ -105,6 +111,16 @@ const AdminMessages = () => {
     );
   }
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = normalizedQuery
+    ? threads.filter(
+        (t) =>
+          (t.customer_name ?? '').toLowerCase().includes(normalizedQuery) ||
+          t.customer_phone.toLowerCase().includes(normalizedQuery) ||
+          (t.preview ?? '').toLowerCase().includes(normalizedQuery)
+      )
+    : threads;
+
   return (
     <div
       style={{
@@ -126,7 +142,7 @@ const AdminMessages = () => {
       >
         <div
           style={{
-            padding: '14px 16px',
+            padding: '14px 16px 10px',
             borderBottom: '1px solid var(--border)',
             fontSize: 12,
             letterSpacing: 1.2,
@@ -135,6 +151,54 @@ const AdminMessages = () => {
           }}
         >
           Диалоги ({threads.length})
+        </div>
+
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+            }}
+          >
+            <Search size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Имя, телефон или текст"
+              aria-label="Поиск по диалогам"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: 'none',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--text)',
+                fontSize: 12.5,
+                fontFamily: 'inherit',
+              }}
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label="Очистить поиск"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
         {threads.length === 0 ? (
@@ -150,9 +214,13 @@ const AdminMessages = () => {
           >
             <MessageCircle size={15} /> Пока никто не писал
           </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 24, fontSize: 13, color: 'var(--muted)' }}>
+            Ничего не найдено
+          </div>
         ) : (
           <div style={{ maxHeight: 560, overflowY: 'auto' }}>
-            {threads.map((t) => {
+            {filtered.map((t) => {
               const isActive = active?.id === t.id;
               return (
                 <button
@@ -171,11 +239,51 @@ const AdminMessages = () => {
                     display: 'block',
                   }}
                 >
-                  <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                    {t.customer_name || t.customer_phone}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                      paddingRight: 24,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {t.customer_name || t.customer_phone}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        color: 'var(--muted)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {time(t.last_message_at)}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    {time(t.last_message_at)}
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: 'var(--muted)',
+                      marginTop: 2,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      paddingRight: 24,
+                    }}
+                  >
+                    {t.preview
+                      ? `${t.previewSender === 'seller' ? 'Вы: ' : ''}${t.preview}`
+                      : 'Сообщений нет'}
                   </div>
                   {(unread[t.id] ?? 0) > 0 && (
                     <div

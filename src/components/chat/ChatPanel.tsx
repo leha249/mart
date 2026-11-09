@@ -1,15 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, MessageCircle, Loader2 } from 'lucide-react';
+import { X, Send, MessageCircle, Loader2, Store } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
-import { chatService, getStoredToken, type ChatMessage } from '../../services/chat';
+import {
+  chatService,
+  getStoredToken,
+  forgetToken,
+  markChatSeen,
+  type ChatMessage,
+} from '../../services/chat';
 import { useToast } from '../../context/ToastContext';
+import { errorMessage } from '../../utils/errors';
+import { navigate } from '../../utils/navigate';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   sellerId: number | null;
   sellerName?: string;
+  /** Если известен слаг — покажем ссылку на магазин. */
+  sellerSlug?: string | null;
 }
 
 const time = (iso: string) =>
@@ -30,12 +40,15 @@ const guestInputStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 };
 
-const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
+const ChatPanel = ({ open, onClose, sellerId, sellerName, sellerSlug }: Props) => {
   const { session, register } = useCustomer();
   const { addToast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  /** Сообщения, которые уже ушли на сервер, но ответ ещё не получен. */
+  const [optimistic, setOptimistic] = useState<ChatMessage[]>([]);
   const [thread, setThread] = useState<{ id: number; token: string } | null>(null);
+  const [resolvedName, setResolvedName] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -45,6 +58,8 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
   const [guestPhone, setGuestPhone] = useState('');
   const [regBusy, setRegBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const title = resolvedName || sellerName || 'Продавец';
 
   /** Регистрация прямо в чате: имя, фамилия, телефон. */
   const handleGuestRegister = useCallback(async () => {
@@ -76,7 +91,9 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
     }
   }, [addToast, guestFirst, guestLast, guestPhone, regBusy, register]);
 
-  // Открытие треда
+  // Открытие треда: сохранённый токен → иначе создаём новый.
+  // Если сохранённый тред удалён (магазин удалили) — токен выбрасываем и
+  // открываем заново, иначе панель навсегда остаётся с ошибкой.
   useEffect(() => {
     if (!open || !sellerId || !session) return;
     let cancelled = false;
@@ -84,24 +101,54 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
     (async () => {
       setLoading(true);
       setError(null);
+      setOptimistic([]);
+
+      const remember = (list: ChatMessage[], id: number) => {
+        const last = list.length ? list[list.length - 1] : null;
+        if (last) markChatSeen(id, Number(last.id));
+      };
+
       try {
         const stored = getStoredToken(sellerId);
-        const res = stored
-          ? { threadId: stored.threadId, token: stored.token }
-          : await chatService.openForCustomer(
-              sellerId,
-              session.phone,
-              session.name
+        let active: { threadId: number; token: string; sellerName?: string | null } | null =
+          null;
+
+        if (stored) {
+          try {
+            const list = await chatService.customerMessages(
+              stored.threadId,
+              stored.token
             );
-        if (cancelled) return;
-        setThread({ id: res.threadId, token: res.token });
-        const list = await chatService.customerMessages(
-          res.threadId,
-          res.token
-        );
-        if (!cancelled) setMessages(list);
-      } catch {
-        if (!cancelled) setError('Не удалось открыть чат');
+            if (cancelled) return;
+            setMessages(list);
+            remember(list, sellerId);
+            active = { threadId: stored.threadId, token: stored.token };
+          } catch {
+            // Токен больше не действителен — начинаем переписку заново.
+            forgetToken(sellerId);
+          }
+        }
+
+        if (!active) {
+          const res = await chatService.openForCustomer(
+            sellerId,
+            session.phone,
+            session.name
+          );
+          if (cancelled) return;
+          const list = await chatService.customerMessages(res.threadId, res.token);
+          if (cancelled) return;
+          setMessages(list);
+          remember(list, sellerId);
+          if (res.sellerName) setResolvedName(res.sellerName);
+          active = res;
+        }
+
+        setThread({ id: active.threadId, token: active.token });
+      } catch (e) {
+        if (!cancelled) {
+          setError(errorMessage(e, 'Не удалось открыть чат'));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -112,9 +159,10 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
     };
   }, [open, sellerId, session]);
 
-  // Опрос новых сообщений
+  // Опрос новых сообщений, пока панель открыта
   useEffect(() => {
-    if (!open || !thread) return;
+    if (!open || !thread || !sellerId) return;
+
     const timer = window.setInterval(async () => {
       try {
         const list = await chatService.customerMessages(
@@ -122,49 +170,84 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
           thread.token
         );
         setMessages(list);
+        const last = list.length ? list[list.length - 1] : null;
+        // Панель открыта — значит покупатель прочитал ответ.
+        if (last) markChatSeen(sellerId, Number(last.id));
       } catch {
         /* тихо: следующий тик попробует снова */
       }
     }, 4000);
+
     return () => window.clearInterval(timer);
-  }, [open, thread]);
+  }, [open, thread, sellerId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, optimistic.length]);
+
+  // Escape закрывает панель
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   const handleSend = useCallback(async () => {
-    if (!thread || sending) return;
+    if (!thread || !sellerId || sending) return;
     const body = text.trim();
     if (!body) return;
 
+    const tempId = -Date.now();
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      sender: 'customer',
+      body,
+      created_at: new Date().toISOString(),
+    };
+
+    setOptimistic((prev) => [...prev, optimisticMessage]);
+    setText('');
     setSending(true);
+
     try {
       await chatService.customerSend(thread.id, thread.token, body);
-      setText('');
       const list = await chatService.customerMessages(thread.id, thread.token);
       setMessages(list);
-    } catch {
-      addToast('Не удалось отправить сообщение', 'error');
+      setOptimistic([]);
+      const last = list.length ? list[list.length - 1] : null;
+      if (last) markChatSeen(sellerId, Number(last.id));
+    } catch (e) {
+      // Возвращаем текст в поле и убираем «пузырь», чтобы не врать.
+      setOptimistic((prev) => prev.filter((m) => m.id !== tempId));
+      setText(body);
+      addToast(errorMessage(e, 'Не удалось отправить сообщение'), 'error');
     } finally {
       setSending(false);
     }
-  }, [thread, text, sending, addToast]);
+  }, [thread, sellerId, text, sending, addToast]);
+
+  const visible = [...messages, ...optimistic];
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
+          className="mora-chat-panel"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.25 }}
+          role="dialog"
+          aria-label={`Чат с продавцом ${title}`}
           style={{
             position: 'fixed',
             right: 20,
             bottom: 20,
-            width: 'min(380px, calc(100vw - 40px))',
-            height: 'min(520px, calc(100vh - 40px))',
+            width: 'min(392px, calc(100vw - 40px))',
+            height: 'min(560px, calc(100vh - 40px))',
             zIndex: 900,
             display: 'flex',
             flexDirection: 'column',
@@ -186,30 +269,64 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
               borderBottom: '1px solid var(--border)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MessageCircle size={16} style={{ color: 'var(--accent)' }} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {sellerName ?? 'Продавец'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <MessageCircle
+                size={16}
+                style={{ color: 'var(--accent)', flexShrink: 0 }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {title}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                   Обычно отвечает в течение дня
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Закрыть чат"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--muted)',
-                cursor: 'pointer',
-                padding: 4,
-              }}
-            >
-              <X size={16} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {sellerSlug && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate(`/seller/${sellerSlug}`);
+                  }}
+                  aria-label="Открыть магазин"
+                  title="Открыть магазин"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    padding: 6,
+                    display: 'flex',
+                  }}
+                >
+                  <Store size={15} />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                aria-label="Закрыть чат"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                  padding: 6,
+                  display: 'flex',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Без сессии — быстрая регистрация прямо в чате */}
@@ -288,22 +405,37 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8,
+                  overscrollBehavior: 'contain',
                 }}
               >
                 {loading && (
-                  <div style={{ color: 'var(--muted)', fontSize: 12 }}>
-                    <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />{' '}
+                  <div
+                    style={{
+                      color: 'var(--muted)',
+                      fontSize: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                     Открываем чат…
                   </div>
                 )}
 
                 {error && (
-                  <div style={{ color: 'var(--danger)', fontSize: 12 }}>
+                  <div
+                    style={{
+                      color: 'var(--danger)',
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {error}
                   </div>
                 )}
 
-                {!loading && !error && messages.length === 0 && (
+                {!loading && !error && visible.length === 0 && (
                   <div
                     style={{
                       color: 'var(--muted)',
@@ -316,8 +448,9 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                   </div>
                 )}
 
-                {messages.map((m) => {
+                {visible.map((m) => {
                   const mine = m.sender === 'customer';
+                  const pending = m.id < 0;
                   return (
                     <div
                       key={m.id}
@@ -326,13 +459,12 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                         maxWidth: '82%',
                         padding: '9px 13px',
                         borderRadius: 14,
-                        background: mine
-                          ? 'var(--accent)'
-                          : 'var(--surface-hi)',
+                        background: mine ? 'var(--accent)' : 'var(--surface-hi)',
                         color: mine ? 'var(--accent-contrast)' : 'var(--text)',
                         fontSize: 13,
                         lineHeight: 1.45,
                         whiteSpace: 'pre-wrap',
+                        opacity: pending ? 0.6 : 1,
                       }}
                     >
                       {m.body}
@@ -344,7 +476,7 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                           textAlign: 'right',
                         }}
                       >
-                        {time(m.created_at)}
+                        {pending ? 'отправляется…' : time(m.created_at)}
                       </div>
                     </div>
                   );
@@ -371,8 +503,10 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                   }}
                   placeholder="Сообщение…"
                   maxLength={2000}
+                  aria-label="Сообщение продавцу"
                   style={{
                     flex: 1,
+                    minWidth: 0,
                     padding: '10px 14px',
                     borderRadius: 12,
                     border: '1px solid var(--border)',
@@ -389,11 +523,12 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
                   aria-label="Отправить"
                   style={{
                     width: 40,
+                    flexShrink: 0,
                     borderRadius: 12,
                     border: 'none',
                     background: text.trim() ? 'var(--accent)' : 'var(--surface-hi)',
                     color: text.trim() ? 'var(--accent-contrast)' : 'var(--muted)',
-                    cursor: text.trim() ? 'pointer' : 'not-allowed',
+                    cursor: text.trim() && !sending ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -405,7 +540,24 @@ const ChatPanel = ({ open, onClose, sellerId, sellerName }: Props) => {
             </>
           )}
 
-          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          <style>{`
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            /* На телефоне чат занимает экран: иначе поле ввода уезжает под клавиатуру */
+            @media (max-width: 560px) {
+              .mora-chat-panel {
+                right: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-bottom: none !important;
+              }
+            }
+          `}</style>
         </motion.div>
       )}
     </AnimatePresence>

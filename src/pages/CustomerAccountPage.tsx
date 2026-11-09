@@ -15,11 +15,14 @@ import {
   ChevronUp,
   ShoppingBag,
   ShieldCheck,
+  MessageCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Cursor from '../components/Cursor';
 import ScrollProgress from '../components/ScrollProgress';
+import ChatPanel from '../components/chat/ChatPanel';
+import CustomerChats from '../components/chat/CustomerChats';
 import { useCustomer } from '../context/CustomerContext';
 import { useToast } from '../context/ToastContext';
 import { formatPrice, formatDate } from '../utils/format';
@@ -118,6 +121,11 @@ const CustomerAccountPage = () => {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState(session?.name ?? '');
+  const [chatTarget, setChatTarget] = useState<{
+    sellerId: number;
+    name?: string;
+    slug?: string | null;
+  } | null>(null);
 
   // Редирект, если не вошёл
   useEffect(() => {
@@ -127,6 +135,17 @@ const CustomerAccountPage = () => {
   }, [session]);
 
   usePageMeta({ title: 'Личный кабинет — MØRA MART' });
+
+  // Переход из меню «Мои чаты» (/account#chats) — подкручиваем к переписке.
+  useEffect(() => {
+    if (window.location.hash !== '#chats') return;
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById('chats')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // Загружаем заказы по токенам, сохранённым на этом устройстве:
   // выборка по телефону для анонима закрыта на стороне БД.
@@ -887,6 +906,31 @@ const CustomerAccountPage = () => {
                               </div>
                             ))}
                           </div>
+
+                          {order.seller_id && (
+                            <button
+                              onClick={() =>
+                                setChatTarget({ sellerId: order.seller_id! })
+                              }
+                              style={{
+                                marginTop: 16,
+                                padding: '10px 18px',
+                                borderRadius: 100,
+                                border: '1px solid var(--border)',
+                                background: 'transparent',
+                                color: 'var(--text)',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                              }}
+                            >
+                              <MessageCircle size={14} /> Написать продавцу
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -894,11 +938,29 @@ const CustomerAccountPage = () => {
                 })}
               </div>
             )}
+
+            <CustomerChats
+              onOpen={(chat) => {
+                setChatTarget({
+                  sellerId: chat.sellerId,
+                  name: chat.sellerName,
+                  slug: chat.sellerSlug,
+                });
+              }}
+            />
           </motion.div>
         </div>
       </main>
 
       <Footer />
+
+      <ChatPanel
+        open={Boolean(chatTarget)}
+        onClose={() => setChatTarget(null)}
+        sellerId={chatTarget?.sellerId ?? null}
+        sellerName={chatTarget?.name}
+        sellerSlug={chatTarget?.slug ?? null}
+      />
 
       <style>{`
         @keyframes spin {

@@ -14,6 +14,7 @@ import {
   Info,
   Mail,
   Send,
+  MessageCircle,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -26,6 +27,7 @@ import ThemeToggle from './ThemeToggle';
 import Logo from './Logo';
 import { CONTACTS } from '../utils/constants';
 import { navigate } from '../utils/navigate';
+import { chatService } from '../services/chat';
 
 const navLinks = [
   { label: 'Магазины', kind: 'sellers' as const },
@@ -35,6 +37,7 @@ const navLinks = [
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chatReplies, setChatReplies] = useState(0);
   const { totalItems } = useCart();
   const { favorites } = useFavorites();
   const { openCart, openSearch } = useUI();
@@ -55,6 +58,24 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  // Сколько чатов ждут ответа покупателя. Считаем только когда открыто меню:
+  // на каждой странице дёргать RPC незачем.
+  useEffect(() => {
+    if (!menuOpen || !isCustomer) return;
+    let alive = true;
+    chatService
+      .listCustomerChats()
+      .then((list) => {
+        if (alive) setChatReplies(list.filter((c) => c.unseen).length);
+      })
+      .catch(() => {
+        /* не мешаем меню открываться */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [menuOpen, isCustomer]);
 
   const go = (path: string) => {
     navigate(path);
@@ -358,6 +379,15 @@ const Navbar = () => {
                   go: goToAccount,
                   accent: true,
                 },
+                ...(isCustomer
+                  ? [
+                      {
+                        label: `Мои чаты${chatReplies ? ` · ${chatReplies}` : ''}`,
+                        icon: MessageCircle,
+                        go: () => go('/account#chats'),
+                      },
+                    ]
+                  : []),
                 { label: 'Тарифы', icon: Tag, go: () => go('/pricing') },
                 { label: 'О платформе', icon: Info, go: () => go('/about') },
                 { label: 'Контакты', icon: Mail, go: () => go('/contacts') },
