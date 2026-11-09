@@ -246,14 +246,16 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: -12%;
+          right: -20%;
           top: 47%;
-          width: min(520px, 72%);
-          transform: translateY(-50%) perspective(1300px) rotateY(-15deg)
-            rotateX(5deg) rotate(-3deg) scale(1.22);
+          width: min(560px, 78%);
+          /* без scale: размер задаётся реальными пикселями, поэтому текст резкий */
+          transform: translateY(-50%) perspective(1500px) rotateY(-14deg)
+            rotateX(4deg) rotate(-2.5deg);
           transform-origin: right center;
           opacity: .95;
           pointer-events: none;
+          backface-visibility: hidden;
         }
 
         .lg-mark {

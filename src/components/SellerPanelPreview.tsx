@@ -103,7 +103,7 @@ const SellerPanelPreview = () => {
         }
 
         .sp-window {
-          border-radius: 16px;
+          border-radius: 20px;
           border: 1px solid rgba(255,255,255,.11);
           background: linear-gradient(180deg, #151515 0%, #0b0b0b 100%);
           overflow: hidden;
@@ -112,50 +112,50 @@ const SellerPanelPreview = () => {
         .sp-bar {
           display: flex;
           align-items: center;
-          gap: 7px;
-          padding: 11px 14px;
+          gap: 9px;
+          padding: 14px 18px;
           border-bottom: 1px solid rgba(255,255,255,.07);
           background: rgba(255,255,255,.015);
         }
 
         .sp-dot {
-          width: 8px;
-          height: 8px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
           background: rgba(255,255,255,.17);
         }
 
         .sp-url {
-          margin-left: 10px;
-          font-size: 11px;
+          margin-left: 12px;
+          font-size: 13.5px;
           color: rgba(255,255,255,.32);
           letter-spacing: .01em;
         }
 
         .sp-pill {
           margin-left: auto;
-          padding: 3px 9px;
+          padding: 4px 11px;
           border-radius: 100px;
           border: 1px solid rgba(255,255,255,.10);
-          font-size: 9.5px;
+          font-size: 11.5px;
           color: rgba(255,255,255,.45);
         }
 
         .sp-body { display: flex; }
 
         .sp-side {
-          width: 52px;
-          padding: 14px 0;
+          width: 64px;
+          padding: 18px 0;
           border-right: 1px solid rgba(255,255,255,.06);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .sp-side-item {
-          width: 30px;
-          height: 30px;
+          width: 36px;
+          height: 36px;
           border-radius: 8px;
           display: flex;
           align-items: center;
@@ -168,16 +168,16 @@ const SellerPanelPreview = () => {
           color: #e8ff5a;
         }
 
-        .sp-main { flex: 1; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+        .sp-main { flex: 1; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 15px; }
 
         .sp-head { display: flex; align-items: baseline; gap: 8px; }
-        .sp-head-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.88); }
-        .sp-head-sub { font-size: 10px; color: rgba(255,255,255,.3); }
+        .sp-head-title { font-size: 16px; font-weight: 700; color: rgba(255,255,255,.88); }
+        .sp-head-sub { font-size: 12px; color: rgba(255,255,255,.3); }
 
         .sp-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
         .sp-metric {
-          padding: 10px 11px;
+          padding: 12px 13px;
           border-radius: 10px;
           background: rgba(255,255,255,.035);
           border: 1px solid rgba(255,255,255,.06);
@@ -186,17 +186,17 @@ const SellerPanelPreview = () => {
           gap: 3px;
         }
 
-        .sp-metric-label { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: rgba(255,255,255,.34); }
-        .sp-metric-value { font-size: 15px; font-weight: 700; color: #f4f4f4; line-height: 1.1; }
-        .sp-metric-diff { font-size: 9.5px; color: rgba(255,255,255,.38); }
+        .sp-metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: rgba(255,255,255,.34); }
+        .sp-metric-value { font-size: 18px; font-weight: 700; color: #f4f4f4; line-height: 1.1; }
+        .sp-metric-diff { font-size: 11.5px; color: rgba(255,255,255,.38); }
         .sp-accent { color: #e8ff5a; }
 
         .sp-chart {
-          height: 88px;
+          height: 112px;
           display: flex;
           align-items: flex-end;
-          gap: 7px;
-          padding: 10px 10px 0;
+          gap: 9px;
+          padding: 12px 12px 0;
           border-radius: 10px;
           background:
             linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 70%),
@@ -216,10 +216,10 @@ const SellerPanelPreview = () => {
 
         .sp-table-head {
           display: grid;
-          grid-template-columns: 1fr 90px 82px;
-          gap: 8px;
-          padding: 0 9px 4px;
-          font-size: 8.5px;
+          grid-template-columns: 1fr 112px 102px;
+          gap: 10px;
+          padding: 0 11px 5px;
+          font-size: 10.5px;
           letter-spacing: .1em;
           text-transform: uppercase;
           color: rgba(255,255,255,.26);
@@ -230,13 +230,13 @@ const SellerPanelPreview = () => {
 
         .sp-row {
           display: grid;
-          grid-template-columns: 1fr 90px 82px;
-          gap: 8px;
+          grid-template-columns: 1fr 112px 102px;
+          gap: 10px;
           align-items: center;
-          padding: 7px 9px;
+          padding: 9px 11px;
           border-radius: 8px;
           background: rgba(255,255,255,.025);
-          font-size: 10.5px;
+          font-size: 12.5px;
         }
 
         .sp-row-name {
@@ -249,7 +249,7 @@ const SellerPanelPreview = () => {
 
         .sp-row-price { text-align: right; color: rgba(255,255,255,.88); font-weight: 600; }
 
-        .sp-row-status { text-align: right; font-size: 9.5px; }
+        .sp-row-status { text-align: right; font-size: 11.5px; }
         .sp-new { color: rgba(255,255,255,.45); }
         .sp-ok { color: rgba(232,255,90,.9); }
         .sp-ship { color: rgba(120,190,255,.85); }
