@@ -14,7 +14,7 @@ interface AuthContextType {
   role: UserRole;
   sellerId: number | null;
   sellerName: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserRole>;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
 }
@@ -29,12 +29,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [sellerId, setSellerId] = useState<number | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
 
-  const resolveRole = async (u: User | null): Promise<void> => {
+  const resolveRole = async (u: User | null): Promise<UserRole> => {
     if (!u) {
       setRole('guest');
       setSellerId(null);
       setSellerName(null);
-      return;
+      return 'guest';
     }
 
     try {
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole('admin');
         setSellerId(null);
         setSellerName(null);
-        return;
+        return 'admin';
       }
 
       // 2. Проверяем, продавец ли
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setSellerId(null);
           setSellerName(null);
           sessionStorage.setItem('mora-auth-error', 'blocked');
-          return;
+          return 'guest';
         }
 
         // 2.1.2. Pending — может войти, но только смотреть
@@ -87,14 +87,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setRole('pending');
           setSellerId(sellerData.id);
           setSellerName(sellerData.name);
-          return;
+          return 'pending';
         }
 
         // 2.1.3. Активен или на паузе — продавец
         setRole('seller');
         setSellerId(sellerData.id);
         setSellerName(sellerData.name);
-        return;
+        return 'seller';
       }
 
       // 3. Не админ и не продавец — удалённый аккаунт
@@ -106,11 +106,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSellerId(null);
       setSellerName(null);
       sessionStorage.setItem('mora-auth-error', 'no-role');
+      return 'guest';
     } catch (e) {
       console.error('[AuthContext] resolveRole failed:', e);
       setRole('guest');
       setSellerId(null);
       setSellerName(null);
+      return 'guest';
     }
   };
 
@@ -172,8 +174,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Вход продавца/админа. Принимает email ИЛИ телефон:
    * телефон резолвится в email магазина на сервере (RPC
    * seller_login_email), потому что Supabase Auth умеет только email.
+   *
+   * Возвращает роль сразу после входа: без этого страница входа
+   * успевала увести на /admin, где роль ещё 'guest', и гард выкидывал
+   * обратно — «Добро пожаловать» есть, а кабинет не открылся.
    */
-  const signIn = async (login: string, password: string) => {
+  const signIn = async (
+    login: string,
+    password: string
+  ): Promise<UserRole> => {
     try {
       let email = login.trim();
 
@@ -195,11 +204,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email = String(data);
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+
+      setSession(data.session ?? null);
+      setUser(data.user ?? null);
+
+      // Ждём определение роли, чтобы UI не гадал
+      return await resolveRole(data.user ?? null);
     } catch (e) {
       throw normalizeError(e);
     }

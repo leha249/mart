@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,7 @@ import SellerPanelPreview from '../components/SellerPanelPreview';
  * и Telegram менеджера. Фон — сетка точек, которая тянется за курсором.
  */
 const SellPage = () => {
-  const { signIn } = useAuth();
+  const { signIn, user, role, loading } = useAuth();
   const { addToast } = useToast();
 
   const [login, setLogin] = useState('');
@@ -31,6 +31,15 @@ const SellPage = () => {
     noindex: true,
   });
 
+  // Уже вошли (например, обновили страницу или вернулись из кабинета) —
+  // не держим на форме входа, а сразу уводим в кабинет.
+  useEffect(() => {
+    if (loading || !user) return;
+    if (role === 'admin' || role === 'seller' || role === 'pending') {
+      navigate('/admin');
+    }
+  }, [loading, user, role]);
+
   const canSubmit = login.trim().length > 0 && password.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,7 +53,18 @@ const SellPage = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await signIn(login, password);
+      const resolved = await signIn(login, password);
+
+      // Пароль верный, но аккаунт не привязан к магазину: AuthContext
+      // уже разлогинил. Раньше здесь показывалось «Добро пожаловать»,
+      // а гард /admin молча возвращал на форму.
+      if (resolved === 'guest') {
+        setError(
+          'Пароль верный, но аккаунт не привязан к магазину. Для продавцов MØRA MART аккаунт создаёт владелец платформы: напишите менеджеру в Telegram.'
+        );
+        return;
+      }
+
       addToast('Добро пожаловать в кабинет', 'success');
       navigate('/admin');
     } catch (err) {
