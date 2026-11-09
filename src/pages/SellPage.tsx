@@ -246,15 +246,16 @@ const SellPage = () => {
         .lg-mock {
           position: absolute;
           z-index: 1;
-          right: -14%;
+          right: -20%;
           top: 47%;
-          width: min(540px, 78%);
-          /* 2D-наклон вместо 3D: текст остаётся векторным и резким */
-          transform: translateY(-50%) rotate(-2deg) skewY(-2.2deg) scaleX(1.01);
+          width: min(560px, 78%);
+          /* без scale: размер задаётся реальными пикселями, поэтому текст резкий */
+          transform: translateY(-50%) perspective(1500px) rotateY(-14deg)
+            rotateX(4deg) rotate(-2.5deg);
           transform-origin: right center;
-          opacity: .96;
+          opacity: .95;
           pointer-events: none;
-          will-change: transform;
+          backface-visibility: hidden;
         }
 
         .lg-mark {
@@ -336,7 +337,6 @@ const SellPage = () => {
         @media (min-width: 901px) {
           .lg-tag { white-space: nowrap; max-width: none; }
         }
-
         @media (max-width: 1400px) {
           .lg-mock { width: min(500px, 74%); right: -12%; }
         }

@@ -98,7 +98,7 @@ const SellerPanelPreview = () => {
         .sp {
           width: 100%;
           filter: drop-shadow(0 44px 90px rgba(0,0,0,.7));
-          /* без бесконечной анимации: пока слой двигается, Chrome держит его в низком разрешении */
+          animation: sp-float 9s ease-in-out infinite;
           will-change: transform;
         }
 
