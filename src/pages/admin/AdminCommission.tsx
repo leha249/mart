@@ -42,7 +42,7 @@ const cardStyle: React.CSSProperties = {
   padding: 28,
 };
 
-/** Счёт за неделю — конкретная дата, а не «1 дн. назад». */
+/** Счёт за месяц — конкретная дата, а не «1 дн. назад». */
 const invoiceDate = (value: string): string => {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
@@ -123,9 +123,9 @@ const AdminCommission = () => {
 
   const load = useCallback(async () => {
     try {
-      // Ленивый недельный прогон: сервер сам решит, пора ли выставлять счёт
+      // Ленивый месячный прогон: сервер сам решит, пора ли выставлять счёт
       // (пятница) и не пора ли кого-то поставить на паузу. Повтор безопасен.
-      await commissionService.runWeeklyBilling();
+      await commissionService.runMonthlyBilling();
 
       const invoiceRows = await commissionService.getInvoices();
 
@@ -198,11 +198,11 @@ const AdminCommission = () => {
     if (billing) return;
     setBilling(true);
     try {
-      const created = await commissionService.forceWeeklyBilling();
+      const created = await commissionService.forceMonthlyBilling();
       addToast(
         created > 0
           ? `Сформировано счетов: ${created}`
-          : 'Новых счетов за эту неделю нет',
+          : 'Новых счетов за этот месяц нет',
         'success'
       );
       await load();
@@ -751,7 +751,7 @@ const AdminCommission = () => {
         </div>
       )}
 
-      {/* Недельные счета */}
+      {/* Месячные счета */}
       <div style={cardStyle}>
         <div
           style={{
@@ -764,7 +764,7 @@ const AdminCommission = () => {
           }}
         >
           <h2 className="serif" style={{ fontSize: 24, margin: 0 }}>
-            Счета по неделям
+            Счета по месяцам
           </h2>
           {isAdmin && (
             <button
@@ -783,7 +783,7 @@ const AdminCommission = () => {
                 fontFamily: 'inherit',
               }}
             >
-              {billing ? 'Считаем…' : 'Сформировать за неделю'}
+              {billing ? 'Считаем…' : 'Сформировать за месяц'}
             </button>
           )}
         </div>

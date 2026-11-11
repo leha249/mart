@@ -41,7 +41,7 @@ export interface CommissionBalance {
 
 export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'waived';
 
-/** Недельный счёт: комиссия за период, срок оплаты — следующая пятница. */
+/** Месячный счёт: комиссия за календарный месяц, оплата — до 10-го числа. */
 export interface CommissionInvoice {
   id: number;
   seller_id: number;
@@ -109,7 +109,7 @@ export const commissionService = {
   },
 
   /**
-   * Недельные счета. RLS: продавец видит свои, админ — все.
+   * Счета по месяцам. RLS: продавец видит свои, админ — все.
    */
   async getInvoices(limit = 12): Promise<CommissionInvoice[]> {
     try {
@@ -127,31 +127,31 @@ export const commissionService = {
   },
 
   /**
-   * Ленивый прогон недельного биллинга: если сегодня пятница (или позже),
-   * сервер сформирует счета и расставит паузы. Дубли не создаются.
+   * Ленивый прогон месячного биллинга: сервер выставит счёт за прошлый
+   * календарный месяц, если его ещё нет. Дубли не создаются.
    */
-  async runWeeklyBilling(): Promise<{ invoices_created?: number; sellers_paused?: number } | null> {
+  async runMonthlyBilling(): Promise<{ invoices_created?: number; sellers_paused?: number } | null> {
     try {
-      const { data, error } = await supabase.rpc('run_weekly_billing_safe');
+      const { data, error } = await supabase.rpc('run_monthly_billing_safe');
       if (error) throw error;
       return (data ?? null) as { invoices_created?: number } | null;
     } catch (e) {
-      console.warn('[commissionService.runWeeklyBilling]', e);
+      console.warn('[commissionService.runMonthlyBilling]', e);
       return null;
     }
   },
 
-  /** Только админ: принудительно сформировать счета за неделю. */
-  async forceWeeklyBilling(issueDate?: string): Promise<number> {
+  /** Только админ: принудительно сформировать счета за прошлый месяц. */
+  async forceMonthlyBilling(issueDate?: string): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('run_weekly_billing', {
+      const { data, error } = await supabase.rpc('run_monthly_billing', {
         p_issue_date: issueDate ?? new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
       const payload = (data ?? {}) as { invoices_created?: number };
       return payload.invoices_created ?? 0;
     } catch (e) {
-      console.error('[commissionService.forceWeeklyBilling]', e);
+      console.error('[commissionService.forceMonthlyBilling]', e);
       throw normalizeError(e);
     }
   },

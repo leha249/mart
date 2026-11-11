@@ -9,6 +9,7 @@ import { formatPrice } from '../utils/format';
 import { navigate } from '../utils/navigate';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { sellersService } from '../services/sellers';
+import QRCode from 'qrcode';
 
 interface OrderInfo {
   id: number;
@@ -35,6 +36,8 @@ const OrderSuccess = () => {
   const [data, setData] = useState<LastOrdersData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sellers, setSellers] = useState<Record<number, SellerPay>>({});
+  /** dataURL QR-кода на оплату по каждому продавцу */
+  const [qr, setQr] = useState<Record<number, string>>({});
 
   usePageMeta({
     title: 'Заказ оформлен',
@@ -94,6 +97,24 @@ const OrderSuccess = () => {
         if (seller) map[id] = seller;
       }
       setSellers(map);
+
+      // QR на оплату: генерируется локально из ссылки продавца,
+      // никаких внешних сервисов и утечек ссылки наружу.
+      const codes: Record<number, string> = {};
+      for (const [id, seller] of Object.entries(map)) {
+        if (!seller.payUrl) continue;
+        try {
+          codes[Number(id)] = await QRCode.toDataURL(seller.payUrl, {
+            width: 240,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#0a0a0a', light: '#ffffff' },
+          });
+        } catch (e) {
+          console.warn('[OrderSuccess] QR generation failed:', e);
+        }
+      }
+      if (alive) setQr(codes);
     })();
 
     return () => {
@@ -470,29 +491,71 @@ const OrderSuccess = () => {
                           ) : null}
                         </div>
                         {seller?.payUrl ? (
-                          <a
-                            href={seller.payUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <div
                             style={{
-                              padding: '10px 20px',
-                              borderRadius: 100,
-                              border: 'none',
-                              background: 'var(--accent)',
-                              color: 'var(--accent-contrast)',
-                              fontSize: 13,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              fontFamily: 'inherit',
-                              display: 'inline-flex',
+                              display: 'flex',
                               alignItems: 'center',
-                              gap: 8,
-                              textDecoration: 'none',
+                              gap: 14,
+                              flexWrap: 'wrap',
                             }}
                           >
-                            <CreditCard size={15} /> Оплатить{' '}
-                            {formatPrice(order.total)}
-                          </a>
+                            <a
+                              href={seller.payUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '10px 20px',
+                                borderRadius: 100,
+                                border: 'none',
+                                background: 'var(--accent)',
+                                color: 'var(--accent-contrast)',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                textDecoration: 'none',
+                              }}
+                            >
+                              <CreditCard size={15} /> Оплатить{' '}
+                              {formatPrice(order.total)}
+                            </a>
+
+                            {order.sellerId && qr[order.sellerId] && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 10,
+                                }}
+                              >
+                                <img
+                                  src={qr[order.sellerId]}
+                                  alt={`QR-код для оплаты заказа №${order.id}`}
+                                  width={78}
+                                  height={78}
+                                  style={{
+                                    borderRadius: 8,
+                                    background: '#fff',
+                                    padding: 4,
+                                    display: 'block',
+                                  }}
+                                />
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: 'var(--muted)',
+                                    lineHeight: 1.4,
+                                    maxWidth: 120,
+                                  }}
+                                >
+                                  Или отсканируйте камерой телефона
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
                             Способ оплаты уточнит продавец
